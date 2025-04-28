@@ -62,7 +62,7 @@ function MobileIssuedLicenseCard({ license, onRenew }: { license: any, onRenew: 
   const aetNumber = getAETNumber();
   
   return (
-    <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+    <Card className="cursor-pointer hover:bg-accent/50 transition-colors border-muted/60">
       <CardContent className="p-4">
         <div className="flex justify-between items-start">
           <div>
@@ -75,7 +75,7 @@ function MobileIssuedLicenseCard({ license, onRenew }: { license: any, onRenew: 
           </div>
           <div className="flex flex-col items-end">
             {aetNumber && (
-              <span className="text-xs font-medium text-muted-foreground mb-1">
+              <span className="text-xs font-medium bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full mb-1.5">
                 AET: {aetNumber}
               </span>
             )}
@@ -84,12 +84,19 @@ function MobileIssuedLicenseCard({ license, onRenew }: { license: any, onRenew: 
         </div>
         
         <div className="mt-3 flex justify-between items-center">
-          <div className="text-xs">
-            <span className="text-muted-foreground mr-1">Placa:</span>
-            <span className="font-medium">{license.mainVehiclePlate}</span>
+          <div className="text-xs flex items-center">
+            <Badge variant="outline" className="bg-muted/40 mr-2">
+              {license.mainVehiclePlate}
+            </Badge>
+            {license.additionalPlates && license.additionalPlates.length > 0 && (
+              <span className="text-muted-foreground">
+                +{license.additionalPlates.length}
+              </span>
+            )}
           </div>
           {expiryInfo && (
-            <div className="text-xs">
+            <div className="text-xs flex items-center">
+              <CalendarIcon className="h-3 w-3 mr-1" />
               <span className={`font-medium ${expiryInfo.isExpiringSoon ? 'text-amber-600' : ''}`}>
                 {formatShortDate(expiryInfo.date)}
               </span>
@@ -98,12 +105,23 @@ function MobileIssuedLicenseCard({ license, onRenew }: { license: any, onRenew: 
         </div>
         
         {license.states && license.states.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {license.states.map((state: string) => (
-              <Badge key={state} variant="outline" className="text-xs py-0">
-                {state}
-              </Badge>
-            ))}
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {license.states.map((state: string) => {
+              // Verificar se o estado está aprovado
+              const stateStatus = license.stateStatuses?.find((ss: string) => ss.startsWith(`${state}:`));
+              const isApproved = stateStatus?.includes(':approved:');
+              
+              return (
+                <Badge key={state} 
+                  variant={isApproved ? "default" : "outline"} 
+                  className={`text-xs py-0.5 ${
+                    isApproved ? 'bg-green-100 text-green-800 hover:bg-green-100' : ''
+                  }`}
+                >
+                  {state}
+                </Badge>
+              );
+            })}
           </div>
         )}
       </CardContent>
@@ -278,49 +296,77 @@ export default function MobileIssuedLicensesPage() {
                             return (
                               <Card key={state} className={index > 0 ? 'mt-3' : ''}>
                                 <CardContent className="p-3">
-                                  <div className="flex justify-between items-center">
-                                    <div className="flex items-center">
-                                      <Badge variant="outline" className="mr-2">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <Badge variant="outline" className="mb-1.5 bg-muted/40">
                                         {getStateLabel(state)}
                                       </Badge>
-                                      <StatusBadge status={isApproved ? 'approved' : 'pending_registration'} size="sm" />
+                                      <div>
+                                        <StatusBadge status={isApproved ? 'approved' : 'pending_registration'} size="sm" />
+                                      </div>
                                     </div>
                                     
                                     {aetNumber && (
-                                      <div className="text-xs">
-                                        <span className="text-muted-foreground mr-1">AET:</span>
-                                        <span className="font-medium">{aetNumber}</span>
+                                      <div className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                                        AET: {aetNumber}
                                       </div>
                                     )}
                                   </div>
                                   
                                   {validUntil && (
-                                    <div className="mt-2 flex justify-between items-center">
-                                      <div className="text-xs flex items-center">
-                                        <CalendarIcon className="h-3 w-3 mr-1" />
-                                        <span className="text-muted-foreground mr-1">Válido até:</span>
-                                        <span className={`font-medium ${isExpiring ? 'text-amber-600' : ''}`}>
-                                          {formatShortDate(validUntil)}
-                                        </span>
+                                    <div className="mt-3 space-y-2">
+                                      <div className="bg-muted/30 rounded-md p-2">
+                                        <div className="text-xs flex items-center">
+                                          <CalendarIcon className="h-3 w-3 mr-1.5" />
+                                          <span className="text-muted-foreground mr-1">Válido até:</span>
+                                          <span className={`font-medium ${isExpiring ? 'text-amber-600' : ''}`}>
+                                            {formatShortDate(validUntil)}
+                                          </span>
+                                        </div>
+                                        
+                                        {isExpiring && (
+                                          <div className="mt-1.5">
+                                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">
+                                              Expira em breve
+                                            </Badge>
+                                          </div>
+                                        )}
                                       </div>
                                       
-                                      <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        className="h-7 text-xs"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setIsDialogOpen(false);
-                                          handleRenew(selectedLicense, state);
-                                        }}
-                                      >
-                                        Renovar
-                                      </Button>
+                                      <div className="flex space-x-2">
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm" 
+                                          className="h-8 text-xs flex-1"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsDialogOpen(false);
+                                            handleRenew(selectedLicense, state);
+                                          }}
+                                        >
+                                          Renovar
+                                        </Button>
+                                        
+                                        {fileUrl && (
+                                          <Button 
+                                            variant="secondary" 
+                                            size="sm" 
+                                            className="text-xs h-8 flex-1"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              window.open(fileUrl, '_blank');
+                                            }}
+                                          >
+                                            <FileText className="mr-1 h-3 w-3" />
+                                            Ver documento
+                                          </Button>
+                                        )}
+                                      </div>
                                     </div>
                                   )}
                                   
-                                  {fileUrl && (
-                                    <div className="mt-2">
+                                  {!validUntil && fileUrl && (
+                                    <div className="mt-3">
                                       <Button 
                                         variant="secondary" 
                                         size="sm" 
@@ -345,17 +391,17 @@ export default function MobileIssuedLicensesPage() {
                         <TabsContent value="details">
                           <div className="space-y-4">
                             <div>
-                              <h4 className="text-sm font-medium mb-1">Dimensões</h4>
-                              <div className="grid grid-cols-3 gap-2">
-                                <div className="text-center">
+                              <h4 className="text-sm font-medium mb-2">Dimensões da Carga</h4>
+                              <div className="grid grid-cols-3 gap-3">
+                                <div className="bg-muted/40 p-2 rounded-md text-center">
                                   <p className="text-xs text-muted-foreground">Comprimento</p>
                                   <p className="font-medium">{(selectedLicense.length / 100).toFixed(2)}m</p>
                                 </div>
-                                <div className="text-center">
+                                <div className="bg-muted/40 p-2 rounded-md text-center">
                                   <p className="text-xs text-muted-foreground">Largura</p>
                                   <p className="font-medium">{(selectedLicense.width / 100).toFixed(2)}m</p>
                                 </div>
-                                <div className="text-center">
+                                <div className="bg-muted/40 p-2 rounded-md text-center">
                                   <p className="text-xs text-muted-foreground">Altura</p>
                                   <p className="font-medium">{(selectedLicense.height / 100).toFixed(2)}m</p>
                                 </div>
@@ -364,28 +410,41 @@ export default function MobileIssuedLicensesPage() {
                             
                             <Separator />
                             
-                            {selectedLicense.additionalPlates && selectedLicense.additionalPlates.length > 0 && (
-                              <>
-                                <div>
-                                  <h4 className="text-sm font-medium mb-1">Placas Adicionais</h4>
-                                  <div className="flex flex-wrap gap-1">
-                                    {selectedLicense.additionalPlates.map((plate: string) => (
-                                      <Badge key={plate} variant="secondary">
-                                        {plate}
-                                      </Badge>
-                                    ))}
-                                  </div>
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Veículos da Composição</h4>
+                              <div className="space-y-2">
+                                <div className="bg-muted/40 p-2 rounded-md flex items-center">
+                                  <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 mr-2">
+                                    Principal
+                                  </Badge>
+                                  <span className="font-medium">{selectedLicense.mainVehiclePlate}</span>
                                 </div>
-                                <Separator />
-                              </>
-                            )}
+                                
+                                {selectedLicense.additionalPlates && selectedLicense.additionalPlates.length > 0 && (
+                                  selectedLicense.additionalPlates.map((plate: string, idx: number) => (
+                                    <div key={plate} className="bg-muted/40 p-2 rounded-md flex items-center">
+                                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100 mr-2">
+                                        {idx === 0 ? "1ª Carreta" : "2ª Carreta"}
+                                      </Badge>
+                                      <span className="font-medium">{plate}</span>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                            
+                            <Separator />
                             
                             <div>
-                              <h4 className="text-sm font-medium mb-1">Informações do Pedido</h4>
-                              <div className="space-y-1 text-sm">
+                              <h4 className="text-sm font-medium mb-2">Informações do Pedido</h4>
+                              <div className="bg-muted/40 p-3 rounded-md space-y-2 text-sm">
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Número do pedido:</span>
                                   <span className="font-medium">{selectedLicense.requestNumber}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Tipo:</span>
+                                  <span className="font-medium">{getLicenseTypeLabel(selectedLicense.type)}</span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Data de criação:</span>
@@ -394,6 +453,10 @@ export default function MobileIssuedLicensesPage() {
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Última atualização:</span>
                                   <span>{formatShortDate(selectedLicense.updatedAt)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Status geral:</span>
+                                  <StatusBadge status={selectedLicense.status} size="sm" />
                                 </div>
                               </div>
                             </div>
