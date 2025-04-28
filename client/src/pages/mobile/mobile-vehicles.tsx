@@ -6,7 +6,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, X } from "lucide-react";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogTrigger, 
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from "@/components/ui/dialog";
 import { VehicleForm } from "@/components/vehicles/vehicle-form";
 import { VehicleType, VehicleBodyType } from "@shared/schema";
 import { cn } from "@/lib/utils";
@@ -25,9 +32,9 @@ const getVehicleTypeLabel = (type: VehicleType) => {
 
 const getBodyTypeLabel = (type?: VehicleBodyType) => {
   if (!type) return "N/A";
-  const types: Record<VehicleBodyType, string> = {
+  const types: Record<string, string> = {
     open: "Aberta",
-    tipper: "Basculante",
+    dump: "Basculante",
     container: "Porta-Container",
     closed: "Fechada",
     tank: "Tanque",
@@ -38,6 +45,7 @@ const getBodyTypeLabel = (type?: VehicleBodyType) => {
 export default function MobileVehiclesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [openVehicleDialogs, setOpenVehicleDialogs] = useState<Record<number, boolean>>({});
   
   // Buscar veículos
   const { data: vehicles, isLoading } = useQuery({
@@ -46,7 +54,7 @@ export default function MobileVehiclesPage() {
   });
   
   // Filtrar veículos baseado no termo de busca
-  const filteredVehicles = vehicles?.filter(vehicle => {
+  const filteredVehicles = vehicles?.filter((vehicle: any) => {
     if (!searchTerm) return true;
     
     const search = searchTerm.toLowerCase();
@@ -57,6 +65,15 @@ export default function MobileVehiclesPage() {
       (getVehicleTypeLabel(vehicle.type).toLowerCase().includes(search))
     );
   });
+  
+  // Funções para controlar o diálogo de cada veículo
+  const openVehicleDialog = (id: number) => {
+    setOpenVehicleDialogs(prev => ({ ...prev, [id]: true }));
+  };
+  
+  const closeVehicleDialog = (id: number) => {
+    setOpenVehicleDialogs(prev => ({ ...prev, [id]: false }));
+  };
   
   return (
     <MobileLayout title="Meus Veículos">
@@ -90,7 +107,7 @@ export default function MobileVehiclesPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] p-0 h-[90vh] overflow-y-auto mobile-form-dialog">
               <VehicleForm
-                onComplete={() => setIsFormOpen(false)}
+                onSuccess={() => setIsFormOpen(false)}
                 onCancel={() => setIsFormOpen(false)}
               />
             </DialogContent>
@@ -131,7 +148,17 @@ export default function MobileVehiclesPage() {
             </div>
           ) : (
             filteredVehicles?.map((vehicle) => (
-              <Dialog key={vehicle.id}>
+              <Dialog 
+                key={vehicle.id} 
+                open={openVehicleDialogs[vehicle.id] || false}
+                onOpenChange={(open) => {
+                  if (open) {
+                    openVehicleDialog(vehicle.id);
+                  } else {
+                    closeVehicleDialog(vehicle.id);
+                  }
+                }}
+              >
                 <DialogTrigger asChild>
                   <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
                     <CardContent className="p-4">
@@ -172,14 +199,14 @@ export default function MobileVehiclesPage() {
                   </Card>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px] p-0 max-h-[90vh] h-auto overflow-y-auto mobile-form-dialog">
-                  <DialogHeader>
-                    <DialogTitle className="sr-only">Informações do Veículo</DialogTitle>
-                    <DialogDescription className="sr-only">Visualize ou edite as informações do veículo</DialogDescription>
-                  </DialogHeader>
+                  <div className="p-4 border-b">
+                    <h2 className="font-semibold text-lg">Informações do Veículo</h2>
+                    <p className="text-sm text-muted-foreground">Visualize ou edite as informações do veículo</p>
+                  </div>
                   <VehicleForm
                     vehicle={vehicle}
-                    onComplete={() => vehicleDialogClose()}
-                    onCancel={() => vehicleDialogClose()}
+                    onSuccess={() => closeVehicleDialog(vehicle.id)}
+                    onCancel={() => closeVehicleDialog(vehicle.id)}
                   />
                 </DialogContent>
               </Dialog>
