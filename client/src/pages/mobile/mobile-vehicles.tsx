@@ -171,11 +171,15 @@ export default function MobileVehiclesPage() {
                     </CardContent>
                   </Card>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] p-0 h-[90vh] overflow-y-auto mobile-form-dialog">
+                <DialogContent className="sm:max-w-[425px] p-0 max-h-[90vh] h-auto overflow-y-auto mobile-form-dialog">
+                  <DialogHeader>
+                    <DialogTitle className="sr-only">Informações do Veículo</DialogTitle>
+                    <DialogDescription className="sr-only">Visualize ou edite as informações do veículo</DialogDescription>
+                  </DialogHeader>
                   <VehicleForm
                     vehicle={vehicle}
-                    onComplete={() => {}}
-                    onCancel={() => {}}
+                    onComplete={() => vehicleDialogClose()}
+                    onCancel={() => vehicleDialogClose()}
                   />
                 </DialogContent>
               </Dialog>

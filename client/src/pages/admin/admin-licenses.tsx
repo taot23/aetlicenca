@@ -1260,7 +1260,7 @@ export default function AdminLicensesPage() {
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-sm w-full sm:w-auto flex items-center justify-center"
                   onClick={(e) => {
                     e.preventDefault();
-                    stateStatusForm.handleSubmit(updateStateStatus)();
+                    stateStatusForm.handleSubmit(onSubmitStateStatus)();
                   }}
                 >
                   {updateStateStatusMutation.isPending && (
