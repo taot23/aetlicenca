@@ -251,18 +251,25 @@ export function Sidebar({ className }: SidebarProps) {
 
   return isMobile ? (
     <>
-      <div className="md:hidden fixed inset-x-0 top-0 z-20 bg-gray-900 text-white flex items-center h-16 px-4">
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-white">
-              <Menu className="h-6 w-6" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 bg-gray-800 text-white w-[250px]">
-            <NavItems />
-          </SheetContent>
-        </Sheet>
-        <Logo width={100} className="ml-2" />
+      <div className="md:hidden fixed inset-x-0 top-0 z-20 bg-gray-900 text-white flex items-center justify-between h-16 px-4 shadow-md">
+        <div className="flex items-center">
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-white p-2 mr-2">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="p-0 bg-gray-800 text-white w-[280px] overflow-y-auto max-h-screen">
+              <NavItems />
+            </SheetContent>
+          </Sheet>
+          <Logo width={90} className="ml-1" />
+        </div>
+        <div className="flex items-center">
+          <Avatar className="h-8 w-8 bg-gray-700">
+            <AvatarFallback>{userInitials}</AvatarFallback>
+          </Avatar>
+        </div>
       </div>
       <div className="pt-16 md:pt-0"></div>
     </>

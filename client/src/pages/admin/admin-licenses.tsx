@@ -566,11 +566,11 @@ export default function AdminLicensesPage() {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto py-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+      <div className="container mx-auto py-4 px-3 md:px-6 md:py-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Licenças</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight leading-tight">Licenças</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               Gerencie todas as licenças no sistema.
             </p>
           </div>
@@ -578,18 +578,18 @@ export default function AdminLicensesPage() {
 
         <div className="flex flex-col space-y-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 px-3 md:pt-6 md:px-6">
               {/* Novo layout de pesquisa conforme mockup, similar ao da página "Acompanhar Licença" */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-5">
                 <div>
-                  <div className="flex flex-col space-y-1.5">
-                    <Label htmlFor="license-search">Pesquisar</Label>
+                  <div className="flex flex-col space-y-1">
+                    <Label htmlFor="license-search" className="text-sm">Pesquisar</Label>
                     <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                      <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-gray-500" />
                       <Input
                         id="license-search"
                         placeholder="Nº do pedido ou placa..."
-                        className="pl-9"
+                        className="pl-8 h-9 text-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
@@ -598,10 +598,10 @@ export default function AdminLicensesPage() {
                 </div>
                 
                 <div>
-                  <div className="flex flex-col space-y-1.5">
-                    <Label htmlFor="status-filter">Status</Label>
+                  <div className="flex flex-col space-y-1">
+                    <Label htmlFor="status-filter" className="text-sm">Status</Label>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger id="status-filter">
+                      <SelectTrigger id="status-filter" className="h-9 text-sm">
                         <SelectValue placeholder="Todos os status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -617,11 +617,12 @@ export default function AdminLicensesPage() {
                 </div>
                 
                 <div>
-                  <div className="flex flex-col space-y-1.5">
-                    <Label htmlFor="date-filter">Data</Label>
+                  <div className="flex flex-col space-y-1">
+                    <Label htmlFor="date-filter" className="text-sm">Data</Label>
                     <Input
                       id="date-filter"
                       type="date"
+                      className="h-9 text-sm"
                       value={dateFilter}
                       onChange={(e) => setDateFilter(e.target.value)}
                     />
@@ -629,10 +630,10 @@ export default function AdminLicensesPage() {
                 </div>
                 
                 <div className="md:col-span-3">
-                  <div className="flex flex-col space-y-1.5">
-                    <Label htmlFor="transporter-filter">Transportador</Label>
+                  <div className="flex flex-col space-y-1">
+                    <Label htmlFor="transporter-filter" className="text-sm">Transportador</Label>
                     <Select value={transporterFilter} onValueChange={setTransporterFilter}>
-                      <SelectTrigger id="transporter-filter">
+                      <SelectTrigger id="transporter-filter" className="h-9 text-sm">
                         <SelectValue placeholder="Todos os transportadores" />
                       </SelectTrigger>
                       <SelectContent>
@@ -855,27 +856,35 @@ export default function AdminLicensesPage() {
                     ) : (
                       filteredLicenses.map((license) => (
                         <Card key={license.id} className="overflow-hidden">
-                          <CardContent className="p-4">
-                            <div className="flex flex-col gap-2">
+                          <CardContent className="p-3">
+                            <div className="flex flex-col gap-1.5">
                               <div className="flex justify-between items-start">
                                 <div>
-                                  <h3 className="font-medium text-lg">{license.requestNumber}</h3>
-                                  <p className="text-sm text-gray-500">
+                                  <h3 className="font-medium text-base">{license.requestNumber}</h3>
+                                  <p className="text-xs text-gray-500">
                                     {getLicenseTypeLabel(license.type)}
                                   </p>
                                 </div>
                                 <StatusBadge status={license.status} />
                               </div>
                               
-                              <div className="mt-2">
-                                <p className="text-sm"><span className="font-medium">Veículo:</span> {license.mainVehiclePlate}</p>
-                                <div className="text-sm">
-                                  <span className="font-medium">Transportador:</span>{" "}
-                                  <TransporterInfo transporterId={license.transporterId} compact={true} />
+                              <div className="mt-1.5 space-y-1">
+                                <div className="flex items-center text-xs">
+                                  <span className="font-medium min-w-[70px]">Veículo:</span> 
+                                  <span className="truncate">{license.mainVehiclePlate}</span>
                                 </div>
-                                <p className="text-sm"><span className="font-medium">Data:</span> {formatDate(license.createdAt)}</p>
+                                <div className="flex items-start text-xs">
+                                  <span className="font-medium min-w-[70px] mt-0.5">Transportador:</span>
+                                  <span className="truncate">
+                                    <TransporterInfo transporterId={license.transporterId} compact={true} />
+                                  </span>
+                                </div>
+                                <div className="flex items-center text-xs">
+                                  <span className="font-medium min-w-[70px]">Data:</span> 
+                                  <span>{formatDate(license.createdAt)}</span>
+                                </div>
                                 <div className="mt-1">
-                                  <span className="text-sm font-medium">Estados:</span>
+                                  <span className="text-xs font-medium">Estados:</span>
                                   <div className="flex flex-wrap gap-1 mt-1">
                                     {license.states.map((state, idx) => {
                                       // Encontrar o status atual deste estado
@@ -903,7 +912,7 @@ export default function AdminLicensesPage() {
                                       }
                                       
                                       return (
-                                        <Badge key={idx} variant="outline" className={`text-xs ${badgeClass}`}>
+                                        <Badge key={idx} variant="outline" className={`text-[10px] px-1.5 py-0.5 ${badgeClass}`}>
                                           {state}
                                         </Badge>
                                       );
@@ -912,14 +921,14 @@ export default function AdminLicensesPage() {
                                 </div>
                               </div>
 
-                              <div className="flex justify-center mt-3">
+                              <div className="flex justify-center mt-2">
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleViewDetails(license)}
-                                  className="flex items-center"
+                                  className="flex items-center h-8 text-xs"
                                 >
-                                  <Pencil className="h-4 w-4 mr-1" />
+                                  <Pencil className="h-3.5 w-3.5 mr-1" />
                                   Detalhes
                                 </Button>
                               </div>

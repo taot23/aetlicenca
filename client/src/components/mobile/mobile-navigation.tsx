@@ -40,16 +40,16 @@ export function MobileNavigation() {
   ];
   
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-16 bg-background border-t border-border flex items-center justify-around px-2 z-50">
+    <div className="fixed bottom-0 left-0 right-0 h-16 bg-background border-t border-border flex items-center justify-around px-1 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
       {navItems.map((item) => (
         <Link 
           key={item.href} 
           href={item.href}
-          className="no-underline"
+          className="no-underline flex-1"
         >
           <div className={cn(
             "flex flex-col items-center justify-center",
-            "w-full px-1 py-2 rounded-lg",
+            "h-14 mx-1 py-1 rounded-lg",
             "transition-colors",
             item.active ? "text-primary" : "text-muted-foreground hover:text-foreground"
           )}>
@@ -57,7 +57,7 @@ export function MobileNavigation() {
               "h-5 w-5 mb-1",
               item.active ? "text-primary" : "text-muted-foreground"
             )} />
-            <span className="text-xs font-medium">{item.name}</span>
+            <span className="text-[10px] font-medium leading-tight">{item.name}</span>
           </div>
         </Link>
       ))}

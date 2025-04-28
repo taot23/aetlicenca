@@ -28,21 +28,21 @@ export function StatCard({
   
   return (
     <div className={cn(
-      "bg-white rounded-lg p-4 flex flex-col shadow-sm w-full", 
+      "bg-white rounded-lg p-3 flex flex-col shadow-sm w-full h-full", 
       className
     )}>
-      <div className="text-gray-500 text-sm font-normal mb-2">{title}</div>
+      <div className="text-gray-500 text-xs font-medium mb-1.5">{title}</div>
       
       <div className="flex items-center">
         <div className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center bg-blue-100",
+          "w-9 h-9 rounded-full flex items-center justify-center bg-blue-100",
           iconClassName
         )}>
           {icon}
         </div>
         
         <div className={cn(
-          "text-3xl font-bold ml-3", 
+          "text-2xl font-bold ml-2.5", 
           valueClassName
         )}>
           {value}
@@ -51,17 +51,17 @@ export function StatCard({
       
       {(changePercentage !== undefined || changeText) && (
         <div className={cn(
-          "mt-2 text-xs flex items-center",
+          "mt-1.5 text-[10px] flex items-center flex-wrap",
           isPositiveChange ? "text-green-500" : "text-red-500",
           changeClassName
         )}>
-          <span className="mr-1">
+          <span className="mr-0.5">
             {isPositiveChange ? "↑" : "↓"}
           </span>
           {typeof changePercentage === 'number' && (
             <span>{Math.abs(changePercentage)}% </span>
           )}
-          <span className="text-gray-500">
+          <span className="text-gray-500 text-[10px] leading-tight">
             {changeText || "em relação ao mês anterior"}
           </span>
         </div>
