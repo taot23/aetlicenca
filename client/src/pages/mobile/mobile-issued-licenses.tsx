@@ -208,9 +208,9 @@ export default function MobileIssuedLicensesPage() {
                   </div>
                 </DialogTrigger>
                 
-                <DialogContent className="sm:max-w-[425px] p-0 h-[90vh] overflow-y-auto mobile-form-dialog">
+                <DialogContent className="sm:max-w-[425px] p-0 max-h-[90vh] overflow-y-auto mobile-form-dialog">
                   <DialogHeader className="sticky top-0 z-10 bg-background p-4 border-b">
-                    <DialogTitle>{selectedLicense?.requestNumber}</DialogTitle>
+                    <DialogTitle className="text-lg font-semibold">{selectedLicense?.requestNumber}</DialogTitle>
                   </DialogHeader>
                   
                   {selectedLicense && (
