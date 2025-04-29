@@ -531,6 +531,31 @@ export const vehicleBodyTypeEnum = z.enum([
 
 export type VehicleBodyType = z.infer<typeof vehicleBodyTypeEnum>;
 
+// Status History model
+export const statusHistories = pgTable("status_histories", {
+  id: serial("id").primaryKey(),
+  licenseId: integer("license_id").notNull().references(() => licenseRequests.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  state: text("state").notNull(), // Estado da federação: SP, MG, etc.
+  oldStatus: text("old_status").notNull(), // Status anterior
+  newStatus: text("new_status").notNull(), // Novo status
+  comments: text("comments"), // Comentários/observações sobre a alteração
+  createdAt: timestamp("created_at").defaultNow().notNull(), // Data/hora da alteração
+}, (table) => {
+  return {
+    licenseIdIdx: index("idx_history_license_id").on(table.licenseId),
+    userIdIdx: index("idx_history_user_id").on(table.userId),
+    stateIdx: index("idx_history_state").on(table.state),
+    createdAtIdx: index("idx_history_created_at").on(table.createdAt)
+  };
+});
+
+export const insertStatusHistorySchema = createInsertSchema(statusHistories)
+  .omit({ id: true, createdAt: true });
+
+export type StatusHistory = typeof statusHistories.$inferSelect;
+export type InsertStatusHistory = z.infer<typeof insertStatusHistorySchema>;
+
 export const bodyTypeOptions = [
   { value: "open", label: "ABERTA" },
   { value: "dump", label: "BASCULANTE" },
