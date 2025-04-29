@@ -2594,11 +2594,29 @@ app.patch('/api/admin/licenses/:id/status', requireOperational, upload.single('l
         file = req.file;
       }
       
+      // Obter o status anterior do estado específico
+      const previousStateStatus = existingLicense.stateStatuses?.find(ss => 
+        ss.startsWith(`${stateStatusData.state}:`)
+      )?.split(':')?.[1] || 'pending';
+      
       // Atualizar status do estado da licença
       const updatedLicense = await storage.updateLicenseStateStatus({
         ...stateStatusData,
         file,
       });
+      
+      // Registrar mudança no histórico de status
+      await storage.createStatusHistory({
+        licenseId: updatedLicense.id,
+        state: stateStatusData.state,
+        userId: req.user!.id,
+        oldStatus: previousStateStatus,
+        newStatus: stateStatusData.status,
+        comments: stateStatusData.comments || null,
+        createdAt: new Date()
+      });
+      
+      console.log(`Histórico de status criado para licença ${licenseId}, estado ${stateStatusData.state}: ${previousStateStatus} -> ${stateStatusData.status}`);
       
       // Enviar notificação em tempo real via WebSocket
       broadcastMessage({
