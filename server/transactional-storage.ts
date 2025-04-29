@@ -950,4 +950,58 @@ export class TransactionalStorage implements IStorage {
     const result = await getSoonToExpireLicenses();
     return result.rows;
   }
+  
+  // Métodos para histórico de status
+  async createStatusHistory(historyData: InsertStatusHistory): Promise<StatusHistory> {
+    try {
+      const [history] = await db
+        .insert(statusHistories)
+        .values({
+          licenseId: historyData.licenseId,
+          state: historyData.state,
+          userId: historyData.userId,
+          oldStatus: historyData.oldStatus,
+          newStatus: historyData.newStatus,
+          comments: historyData.comments,
+          createdAt: historyData.createdAt || new Date()
+        })
+        .returning();
+      
+      return history;
+    } catch (error) {
+      console.error('Erro ao criar histórico de status:', error);
+      throw new Error('Falha ao registrar histórico de status');
+    }
+  }
+  
+  async getStatusHistoryByLicenseId(licenseId: number): Promise<StatusHistory[]> {
+    try {
+      return await db
+        .select()
+        .from(statusHistories)
+        .where(eq(statusHistories.licenseId, licenseId))
+        .orderBy(desc(statusHistories.createdAt));
+    } catch (error) {
+      console.error('Erro ao buscar histórico de status por licença:', error);
+      throw new Error('Falha ao buscar histórico de status');
+    }
+  }
+  
+  async getStatusHistoryByState(licenseId: number, state: string): Promise<StatusHistory[]> {
+    try {
+      return await db
+        .select()
+        .from(statusHistories)
+        .where(
+          and(
+            eq(statusHistories.licenseId, licenseId),
+            eq(statusHistories.state, state)
+          )
+        )
+        .orderBy(desc(statusHistories.createdAt));
+    } catch (error) {
+      console.error('Erro ao buscar histórico de status por estado:', error);
+      throw new Error('Falha ao buscar histórico de status para o estado especificado');
+    }
+  }
 }
