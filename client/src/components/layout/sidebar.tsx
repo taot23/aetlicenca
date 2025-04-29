@@ -205,19 +205,7 @@ export function Sidebar({ className }: SidebarProps) {
               </Button>
             )}
             
-            {isOperational && (
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start text-white hover:bg-gray-700",
-                  location === "/admin/vehicles" ? "bg-gray-700" : "bg-transparent"
-                )}
-                onClick={() => handleNavigate("/admin/vehicles")}
-              >
-                <Truck className="mr-3 h-5 w-5" />
-                Todos Veículos
-              </Button>
-            )}
+            {/* Botão de todos veículos para usuários operacionais removido */}
           </>
         )}
       </div>
