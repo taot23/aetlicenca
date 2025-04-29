@@ -12,10 +12,12 @@ import {
   insertDraftLicenseSchema, 
   updateLicenseStatusSchema,
   updateLicenseStateSchema,
+  insertStatusHistorySchema,
   LicenseStatus,
   userRoleEnum,
   licenseRequests,
-  transporters
+  transporters,
+  statusHistories
 } from "@shared/schema";
 import { eq, sql, or, inArray } from "drizzle-orm";
 import { fromZodError } from "zod-validation-error";

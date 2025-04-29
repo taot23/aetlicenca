@@ -1596,6 +1596,29 @@ export class DatabaseStorage implements IStorage {
     
     return typeMap[type] || type;
   }
+
+  // Métodos de histórico de status
+  async createStatusHistory(historyData: InsertStatusHistory): Promise<StatusHistory> {
+    const results = await db.insert(statusHistories).values(historyData).returning();
+    return results[0];
+  }
+
+  async getStatusHistoryByLicenseId(licenseId: number): Promise<StatusHistory[]> {
+    return db.select()
+      .from(statusHistories)
+      .where(eq(statusHistories.licenseId, licenseId))
+      .orderBy(desc(statusHistories.createdAt));
+  }
+
+  async getStatusHistoryByState(licenseId: number, state: string): Promise<StatusHistory[]> {
+    return db.select()
+      .from(statusHistories)
+      .where(and(
+        eq(statusHistories.licenseId, licenseId),
+        eq(statusHistories.state, state)
+      ))
+      .orderBy(desc(statusHistories.createdAt));
+  }
 }
 
 // Define qual implementação de armazenamento será usada
