@@ -22,16 +22,29 @@ import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { getRoleColor, getRoleLabel } from "@/lib/role-utils";
 
-// Schema para validação do formulário
-const userFormSchema = z.object({
+// Schema para validação do formulário base
+const baseUserFormSchema = {
   fullName: z.string().min(3, "Nome completo deve ter pelo menos 3 caracteres"),
   email: z.string().email("Informe um email válido"),
-  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   phone: z.string().min(8, "Telefone deve ter pelo menos 8 caracteres"),
   role: z.string()
+};
+
+// Schema para criação (com senha obrigatória)
+const createUserFormSchema = z.object({
+  ...baseUserFormSchema,
+  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
 });
 
-type UserFormValues = z.infer<typeof userFormSchema>;
+// Schema para edição (com senha opcional)
+const updateUserFormSchema = z.object({
+  ...baseUserFormSchema,
+  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").optional().or(z.literal('')),
+});
+
+type CreateUserFormValues = z.infer<typeof createUserFormSchema>;
+type UpdateUserFormValues = z.infer<typeof updateUserFormSchema>;
+type UserFormValues = CreateUserFormValues | UpdateUserFormValues;
 
 interface User {
   id: number;
@@ -84,7 +97,7 @@ export default function AdminUsers() {
   // User form for create/edit
   const UserForm = ({ user, onSuccess }: { user?: User, onSuccess?: () => void }) => {
     const form = useForm<UserFormValues>({
-      resolver: zodResolver(userFormSchema),
+      resolver: zodResolver(user ? updateUserFormSchema : createUserFormSchema),
       defaultValues: user ? {
         fullName: user.fullName,
         email: user.email,
@@ -149,9 +162,15 @@ export default function AdminUsers() {
 
     const onSubmit = (data: UserFormValues) => {
       if (user) {
-        updateUserMutation.mutate(data);
+        // Se estiver editando e a senha estiver vazia, remova o campo password
+        if (data.password === '') {
+          const { password, ...restData } = data;
+          updateUserMutation.mutate(restData as UpdateUserFormValues);
+        } else {
+          updateUserMutation.mutate(data);
+        }
       } else {
-        createUserMutation.mutate(data);
+        createUserMutation.mutate(data as CreateUserFormValues);
       }
     };
 
