@@ -1710,6 +1710,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint para buscar o histórico de status de uma licença
+  app.get('/api/licenses/:id/status-history', requireAuth, async (req, res) => {
+    try {
+      const licenseId = parseInt(req.params.id);
+      
+      // Verifica se a licença existe
+      const license = await storage.getLicenseRequestById(licenseId);
+      if (!license) {
+        return res.status(404).json({ message: 'Licença não encontrada' });
+      }
+      
+      // Verifica se o usuário tem permissão para acessar essa licença
+      const isStaff = ['operational', 'supervisor', 'admin'].includes(req.user!.role);
+      if (!isStaff && license.userId !== req.user!.id) {
+        return res.status(403).json({ message: 'Sem permissão para acessar o histórico desta licença' });
+      }
+      
+      // Busca o histórico completo
+      const statusHistory = await storage.getStatusHistoryByLicenseId(licenseId);
+      
+      res.json(statusHistory);
+    } catch (error) {
+      console.error('Erro ao buscar histórico de status:', error);
+      res.status(500).json({ message: 'Erro ao buscar histórico de status' });
+    }
+  });
+  
+  // Endpoint para buscar o histórico de status de um estado específico na licença
+  app.get('/api/licenses/:id/status-history/:state', requireAuth, async (req, res) => {
+    try {
+      const licenseId = parseInt(req.params.id);
+      const state = req.params.state;
+      
+      // Verifica se a licença existe
+      const license = await storage.getLicenseRequestById(licenseId);
+      if (!license) {
+        return res.status(404).json({ message: 'Licença não encontrada' });
+      }
+      
+      // Verifica se o usuário tem permissão para acessar essa licença
+      const isStaff = ['operational', 'supervisor', 'admin'].includes(req.user!.role);
+      if (!isStaff && license.userId !== req.user!.id) {
+        return res.status(403).json({ message: 'Sem permissão para acessar o histórico desta licença' });
+      }
+      
+      // Verifica se o estado existe na licença
+      if (!license.states.includes(state)) {
+        return res.status(400).json({ message: 'Estado não encontrado na licença' });
+      }
+      
+      // Busca o histórico para o estado específico
+      const stateHistory = await storage.getStatusHistoryByState(licenseId, state);
+      
+      res.json(stateHistory);
+    } catch (error) {
+      console.error('Erro ao buscar histórico de status do estado:', error);
+      res.status(500).json({ message: 'Erro ao buscar histórico de status do estado' });
+    }
+  });
+
   // Admin endpoints
   // Endpoint para buscar todas as licenças - acessível para Admin, Operacional e Supervisor
   // Rota para admin/operational obter todas as licenças
@@ -2536,6 +2596,11 @@ app.patch('/api/admin/licenses/:id/status', requireOperational, upload.single('l
         file = req.file;
       }
       
+      // Obter o status anterior do estado específico
+      const previousStateStatus = existingLicense.stateStatuses?.find(ss => 
+        ss.startsWith(`${statusData.state}:`)
+      )?.split(':')?.[1] || 'pending';
+      
       // Usar updateLicenseStateStatus para garantir que o arquivo e número AET 
       // sejam específicos para o estado selecionado
       const updatedLicense = await storage.updateLicenseStateStatus({
@@ -2546,6 +2611,31 @@ app.patch('/api/admin/licenses/:id/status', requireOperational, upload.single('l
         validUntil: statusData.validUntil,
         aetNumber: statusData.aetNumber,
         file
+      });
+      
+      // Registrar mudança no histórico de status
+      await storage.createStatusHistory({
+        licenseId: updatedLicense.id,
+        state: statusData.state,
+        userId: req.user!.id,
+        oldStatus: previousStateStatus,
+        newStatus: statusData.status,
+        comments: statusData.comments || null,
+        createdAt: new Date()
+      });
+      
+      console.log(`Histórico de status criado para licença ${licenseId}, estado ${statusData.state}: ${previousStateStatus} -> ${statusData.status}`);
+      
+      // Enviar notificação em tempo real via WebSocket
+      broadcastMessage({
+        type: 'STATUS_UPDATE',
+        data: {
+          licenseId: updatedLicense.id,
+          state: statusData.state,
+          status: statusData.status,
+          updatedAt: new Date().toISOString(),
+          license: updatedLicense
+        }
       });
       
       res.json(updatedLicense);

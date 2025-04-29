@@ -3,7 +3,8 @@ import {
   vehicles, type Vehicle, type InsertVehicle,
   transporters, type Transporter, type InsertTransporter,
   licenseRequests, type LicenseRequest, type InsertLicenseRequest, type UpdateLicenseStatus, 
-  type UpdateLicenseState, LicenseStatus, LicenseType
+  type UpdateLicenseState, LicenseStatus, LicenseType,
+  statusHistories, type StatusHistory, type InsertStatusHistory
 } from "@shared/schema";
 import { eq, and, desc, asc, sql, gt, lt, like, not, isNull, or } from "drizzle-orm";
 import { db, pool, withTransaction } from "./db";
