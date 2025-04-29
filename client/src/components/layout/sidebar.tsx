@@ -213,7 +213,7 @@ export function Sidebar({ className }: SidebarProps) {
       <div className="p-4 border-t border-gray-700">
         <div className="flex items-center">
           <Avatar className="h-10 w-10 bg-gray-500">
-            <AvatarFallback className="text-white">{userInitials}</AvatarFallback>
+            <AvatarFallback className="text-black font-medium">{userInitials}</AvatarFallback>
           </Avatar>
           <div className="ml-3">
             <p className="text-sm font-medium text-white">{user?.fullName}</p>
@@ -255,7 +255,7 @@ export function Sidebar({ className }: SidebarProps) {
         </div>
         <div className="flex items-center">
           <Avatar className="h-8 w-8 bg-gray-700">
-            <AvatarFallback className="text-white">{userInitials}</AvatarFallback>
+            <AvatarFallback className="text-black font-medium">{userInitials}</AvatarFallback>
           </Avatar>
         </div>
       </div>
