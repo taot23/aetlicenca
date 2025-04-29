@@ -820,6 +820,36 @@ export class MemStorage implements IStorage {
       default: return type;
     }
   }
+
+  // Métodos de histórico de status
+  async createStatusHistory(historyData: InsertStatusHistory): Promise<StatusHistory> {
+    const id = this.currentHistoryId++;
+    const history: StatusHistory = {
+      ...historyData,
+      id,
+      createdAt: new Date()
+    };
+    this.statusHistories.set(id, history);
+    return history;
+  }
+
+  async getStatusHistoryByLicenseId(licenseId: number): Promise<StatusHistory[]> {
+    return Array.from(this.statusHistories.values())
+      .filter(history => history.licenseId === licenseId)
+      .sort((a, b) => {
+        // Ordenar do mais recente para o mais antigo
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+  }
+
+  async getStatusHistoryByState(licenseId: number, state: string): Promise<StatusHistory[]> {
+    return Array.from(this.statusHistories.values())
+      .filter(history => history.licenseId === licenseId && history.state === state)
+      .sort((a, b) => {
+        // Ordenar do mais recente para o mais antigo
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      });
+  }
 }
 
 // Implementação de armazenamento com PostgreSQL
