@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { StatusBadge, Status } from "@/components/licenses/status-badge";
+import { StatusHistory } from "@/components/licenses/status-history";
 import { useWebSocketContext } from "@/hooks/use-websocket-context";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -1293,6 +1294,11 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Componente de histórico de status */}
+      <div className="mt-6">
+        <StatusHistory licenseId={license.id} states={license.states || []} />
+      </div>
     </div>
   );
 }
