@@ -834,21 +834,45 @@ export class MemStorage implements IStorage {
   }
 
   async getStatusHistoryByLicenseId(licenseId: number): Promise<StatusHistory[]> {
-    return Array.from(this.statusHistories.values())
+    const histories = Array.from(this.statusHistories.values())
       .filter(history => history.licenseId === licenseId)
       .sort((a, b) => {
         // Ordenar do mais recente para o mais antigo
         return b.createdAt.getTime() - a.createdAt.getTime();
       });
+      
+    // Adicionar informações de usuário para cada história
+    return histories.map(history => {
+      const user = this.users.get(history.userId);
+      return {
+        ...history,
+        user: user ? {
+          fullName: user.fullName,
+          email: user.email
+        } : undefined
+      };
+    });
   }
 
   async getStatusHistoryByState(licenseId: number, state: string): Promise<StatusHistory[]> {
-    return Array.from(this.statusHistories.values())
+    const histories = Array.from(this.statusHistories.values())
       .filter(history => history.licenseId === licenseId && history.state === state)
       .sort((a, b) => {
         // Ordenar do mais recente para o mais antigo
         return b.createdAt.getTime() - a.createdAt.getTime();
       });
+      
+    // Adicionar informações de usuário para cada história
+    return histories.map(history => {
+      const user = this.users.get(history.userId);
+      return {
+        ...history,
+        user: user ? {
+          fullName: user.fullName,
+          email: user.email
+        } : undefined
+      };
+    });
   }
 }
 
@@ -1604,20 +1628,54 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getStatusHistoryByLicenseId(licenseId: number): Promise<StatusHistory[]> {
-    return db.select()
-      .from(statusHistories)
-      .where(eq(statusHistories.licenseId, licenseId))
-      .orderBy(desc(statusHistories.createdAt));
+    // Usar uma subconsulta para buscar o nome completo e email do usuário
+    const history = await db.select({
+      id: statusHistories.id,
+      licenseId: statusHistories.licenseId,
+      state: statusHistories.state,
+      userId: statusHistories.userId,
+      oldStatus: statusHistories.oldStatus,
+      newStatus: statusHistories.newStatus,
+      comments: statusHistories.comments,
+      createdAt: statusHistories.createdAt,
+      user: {
+        fullName: users.fullName,
+        email: users.email
+      }
+    })
+    .from(statusHistories)
+    .leftJoin(users, eq(statusHistories.userId, users.id))
+    .where(eq(statusHistories.licenseId, licenseId))
+    .orderBy(desc(statusHistories.createdAt));
+    
+    return history;
   }
 
   async getStatusHistoryByState(licenseId: number, state: string): Promise<StatusHistory[]> {
-    return db.select()
-      .from(statusHistories)
-      .where(and(
-        eq(statusHistories.licenseId, licenseId),
-        eq(statusHistories.state, state)
-      ))
-      .orderBy(desc(statusHistories.createdAt));
+    // Usar uma subconsulta para buscar o nome completo e email do usuário
+    const history = await db.select({
+      id: statusHistories.id,
+      licenseId: statusHistories.licenseId,
+      state: statusHistories.state,
+      userId: statusHistories.userId,
+      oldStatus: statusHistories.oldStatus,
+      newStatus: statusHistories.newStatus,
+      comments: statusHistories.comments,
+      createdAt: statusHistories.createdAt,
+      user: {
+        fullName: users.fullName,
+        email: users.email
+      }
+    })
+    .from(statusHistories)
+    .leftJoin(users, eq(statusHistories.userId, users.id))
+    .where(and(
+      eq(statusHistories.licenseId, licenseId),
+      eq(statusHistories.state, state)
+    ))
+    .orderBy(desc(statusHistories.createdAt));
+    
+    return history;
   }
 }
 
