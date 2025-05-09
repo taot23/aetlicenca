@@ -38,9 +38,10 @@ interface StatusHistoryProps {
   licenseId: number;
   states: string[];
   showHeader?: boolean;
+  showTabs?: boolean;
 }
 
-export function StatusHistory({ licenseId, states, showHeader = true }: StatusHistoryProps) {
+export function StatusHistory({ licenseId, states, showHeader = true, showTabs = true }: StatusHistoryProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = React.useState<string>("all");
@@ -234,103 +235,197 @@ export function StatusHistory({ licenseId, states, showHeader = true }: StatusHi
         </CardHeader>
       )}
       <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4 flex-wrap">
-            <TabsTrigger value="all">Todos os Estados</TabsTrigger>
-            {states.map((state) => (
-              <TabsTrigger key={state} value={state}>{state}</TabsTrigger>
-            ))}
-          </TabsList>
-          
-          {isDataLoading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : errorState.hasError ? (
-            <div className="text-center py-8">
-              {errorState.isAuth ? (
-                <div>
-                  <AlertCircle className="h-8 w-8 mx-auto mb-2 text-orange-500" />
-                  <h3 className="font-medium text-lg">Autenticação necessária</h3>
-                  <p className="text-muted-foreground mt-1">
-                    Você precisa estar logado para visualizar o histórico de status.
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <AlertCircle className="h-8 w-8 mx-auto mb-2 text-red-500" />
-                  <h3 className="font-medium text-lg">Erro ao carregar histórico</h3>
-                  <p className="text-muted-foreground mt-1">
-                    {errorState.message}
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : displayData && displayData.length > 0 ? (
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-4">
-                {displayData.map((item) => (
-                  <div key={item.id} className="border rounded-lg p-4 bg-card">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center">
-                        <ArrowRightLeft className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="font-medium">
-                          Alteração de <StatusBadge status={item.oldStatus} /> para <StatusBadge status={item.newStatus} />
+        {showTabs ? (
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4 flex-wrap">
+              <TabsTrigger value="all">Todos os Estados</TabsTrigger>
+              {states.map((state) => (
+                <TabsTrigger key={state} value={state}>{state}</TabsTrigger>
+              ))}
+            </TabsList>
+            
+            {isDataLoading ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : errorState.hasError ? (
+              <div className="text-center py-8">
+                {errorState.isAuth ? (
+                  <div>
+                    <AlertCircle className="h-8 w-8 mx-auto mb-2 text-orange-500" />
+                    <h3 className="font-medium text-lg">Autenticação necessária</h3>
+                    <p className="text-muted-foreground mt-1">
+                      Você precisa estar logado para visualizar o histórico de status.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <AlertCircle className="h-8 w-8 mx-auto mb-2 text-red-500" />
+                    <h3 className="font-medium text-lg">Erro ao carregar histórico</h3>
+                    <p className="text-muted-foreground mt-1">
+                      {errorState.message}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : displayData && displayData.length > 0 ? (
+              <ScrollArea className="h-[400px] pr-4">
+                <div className="space-y-4">
+                  {displayData.map((item) => (
+                    <div key={item.id} className="border rounded-lg p-4 bg-card">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center">
+                          <ArrowRightLeft className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span className="font-medium">
+                            Alteração de <StatusBadge status={item.oldStatus} /> para <StatusBadge status={item.newStatus} />
+                          </span>
+                        </div>
+                        {(() => {
+                          // Definir cores baseadas no status do estado
+                          let badgeClass = "bg-gray-100 border-gray-200 text-gray-800";
+                          
+                          // Usar o status atual do item para definir a cor
+                          if (item.newStatus === "approved") {
+                            badgeClass = "bg-green-50 border-green-200 text-green-800";
+                          } else if (item.newStatus === "rejected") {
+                            badgeClass = "bg-red-50 border-red-200 text-red-800";
+                          } else if (item.newStatus === "pending_approval") {
+                            badgeClass = "bg-yellow-50 border-yellow-200 text-yellow-800";
+                          } else if (item.newStatus === "under_review") {
+                            badgeClass = "bg-blue-50 border-blue-200 text-blue-800";
+                          }
+                          
+                          return (
+                            <Badge variant="outline" className={`text-xs ${badgeClass}`}>
+                              {item.state}
+                            </Badge>
+                          );
+                        })()}
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-muted-foreground mb-2">
+                        <Clock className="h-4 w-4 mr-1" />
+                        <span>{formatDate(item.createdAt)}</span>
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-muted-foreground mb-2">
+                        <User className="h-4 w-4 mr-1" />
+                        <span>
+                          {item.user ? item.user.fullName : `Usuário ID: ${item.userId}`}
                         </span>
                       </div>
-                      {(() => {
-                        // Definir cores baseadas no status do estado
-                        let badgeClass = "bg-gray-100 border-gray-200 text-gray-800";
-                        
-                        // Usar o status atual do item para definir a cor
-                        if (item.newStatus === "approved") {
-                          badgeClass = "bg-green-50 border-green-200 text-green-800";
-                        } else if (item.newStatus === "rejected") {
-                          badgeClass = "bg-red-50 border-red-200 text-red-800";
-                        } else if (item.newStatus === "pending_approval") {
-                          badgeClass = "bg-yellow-50 border-yellow-200 text-yellow-800";
-                        } else if (item.newStatus === "under_review") {
-                          badgeClass = "bg-blue-50 border-blue-200 text-blue-800";
-                        }
-                        
-                        return (
-                          <Badge variant="outline" className={`text-xs ${badgeClass}`}>
-                            {item.state}
-                          </Badge>
-                        );
-                      })()}
-                    </div>
-                    
-                    <div className="flex items-center text-sm text-muted-foreground mb-2">
-                      <Clock className="h-4 w-4 mr-1" />
-                      <span>{formatDate(item.createdAt)}</span>
-                    </div>
-                    
-                    <div className="flex items-center text-sm text-muted-foreground mb-2">
-                      <User className="h-4 w-4 mr-1" />
-                      <span>
-                        {item.user ? item.user.fullName : `Usuário ID: ${item.userId}`}
-                      </span>
-                    </div>
-                    
-                    {item.comments && (
-                      <div className="mt-2 pt-2 border-t">
-                        <div className="flex items-start">
-                          <MessageSquare className="h-4 w-4 mr-1 mt-0.5 text-muted-foreground" />
-                          <div className="text-sm">{item.comments}</div>
+                      
+                      {item.comments && (
+                        <div className="mt-2 pt-2 border-t">
+                          <div className="flex items-start">
+                            <MessageSquare className="h-4 w-4 mr-1 mt-0.5 text-muted-foreground" />
+                            <div className="text-sm">{item.comments}</div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhum registro de histórico encontrado.
               </div>
-            </ScrollArea>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhum registro de histórico encontrado.
-            </div>
-          )}
-        </Tabs>
+            )}
+          </Tabs>
+        ) : (
+          /* Quando showTabs for falso, mostrar apenas o histórico completo sem as abas */
+          <>
+            {isLoading ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : errorState.hasError ? (
+              <div className="text-center py-8">
+                {errorState.isAuth ? (
+                  <div>
+                    <AlertCircle className="h-8 w-8 mx-auto mb-2 text-orange-500" />
+                    <h3 className="font-medium text-lg">Autenticação necessária</h3>
+                    <p className="text-muted-foreground mt-1">
+                      Você precisa estar logado para visualizar o histórico de status.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <AlertCircle className="h-8 w-8 mx-auto mb-2 text-red-500" />
+                    <h3 className="font-medium text-lg">Erro ao carregar histórico</h3>
+                    <p className="text-muted-foreground mt-1">
+                      {errorState.message}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : historyData && historyData.length > 0 ? (
+              <ScrollArea className="h-[400px] pr-4">
+                <div className="space-y-4">
+                  {historyData.map((item) => (
+                    <div key={item.id} className="border rounded-lg p-4 bg-card">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center">
+                          <ArrowRightLeft className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span className="font-medium">
+                            Alteração de <StatusBadge status={item.oldStatus} /> para <StatusBadge status={item.newStatus} />
+                          </span>
+                        </div>
+                        {(() => {
+                          // Definir cores baseadas no status do estado
+                          let badgeClass = "bg-gray-100 border-gray-200 text-gray-800";
+                          
+                          // Usar o status atual do item para definir a cor
+                          if (item.newStatus === "approved") {
+                            badgeClass = "bg-green-50 border-green-200 text-green-800";
+                          } else if (item.newStatus === "rejected") {
+                            badgeClass = "bg-red-50 border-red-200 text-red-800";
+                          } else if (item.newStatus === "pending_approval") {
+                            badgeClass = "bg-yellow-50 border-yellow-200 text-yellow-800";
+                          } else if (item.newStatus === "under_review") {
+                            badgeClass = "bg-blue-50 border-blue-200 text-blue-800";
+                          }
+                          
+                          return (
+                            <Badge variant="outline" className={`text-xs ${badgeClass}`}>
+                              {item.state}
+                            </Badge>
+                          );
+                        })()}
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-muted-foreground mb-2">
+                        <Clock className="h-4 w-4 mr-1" />
+                        <span>{formatDate(item.createdAt)}</span>
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-muted-foreground mb-2">
+                        <User className="h-4 w-4 mr-1" />
+                        <span>
+                          {item.user ? item.user.fullName : `Usuário ID: ${item.userId}`}
+                        </span>
+                      </div>
+                      
+                      {item.comments && (
+                        <div className="mt-2 pt-2 border-t">
+                          <div className="flex items-start">
+                            <MessageSquare className="h-4 w-4 mr-1 mt-0.5 text-muted-foreground" />
+                            <div className="text-sm">{item.comments}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhum registro de histórico encontrado.
+              </div>
+            )}
+          </>
+        )}
       </CardContent>
     </Card>
   );
