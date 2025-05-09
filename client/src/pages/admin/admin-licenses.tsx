@@ -30,7 +30,6 @@ import {
 import { StatusBadge } from "@/components/licenses/status-badge";
 import { ProgressFlow, StateProgressFlow } from "@/components/licenses/progress-flow";
 import { LicenseDetailsCard } from "@/components/licenses/license-details-card";
-import { StatusHistory } from "@/components/licenses/status-history";
 import {
   Table,
   TableBody,
@@ -1306,10 +1305,9 @@ export default function AdminLicensesPage() {
               
               {/* Tabs para separar o conteúdo */}
               <Tabs defaultValue="details" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="details">Detalhes da Licença</TabsTrigger>
                   <TabsTrigger value="states">Status por Estado</TabsTrigger>
-                  <TabsTrigger value="history">Histórico de Status</TabsTrigger>
                 </TabsList>
                 
                 {/* Aba de Detalhes */}
@@ -1415,16 +1413,6 @@ export default function AdminLicensesPage() {
                   })}
                 </div>
                 </div>
-                </TabsContent>
-                
-                {/* Aba de Histórico de Status */}
-                <TabsContent value="history" className="pt-4">
-                  <StatusHistory 
-                    licenseId={selectedLicense.id} 
-                    states={selectedLicense.states} 
-                    showHeader={false}
-                    showTabs={false}
-                  />
                 </TabsContent>
               </Tabs>
 
