@@ -43,14 +43,12 @@ interface StatusHistoryProps {
 }
 
 export function StatusHistoryNew({ licenseId, states, showHeader = true, showTabs = true, className }: StatusHistoryProps) {
+  // Estados para controlar interface
   const [activeTab, setActiveTab] = React.useState("all");
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  // Estado para controlar o estado de carregamento do botão de atualizar
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const { toast } = useToast();
   
-  // Estado para controle de erro
+  // Estado para controlar erros de autenticação ou outros erros
   const [errorState, setErrorState] = React.useState({
     hasError: false,
     isAuth: false,
@@ -275,17 +273,17 @@ export function StatusHistoryNew({ licenseId, states, showHeader = true, showTab
                         </span>
                         {(() => {
                           // Definir cores baseadas no status do estado
-                          let badgeClass = "bg-gray-100 text-gray-800 border-gray-200";
+                          let badgeClass = "bg-gray-100 border-gray-200 text-gray-800";
                           
                           // Usar o status atual do item para definir a cor
-                          if (item.state === "SP") {
-                            badgeClass = "bg-blue-50 text-blue-800 border-blue-200";
-                          } else if (item.state === "ES") {
-                            badgeClass = "bg-green-50 text-green-800 border-green-200";
-                          } else if (item.state === "BA") {
-                            badgeClass = "bg-yellow-50 text-yellow-800 border-yellow-200";
-                          } else if (item.state === "DNIT") {
-                            badgeClass = "bg-purple-50 text-purple-800 border-purple-200";
+                          if (item.newStatus === "approved") {
+                            badgeClass = "bg-green-50 border-green-200 text-green-800";
+                          } else if (item.newStatus === "rejected") {
+                            badgeClass = "bg-red-50 border-red-200 text-red-800";
+                          } else if (item.newStatus === "pending_approval") {
+                            badgeClass = "bg-yellow-50 border-yellow-200 text-yellow-800";
+                          } else if (item.newStatus === "under_review") {
+                            badgeClass = "bg-blue-50 border-blue-200 text-blue-800";
                           }
                           
                           return (
@@ -365,17 +363,17 @@ export function StatusHistoryNew({ licenseId, states, showHeader = true, showTab
                         </span>
                         {(() => {
                           // Definir cores baseadas no status do estado
-                          let badgeClass = "bg-gray-100 text-gray-800 border-gray-200";
+                          let badgeClass = "bg-gray-100 border-gray-200 text-gray-800";
                           
                           // Usar o status atual do item para definir a cor
-                          if (item.state === "SP") {
-                            badgeClass = "bg-blue-50 text-blue-800 border-blue-200";
-                          } else if (item.state === "ES") {
-                            badgeClass = "bg-green-50 text-green-800 border-green-200";
-                          } else if (item.state === "BA") {
-                            badgeClass = "bg-yellow-50 text-yellow-800 border-yellow-200";
-                          } else if (item.state === "DNIT") {
-                            badgeClass = "bg-purple-50 text-purple-800 border-purple-200";
+                          if (item.newStatus === "approved") {
+                            badgeClass = "bg-green-50 border-green-200 text-green-800";
+                          } else if (item.newStatus === "rejected") {
+                            badgeClass = "bg-red-50 border-red-200 text-red-800";
+                          } else if (item.newStatus === "pending_approval") {
+                            badgeClass = "bg-yellow-50 border-yellow-200 text-yellow-800";
+                          } else if (item.newStatus === "under_review") {
+                            badgeClass = "bg-blue-50 border-blue-200 text-blue-800";
                           }
                           
                           return (
