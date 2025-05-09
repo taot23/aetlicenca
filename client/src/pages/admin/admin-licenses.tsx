@@ -30,6 +30,7 @@ import {
 import { StatusBadge } from "@/components/licenses/status-badge";
 import { ProgressFlow, StateProgressFlow } from "@/components/licenses/progress-flow";
 import { LicenseDetailsCard } from "@/components/licenses/license-details-card";
+import { StatusHistory } from "@/components/licenses/status-history";
 import {
   Table,
   TableBody,
@@ -1303,20 +1304,28 @@ export default function AdminLicensesPage() {
                 />
               </div>
               
-              {/* Removido seção do transportador para evitar duplicidade, pois já está no LicenseDetailsCard */}
-              
-              {/* Utilizando o componente LicenseDetailsCard para exibição dos detalhes */}
-              <LicenseDetailsCard license={selectedLicense} />
-              
-              {/* A seção de Estados Solicitados foi movida para o componente LicenseDetailsCard */}
-
-              {/* Status por estado - Layout melhorado */}
-              <div className="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200 mt-4">
-                <h3 className="font-semibold text-base text-gray-700 mb-3 flex items-center">
-                  <MapPin className="h-4 w-4 mr-2 text-blue-600" />
-                  Status por Estado
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Tabs para separar o conteúdo */}
+              <Tabs defaultValue="details" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="details">Detalhes da Licença</TabsTrigger>
+                  <TabsTrigger value="states">Status por Estado</TabsTrigger>
+                  <TabsTrigger value="history">Histórico de Status</TabsTrigger>
+                </TabsList>
+                
+                {/* Aba de Detalhes */}
+                <TabsContent value="details" className="pt-4">
+                  {/* Utilizando o componente LicenseDetailsCard para exibição dos detalhes */}
+                  <LicenseDetailsCard license={selectedLicense} />
+                </TabsContent>
+                
+                {/* Aba de Status por Estado */}
+                <TabsContent value="states" className="pt-4">
+                  <div className="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200">
+                    <h3 className="font-semibold text-base text-gray-700 mb-3 flex items-center">
+                      <MapPin className="h-4 w-4 mr-2 text-blue-600" />
+                      Status por Estado
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {selectedLicense.states.map((state) => {
                     // Encontrar o status atual deste estado
                     let stateStatus = "pending";
@@ -1405,7 +1414,14 @@ export default function AdminLicensesPage() {
                     );
                   })}
                 </div>
-              </div>
+                </div>
+                </TabsContent>
+                
+                {/* Aba de Histórico de Status */}
+                <TabsContent value="history" className="pt-4">
+                  <StatusHistory licenseId={selectedLicense.id} states={selectedLicense.states} />
+                </TabsContent>
+              </Tabs>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {selectedLicense.comments && (
