@@ -974,24 +974,54 @@ export class TransactionalStorage implements IStorage {
     }
   }
   
-  async getStatusHistoryByLicenseId(licenseId: number): Promise<StatusHistory[]> {
+  async getStatusHistoryByLicenseId(licenseId: number): Promise<(StatusHistory & { user?: { fullName: string, email: string } })[]> {
     try {
-      return await db
-        .select()
+      const result = await db
+        .select({
+          id: statusHistories.id,
+          licenseId: statusHistories.licenseId,
+          state: statusHistories.state,
+          userId: statusHistories.userId,
+          oldStatus: statusHistories.oldStatus,
+          newStatus: statusHistories.newStatus,
+          comments: statusHistories.comments,
+          createdAt: statusHistories.createdAt,
+          user: {
+            fullName: users.fullName,
+            email: users.email
+          }
+        })
         .from(statusHistories)
+        .leftJoin(users, eq(statusHistories.userId, users.id))
         .where(eq(statusHistories.licenseId, licenseId))
         .orderBy(desc(statusHistories.createdAt));
+      
+      return result;
     } catch (error) {
       console.error('Erro ao buscar histórico de status por licença:', error);
       throw new Error('Falha ao buscar histórico de status');
     }
   }
   
-  async getStatusHistoryByState(licenseId: number, state: string): Promise<StatusHistory[]> {
+  async getStatusHistoryByState(licenseId: number, state: string): Promise<(StatusHistory & { user?: { fullName: string, email: string } })[]> {
     try {
-      return await db
-        .select()
+      const result = await db
+        .select({
+          id: statusHistories.id,
+          licenseId: statusHistories.licenseId,
+          state: statusHistories.state,
+          userId: statusHistories.userId,
+          oldStatus: statusHistories.oldStatus,
+          newStatus: statusHistories.newStatus,
+          comments: statusHistories.comments,
+          createdAt: statusHistories.createdAt,
+          user: {
+            fullName: users.fullName,
+            email: users.email
+          }
+        })
         .from(statusHistories)
+        .leftJoin(users, eq(statusHistories.userId, users.id))
         .where(
           and(
             eq(statusHistories.licenseId, licenseId),
@@ -999,6 +1029,8 @@ export class TransactionalStorage implements IStorage {
           )
         )
         .orderBy(desc(statusHistories.createdAt));
+      
+      return result;
     } catch (error) {
       console.error('Erro ao buscar histórico de status por estado:', error);
       throw new Error('Falha ao buscar histórico de status para o estado especificado');
