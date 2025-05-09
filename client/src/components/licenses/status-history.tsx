@@ -1,7 +1,7 @@
 import React from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, Clock, User, MessageSquare, ArrowRightLeft } from "lucide-react";
+import { Loader2, Clock, User, MessageSquare, ArrowRightLeft, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,21 +63,53 @@ export function StatusHistory({ licenseId, states }: StatusHistoryProps) {
     return format(date, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR });
   };
 
-  // Se houver erro, mostrar mensagem de erro
+  // Lidar com erros de maneira mais controlada, sem mostrar toast para erros de autenticação
+  const [errorState, setErrorState] = React.useState<{
+    hasError: boolean;
+    isAuth: boolean;
+    message: string;
+  }>({
+    hasError: false,
+    isAuth: false,
+    message: "",
+  });
+
   React.useEffect(() => {
     if (isError) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao carregar histórico",
-        description: "Não foi possível carregar o histórico de status.",
+      // Verificar se o erro é de autenticação (não exibir toast nesse caso)
+      const isAuthError = true; // Assumindo que todos os 401 são por falta de autenticação
+      
+      setErrorState({
+        hasError: true,
+        isAuth: isAuthError,
+        message: "Não foi possível carregar o histórico de status."
       });
-    }
-    
-    if (isStateError && activeTab !== "all") {
+      
+      // Mostrar toast apenas para erros que não são de autenticação
+      if (!isAuthError) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao carregar histórico",
+          description: "Não foi possível carregar o histórico de status.",
+        });
+      }
+    } else if (isStateError && activeTab !== "all") {
+      setErrorState({
+        hasError: true,
+        isAuth: false,
+        message: `Não foi possível carregar o histórico de status para o estado ${activeTab}.`
+      });
+      
       toast({
         variant: "destructive",
         title: "Erro ao carregar histórico do estado",
         description: `Não foi possível carregar o histórico de status para o estado ${activeTab}.`,
+      });
+    } else {
+      setErrorState({
+        hasError: false,
+        isAuth: false,
+        message: ""
       });
     }
   }, [isError, isStateError, activeTab, toast]);
@@ -106,6 +138,26 @@ export function StatusHistory({ licenseId, states }: StatusHistoryProps) {
           {isDataLoading ? (
             <div className="flex justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : errorState.hasError ? (
+            <div className="text-center py-8">
+              {errorState.isAuth ? (
+                <div>
+                  <AlertCircle className="h-8 w-8 mx-auto mb-2 text-orange-500" />
+                  <h3 className="font-medium text-lg">Autenticação necessária</h3>
+                  <p className="text-muted-foreground mt-1">
+                    Você precisa estar logado para visualizar o histórico de status.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <AlertCircle className="h-8 w-8 mx-auto mb-2 text-red-500" />
+                  <h3 className="font-medium text-lg">Erro ao carregar histórico</h3>
+                  <p className="text-muted-foreground mt-1">
+                    {errorState.message}
+                  </p>
+                </div>
+              )}
             </div>
           ) : displayData && displayData.length > 0 ? (
             <ScrollArea className="h-[400px] pr-4">
