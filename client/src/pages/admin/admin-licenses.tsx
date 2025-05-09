@@ -127,6 +127,7 @@ const updateStateStatusSchema = z.object({
 
 export default function AdminLicensesPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [transporterFilter, setTransporterFilter] = useState("");
@@ -143,6 +144,9 @@ export default function AdminLicensesPage() {
   const [sortField, setSortField] = useState<string>("createdAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const { lastMessage } = useWebSocketContext();
+  
+  // Verificar se o usuário é do tipo operacional
+  const isOperational = user?.role === 'operational';
   
   // Verificar se estamos na rota de gerenciar-licencas (staff) ou admin
   const isStaffRoute = location.includes('gerenciar-licencas');
@@ -1442,16 +1446,19 @@ export default function AdminLicensesPage() {
                   </Button>
                 </div>
                 
-                <div className="bg-gray-50 rounded-md px-8 py-3 shadow-sm mx-auto">
-                  <Button 
-                    onClick={handleDeleteLicense}
-                    variant="destructive"
-                    className="px-8 py-2 rounded-md"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir Licença
-                  </Button>
-                </div>
+                {/* Botão de excluir licença - não visível para usuários operacionais */}
+                {!isOperational && (
+                  <div className="bg-gray-50 rounded-md px-8 py-3 shadow-sm mx-auto">
+                    <Button 
+                      onClick={handleDeleteLicense}
+                      variant="destructive"
+                      className="px-8 py-2 rounded-md"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir Licença
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           )}
