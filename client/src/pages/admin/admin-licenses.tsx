@@ -1419,7 +1419,7 @@ export default function AdminLicensesPage() {
                 
                 {/* Aba de Histórico de Status */}
                 <TabsContent value="history" className="pt-4">
-                  <StatusHistory licenseId={selectedLicense.id} states={selectedLicense.states} />
+                  <StatusHistory licenseId={selectedLicense.id} states={selectedLicense.states} showHeader={false} />
                 </TabsContent>
               </Tabs>
 

@@ -37,9 +37,10 @@ interface StatusHistoryItem {
 interface StatusHistoryProps {
   licenseId: number;
   states: string[];
+  showHeader?: boolean;
 }
 
-export function StatusHistory({ licenseId, states }: StatusHistoryProps) {
+export function StatusHistory({ licenseId, states, showHeader = true }: StatusHistoryProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = React.useState<string>("all");
@@ -208,28 +209,30 @@ export function StatusHistory({ licenseId, states }: StatusHistoryProps) {
 
   return (
     <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-xl">Histórico de Status</CardTitle>
-          <CardDescription>
-            Acompanhe todas as mudanças de status desta licença
-          </CardDescription>
-        </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="ml-auto" 
-          onClick={refreshData}
-          disabled={isRefreshing}
-        >
-          {isRefreshing ? (
-            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4 mr-1" />
-          )}
-          Atualizar
-        </Button>
-      </CardHeader>
+      {showHeader && (
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-xl">Histórico de Status</CardTitle>
+            <CardDescription>
+              Acompanhe todas as mudanças de status desta licença
+            </CardDescription>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="ml-auto" 
+            onClick={refreshData}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-1" />
+            )}
+            Atualizar
+          </Button>
+        </CardHeader>
+      )}
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4 flex-wrap">
