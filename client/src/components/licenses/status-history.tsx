@@ -275,7 +275,27 @@ export function StatusHistory({ licenseId, states }: StatusHistoryProps) {
                           Alteração de <StatusBadge status={item.oldStatus} /> para <StatusBadge status={item.newStatus} />
                         </span>
                       </div>
-                      <Badge variant="outline">{item.state}</Badge>
+                      {(() => {
+                        // Definir cores baseadas no status do estado
+                        let badgeClass = "bg-gray-100 border-gray-200 text-gray-800";
+                        
+                        // Usar o status atual do item para definir a cor
+                        if (item.newStatus === "approved") {
+                          badgeClass = "bg-green-50 border-green-200 text-green-800";
+                        } else if (item.newStatus === "rejected") {
+                          badgeClass = "bg-red-50 border-red-200 text-red-800";
+                        } else if (item.newStatus === "pending_approval") {
+                          badgeClass = "bg-yellow-50 border-yellow-200 text-yellow-800";
+                        } else if (item.newStatus === "under_review") {
+                          badgeClass = "bg-blue-50 border-blue-200 text-blue-800";
+                        }
+                        
+                        return (
+                          <Badge variant="outline" className={`text-xs ${badgeClass}`}>
+                            {item.state}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                     
                     <div className="flex items-center text-sm text-muted-foreground mb-2">
