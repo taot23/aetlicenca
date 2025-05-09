@@ -362,16 +362,14 @@ export function StatusHistory({ licenseId, states, showHeader = true, showTabs =
               </div>
             ) : historyData && historyData.length > 0 ? (
               <ScrollArea className="h-[400px] pr-4">
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {historyData.map((item) => (
-                    <div key={item.id} className="border rounded-lg p-4 bg-card">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center">
-                          <ArrowRightLeft className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <span className="font-medium">
-                            Alteração de <StatusBadge status={item.oldStatus} /> para <StatusBadge status={item.newStatus} />
-                          </span>
-                        </div>
+                    <div key={item.id} className="pb-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">
+                          Alteração de <StatusBadge status={item.oldStatus} /> para <StatusBadge status={item.newStatus} />
+                        </span>
                         {(() => {
                           // Definir cores baseadas no status do estado
                           let badgeClass = "bg-gray-100 border-gray-200 text-gray-800";
@@ -388,19 +386,19 @@ export function StatusHistory({ licenseId, states, showHeader = true, showTabs =
                           }
                           
                           return (
-                            <Badge variant="outline" className={`text-xs ${badgeClass}`}>
+                            <Badge variant="outline" className={`ml-auto text-xs ${badgeClass}`}>
                               {item.state}
                             </Badge>
                           );
                         })()}
                       </div>
                       
-                      <div className="flex items-center text-sm text-muted-foreground mb-2">
+                      <div className="flex items-center text-sm text-muted-foreground ml-6">
                         <Clock className="h-4 w-4 mr-1" />
                         <span>{formatDate(item.createdAt)}</span>
                       </div>
                       
-                      <div className="flex items-center text-sm text-muted-foreground mb-2">
+                      <div className="flex items-center text-sm text-muted-foreground ml-6">
                         <User className="h-4 w-4 mr-1" />
                         <span>
                           {item.user ? item.user.fullName : `Usuário ID: ${item.userId}`}
@@ -408,7 +406,7 @@ export function StatusHistory({ licenseId, states, showHeader = true, showTabs =
                       </div>
                       
                       {item.comments && (
-                        <div className="mt-2 pt-2 border-t">
+                        <div className="mt-2 ml-6">
                           <div className="flex items-start">
                             <MessageSquare className="h-4 w-4 mr-1 mt-0.5 text-muted-foreground" />
                             <div className="text-sm">{item.comments}</div>
