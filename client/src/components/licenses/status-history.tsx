@@ -1,8 +1,8 @@
 import React from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Loader2, Clock, User, MessageSquare, ArrowRightLeft, AlertCircle } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Loader2, Clock, User, MessageSquare, ArrowRightLeft, AlertCircle, RefreshCw } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +10,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { StatusBadge } from "./status-badge";
+import { Button } from "@/components/ui/button";
+
+// Declare a tipagem para a conexão WebSocket global
+declare global {
+  interface Window {
+    wsConnection?: WebSocket;
+  }
+}
 
 interface StatusHistoryItem {
   id: number;
@@ -33,13 +41,16 @@ interface StatusHistoryProps {
 
 export function StatusHistory({ licenseId, states }: StatusHistoryProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = React.useState<string>("all");
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
   
   // Buscar o histórico completo
   const { 
     data: historyData, 
     isLoading, 
-    isError 
+    isError,
+    refetch: refetchHistory
   } = useQuery<StatusHistoryItem[]>({
     queryKey: [`/api/licenses/${licenseId}/status-history`],
     enabled: !!licenseId,
@@ -51,11 +62,88 @@ export function StatusHistory({ licenseId, states }: StatusHistoryProps) {
     data: stateHistoryData,
     isLoading: isStateLoading,
     isError: isStateError,
+    refetch: refetchStateHistory
   } = useQuery<StatusHistoryItem[]>({
     queryKey: [`/api/licenses/${licenseId}/status-history/${activeTab}`],
     enabled: !!licenseId && activeTab !== "all",
     staleTime: 30000, // 30 segundos
   });
+  
+  // Função para atualizar os dados
+  const refreshData = async () => {
+    setIsRefreshing(true);
+    try {
+      if (activeTab === "all") {
+        await refetchHistory();
+      } else {
+        await refetchStateHistory();
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+  
+  // Ouvir eventos de WebSocket para atualização em tempo real
+  React.useEffect(() => {
+    if (!licenseId) return;
+    
+    // Referência para o objeto websocket
+    let ws: WebSocket | null = null;
+    
+    const handleWebSocketMessage = (event: MessageEvent) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        // Se for uma atualização de status de licença
+        if (data.type === "STATUS_UPDATE" && data.data.licenseId === licenseId) {
+          console.log("StatusUpdate em tempo real para histórico:", data.data);
+          
+          // Refetch dos dados
+          refreshData();
+          
+          // Notificar o usuário
+          toast({
+            title: "Histórico atualizado",
+            description: `Status da licença alterado para ${data.data.status}`,
+            variant: "default",
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao processar mensagem WebSocket:", error);
+      }
+    };
+    
+    // Configurar o evento listener para WebSocket
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    // Criar uma nova instância do WebSocket
+    try {
+      ws = new WebSocket(wsUrl);
+      
+      ws.addEventListener("open", () => {
+        console.log("WebSocket conectado para histórico");
+      });
+      
+      ws.addEventListener("error", (error) => {
+        console.error("Erro WebSocket:", error);
+      });
+      
+      ws.addEventListener("message", handleWebSocketMessage);
+    } catch (error) {
+      console.error("Falha ao iniciar conexão WebSocket:", error);
+    }
+    
+    // Limpar evento listener quando o componente for desmontado
+    return () => {
+      if (ws) {
+        ws.removeEventListener("message", handleWebSocketMessage);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        }
+      }
+    };
+  }, [licenseId, refreshData, toast]);
 
   // Função para formatar data em formato legível
   const formatDate = (dateString: string) => {
@@ -120,11 +208,27 @@ export function StatusHistory({ licenseId, states }: StatusHistoryProps) {
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-xl">Histórico de Status</CardTitle>
-        <CardDescription>
-          Acompanhe todas as mudanças de status desta licença
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-xl">Histórico de Status</CardTitle>
+          <CardDescription>
+            Acompanhe todas as mudanças de status desta licença
+          </CardDescription>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="ml-auto" 
+          onClick={refreshData}
+          disabled={isRefreshing}
+        >
+          {isRefreshing ? (
+            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4 mr-1" />
+          )}
+          Atualizar
+        </Button>
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
