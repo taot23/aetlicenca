@@ -1298,7 +1298,7 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
       
       {/* Componente de histórico de status */}
       <div className="mt-6">
-        <StatusHistory licenseId={license.id} states={license.states || []} />
+        <StatusHistoryNew licenseId={license.id} states={license.states || []} />
       </div>
     </div>
   );

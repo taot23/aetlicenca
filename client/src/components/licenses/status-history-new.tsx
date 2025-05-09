@@ -63,22 +63,46 @@ export function StatusHistoryNew({ licenseId, states, showHeader = true, showTab
     isLoading,
     error,
     refetch
-  } = useQuery<StatusHistoryItem[]>({
+  } = useQuery({
     queryKey: [`/api/licenses/${licenseId}/status-history`],
-    onError: (err: any) => {
-      setErrorState({
-        hasError: true,
-        isAuth: err.message === "Não autenticado" || err.status === 401,
-        message: err.message || "Erro ao carregar histórico de status"
-      });
+    queryFn: async () => {
+      try {
+        const res = await fetch(`/api/licenses/${licenseId}/status-history`);
+        if (!res.ok) {
+          if (res.status === 401) {
+            setErrorState({
+              hasError: true,
+              isAuth: true,
+              message: "Você precisa estar autenticado para visualizar o histórico"
+            });
+            throw new Error("Não autenticado");
+          }
+          throw new Error("Erro ao carregar histórico de status");
+        }
+        
+        const data = await res.json() as StatusHistoryItem[];
+        setErrorState({
+          hasError: false,
+          isAuth: false,
+          message: ""
+        });
+        return data;
+      } catch (err: any) {
+        setErrorState({
+          hasError: true,
+          isAuth: err.message === "Não autenticado" || err.status === 401,
+          message: err.message || "Erro ao carregar histórico de status"
+        });
+        throw err;
+      }
     }
   });
   
   // Calcular dados de exibição baseados na aba ativa
   const displayData = React.useMemo(() => {
-    if (!historyData) return [];
+    if (!historyData) return [] as StatusHistoryItem[];
     if (activeTab === "all") return historyData;
-    return historyData.filter(item => item.state === activeTab);
+    return historyData.filter((item: StatusHistoryItem) => item.state === activeTab);
   }, [historyData, activeTab]);
   
   // Carregamento de dados quando a aba muda
@@ -240,9 +264,9 @@ export function StatusHistoryNew({ licenseId, states, showHeader = true, showTab
                 )}
               </div>
             ) : displayData && displayData.length > 0 ? (
-              <ScrollArea className="h-[400px] pr-4">
+              <ScrollArea className="h-[350px] pr-4">
                 <div className="space-y-6">
-                  {displayData.map((item) => (
+                  {displayData.map((item: StatusHistoryItem) => (
                     <div key={item.id} className="pb-4">
                       <div className="flex items-center gap-2 mb-1">
                         <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
@@ -330,9 +354,9 @@ export function StatusHistoryNew({ licenseId, states, showHeader = true, showTab
                 )}
               </div>
             ) : historyData && historyData.length > 0 ? (
-              <ScrollArea className="h-[400px] pr-4">
+              <ScrollArea className="h-[350px] pr-4">
                 <div className="space-y-6">
-                  {historyData.map((item) => (
+                  {historyData.map((item: StatusHistoryItem) => (
                     <div key={item.id} className="pb-4">
                       <div className="flex items-center gap-2 mb-1">
                         <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
