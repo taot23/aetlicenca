@@ -6,6 +6,7 @@ import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 import { getLicenseTypeLabel, getCargoTypeLabel } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
