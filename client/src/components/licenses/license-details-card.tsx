@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { StatusBadge, Status } from "@/components/licenses/status-badge";
 import { StatusHistory } from "@/components/licenses/status-history";
+import { StatusHistoryNew } from "@/components/licenses/status-history-new";
 import { useWebSocketContext } from "@/hooks/use-websocket-context";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
