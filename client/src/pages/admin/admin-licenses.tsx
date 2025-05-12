@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useWebSocketContext } from "@/hooks/use-websocket-context";
 import { AdminLayout } from "@/components/layout/admin-layout";
@@ -130,7 +130,7 @@ export default function AdminLicensesPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [transporterFilter, setTransporterFilter] = useState("");
+  const [transporterFilter, setTransporterFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
   const [selectedLicense, setSelectedLicense] = useState<LicenseRequest | null>(null);
   const [licenseDetailsOpen, setLicenseDetailsOpen] = useState(false);
@@ -243,6 +243,24 @@ export default function AdminLicensesPage() {
       });
     },
   });
+  
+  // Buscar lista única de transportadores a partir das licenças carregadas
+  const uniqueTransporters = useMemo(() => {
+    const transporters = new Map<number, string>();
+    
+    // Primeiro identificar os IDs únicos de transportadores
+    licenses.forEach(license => {
+      if (license.transporterId) {
+        transporters.set(license.transporterId, `Transportador ID: ${license.transporterId}`);
+      }
+    });
+    
+    // Converter para array para uso no select
+    return Array.from(transporters.entries()).map(([id, name]) => ({
+      id,
+      name
+    }));
+  }, [licenses]);
 
   // Mutação para atualização de status geral foi removida - agora só usamos atualização por estado
   
@@ -360,7 +378,7 @@ export default function AdminLicensesPage() {
       const matchesStatus = !statusFilter || statusFilter === "all" || license.status === statusFilter;
       
       // Filtro de transportador
-      const matchesTransporter = !transporterFilter || transporterFilter === "all" || (
+      const matchesTransporter = transporterFilter === "all" || (
         license.transporterId != null && license.transporterId.toString() === transporterFilter
       );
       
@@ -643,11 +661,16 @@ export default function AdminLicensesPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos os transportadores</SelectItem>
-                        {/* Aqui seria ideal ter uma lista de transportadores para selecionar */}
-                        {/* Como é um exemplo, adicionamos alguns valores genéricos */}
-                        <SelectItem value="1">Transportadora ABC Ltda</SelectItem>
-                        <SelectItem value="2">Transportes XYZ S.A.</SelectItem>
-                        <SelectItem value="3">Logística Express Ltda</SelectItem>
+                        {uniqueTransporters.map((transporter) => (
+                          <SelectItem key={transporter.id} value={transporter.id.toString()}>
+                            <div className="flex items-center">
+                              <TransporterInfo 
+                                transporterId={transporter.id} 
+                                compact={true}
+                              />
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
