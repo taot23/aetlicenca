@@ -383,6 +383,21 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     } else {
       // Remove isDraft from payload when submitting a license request
       const { isDraft, ...requestData } = dataToSubmit;
+      // Log para depuração
+      console.log('Enviando requisição:', requestData);
+      
+      // Garantir que o campo cargoType é válido antes de enviar
+      if (!requestData.cargoType) {
+        console.error('Erro: cargoType não definido no envio final');
+        toast({
+          title: "Erro de validação",
+          description: "Por favor, selecione um tipo de carga para continuar",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Enviar para o servidor
       submitRequestMutation.mutate(requestData as any);
     }
   };
@@ -911,7 +926,18 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-base font-medium">Tipo de Conjunto</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={(value) => {
+                    // Atualizar o tipo do conjunto
+                    field.onChange(value);
+                    
+                    // Quando o tipo muda, resetar o valor do tipo de carga
+                    // para forçar o usuário a selecionar um tipo compatível
+                    if (value !== field.value) {
+                      setLicenseType(value);
+                      form.setValue("cargoType", undefined as any);
+                      setCargoType("");
+                    }
+                  }} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger className="h-10">
                         <SelectValue placeholder="Selecione um tipo" />
