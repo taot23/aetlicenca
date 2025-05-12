@@ -1141,17 +1141,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Update the draft with the new data
-        const updateData = {
-          ...licenseData,
+        // Em vez de atualizar o rascunho e depois submetê-lo, vamos usar um método direto e mais confiável
+        console.log("=== RENOVAÇÃO DE LICENÇA - MÉTODO MANUAL ===");
+        
+        // Obter o rascunho mais atualizado
+        const draftRequest = await storage.getLicenseRequestById(draftId);
+        if (!draftRequest) {
+          return res.status(404).json({ message: 'Rascunho não encontrado após atualização' });
+        }
+        
+        // Preparar dados para criar uma nova licença a partir do rascunho
+        const newLicenseData = {
+          transporterId: Number(licenseData.transporterId),
+          type: licenseData.type,
+          mainVehiclePlate: licenseData.mainVehiclePlate,
+          tractorUnitId: licenseData.tractorUnitId ? Number(licenseData.tractorUnitId) : null,
+          firstTrailerId: licenseData.firstTrailerId ? Number(licenseData.firstTrailerId) : null,
+          secondTrailerId: licenseData.secondTrailerId ? Number(licenseData.secondTrailerId) : null,
+          dollyId: licenseData.dollyId ? Number(licenseData.dollyId) : null,
+          flatbedId: licenseData.flatbedId ? Number(licenseData.flatbedId) : null,
+          length: Number(licenseData.length || 2500), // 25m default
+          width: Number(licenseData.width || 260),    // 2.60m default
+          height: Number(licenseData.height || 440),  // 4.40m default
+          cargoType: licenseData.cargoType || 'dry_cargo',
+          additionalPlates: licenseData.additionalPlates || [],
+          additionalPlatesDocuments: licenseData.additionalPlatesDocuments || [],
+          states: licenseData.states || [],
+          requestNumber,
+          status: "pending_registration",
           isDraft: false,
+          comments: licenseData.comments || "",
         };
         
-        console.log("Dados que serão enviados para update:", JSON.stringify(updateData, null, 2));
-        await storage.updateLicenseDraft(draftId, updateData);
+        console.log("Dados finais da licença renovada:", newLicenseData);
         
-        // Submit the updated draft as a real license request
-        const licenseRequest = await storage.submitLicenseDraft(draftId, requestNumber);
+        // Criar a nova licença
+        const licenseRequest = await storage.createLicenseRequest(user.id, newLicenseData);
+        
+        // Remover o rascunho original
+        await storage.deleteLicenseRequest(draftId);
         
         console.log("Licença submetida com sucesso:", licenseRequest.id);
         return res.json(licenseRequest);
