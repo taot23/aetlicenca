@@ -158,7 +158,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       states: draft.states,
       isDraft: draft.isDraft,
       comments: draft.comments || undefined,
-      cargoType: draft.cargoType || undefined, // Usar o tipo de carga do rascunho ou undefined
+      cargoType: draft.cargoType as any || undefined, // Usar o tipo de carga do rascunho ou undefined (usando 'as any' para evitar erro de tipo)
     } : {
       type: "",
       transporterId: preSelectedTransporterId || undefined, // Usar o transportador pré-selecionado
@@ -176,7 +176,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       additionalPlatesDocuments: [],
       isDraft: true,
       comments: "",
-      cargoType: undefined, // Inicializar como undefined para validação de formulário
+      cargoType: undefined as any, // Inicializar como undefined para validação de formulário
     },
   });
 
@@ -478,7 +478,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     // Antes de enviar, garantir que o cargoType esteja definido corretamente
     // Se ainda não tiver valor, tentar usar o estado local
     if (!values.cargoType && cargoType) {
-      form.setValue("cargoType", cargoType);
+      form.setValue("cargoType", cargoType as any);
     }
     
     // Registrar para debug o valor final que será enviado
@@ -968,7 +968,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                 name="cargoType"
                 render={({ field }) => {
                   // Verificar se o campo está vazio
-                  const isEmpty = field.value === undefined || field.value === null || field.value === '';
+                  const isEmpty = !field.value; // Simplificação para checar se é falsy
                   
                   return (
                     <FormItem id="cargo-type-section">
