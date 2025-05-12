@@ -523,19 +523,107 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   <p>
                     Os seguintes campos são obrigatórios para enviar a solicitação:
                   </p>
-                  <ul className="list-disc pl-5 mt-1 space-y-1">
-                    {form.getValues('width') === undefined && (
-                      <li>Largura do conjunto</li>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pl-5 mt-2">
+                    {/* Campos básicos */}
+                    {!form.getValues('type') && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Tipo de Conjunto</span>
+                      </div>
                     )}
-                    {form.getValues('height') === undefined && (
-                      <li>Altura do conjunto</li>
+                    {!form.getValues('transporterId') && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Transportador</span>
+                      </div>
                     )}
-                    {(form.getValues('cargoType') === undefined || form.getValues('cargoType') === '') && (
-                      <li>Tipo de carga</li>
+                    {!form.getValues('cargoType') && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Tipo de Carga</span>
+                      </div>
                     )}
-                  </ul>
-                  <p className="mt-2">
-                    Por favor, preencha todos os campos marcados como <span className="text-yellow-600 font-medium">Obrigatório</span> antes de enviar.
+                    
+                    {/* Dimensões */}
+                    {!form.getValues('length') && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Comprimento</span>
+                      </div>
+                    )}
+                    {!form.getValues('width') && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Largura</span>
+                      </div>
+                    )}
+                    {!form.getValues('height') && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Altura</span>
+                      </div>
+                    )}
+                    
+                    {/* Estados */}
+                    {(!form.getValues('states') || form.getValues('states').length === 0) && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Estados</span>
+                      </div>
+                    )}
+                    
+                    {/* Veículos dependendo do tipo */}
+                    {form.getValues('type') === 'bitrain_9_axles' || 
+                     form.getValues('type') === 'bitrain_7_axles' || 
+                     form.getValues('type') === 'bitrain_6_axles' ? (
+                      <>
+                        {!form.getValues('tractorUnitId') && (
+                          <div className="flex items-center">
+                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                            <span>Unidade Tratora</span>
+                          </div>
+                        )}
+                        {!form.getValues('firstTrailerId') && (
+                          <div className="flex items-center">
+                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                            <span>1ª Carreta</span>
+                          </div>
+                        )}
+                        {!form.getValues('secondTrailerId') && (
+                          <div className="flex items-center">
+                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                            <span>2ª Carreta</span>
+                          </div>
+                        )}
+                      </>
+                    ) : form.getValues('type') === 'flatbed' ? (
+                      <>
+                        {!form.getValues('flatbedId') && (
+                          <div className="flex items-center">
+                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                            <span>Prancha</span>
+                          </div>
+                        )}
+                      </>
+                    ) : form.getValues('type') === 'romeo_and_juliet' ? (
+                      <>
+                        {!form.getValues('tractorUnitId') && (
+                          <div className="flex items-center">
+                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                            <span>Caminhão</span>
+                          </div>
+                        )}
+                        {!form.getValues('firstTrailerId') && (
+                          <div className="flex items-center">
+                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                            <span>Reboque</span>
+                          </div>
+                        )}
+                      </>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 text-sm">
+                    <span className="font-medium">Dica:</span> Preencha todos os campos acima indicados para poder enviar sua solicitação.
                   </p>
                 </div>
               </div>
