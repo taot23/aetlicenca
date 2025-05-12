@@ -1108,11 +1108,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Generate a real request number
         const requestNumber = `AET-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
         
+        // Identificar se é um pedido de renovação
+        const isRenewal = licenseData.comments && 
+                          typeof licenseData.comments === 'string' && 
+                          licenseData.comments.toLowerCase().includes('renovação');
+
+        console.log(`É pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
+        
+        // Sanitizar dados para renovação
+        if (isRenewal) {
+          console.log("Sanitizando dados para renovação");
+          // Garantir que as dimensões são números
+          if (licenseData.length !== undefined) {
+            licenseData.length = Number(licenseData.length);
+            console.log("Comprimento normalizado:", licenseData.length);
+          }
+          
+          if (licenseData.width !== undefined) {
+            licenseData.width = Number(licenseData.width);
+            console.log("Largura normalizada:", licenseData.width);
+          }
+          
+          if (licenseData.height !== undefined) {
+            licenseData.height = Number(licenseData.height);
+            console.log("Altura normalizada:", licenseData.height);
+          }
+          
+          // Garantir que o cargoType seja válido
+          if (!licenseData.cargoType || typeof licenseData.cargoType !== 'string') {
+            licenseData.cargoType = licenseData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
+            console.log("Tipo de carga normalizado:", licenseData.cargoType);
+          }
+        }
+        
         // Update the draft with the new data
-        await storage.updateLicenseDraft(draftId, {
+        const updateData = {
           ...licenseData,
           isDraft: false,
-        });
+        };
+        
+        console.log("Dados que serão enviados para update:", JSON.stringify(updateData, null, 2));
+        await storage.updateLicenseDraft(draftId, updateData);
         
         // Submit the updated draft as a real license request
         const licenseRequest = await storage.submitLicenseDraft(draftId, requestNumber);
