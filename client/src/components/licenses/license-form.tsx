@@ -108,6 +108,35 @@ interface LicenseFormProps {
   preSelectedTransporterId?: number | null;
 }
 
+// Função para submeter um rascunho diretamente (pode ser chamada de fora do componente)
+export async function submitDraftDirectly(draftId: number) {
+  try {
+    const url = `/api/licenses/drafts/${draftId}/submit`;
+    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Erro ao enviar rascunho: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Invalidar cache
+    queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
+    
+    return data;
+  } catch (error) {
+    console.error("Erro ao submeter rascunho diretamente:", error);
+    throw error;
+  }
+}
+
 export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporterId }: LicenseFormProps) {
   const { toast } = useToast();
   const [licenseType, setLicenseType] = useState<string>(draft?.type || "");

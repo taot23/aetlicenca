@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import { TransporterInfo } from "@/components/transporters/transporter-info";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SortableHeader } from "@/components/ui/sortable-header";
+import { submitDraftDirectly } from "./license-form";
 
 interface LicenseListProps {
   licenses: LicenseRequest[];
