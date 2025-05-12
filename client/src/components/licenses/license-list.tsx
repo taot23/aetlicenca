@@ -71,26 +71,7 @@ export function LicenseList({
     },
   });
 
-  // Submit draft mutation
-  const submitMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("POST", `/api/licenses/drafts/${id}/submit`);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Solicitação enviada",
-        description: "A solicitação de licença foi enviada com sucesso",
-      });
-      onRefresh();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro",
-        description: error.message || "Não foi possível enviar a solicitação",
-        variant: "destructive",
-      });
-    },
-  });
+  // A submissão de rascunhos agora usa submitDraftDirectly diretamente, não precisamos mais dessa mutação
 
   const handleDeleteClick = (license: LicenseRequest) => {
     setSelectedLicense(license);
@@ -104,8 +85,28 @@ export function LicenseList({
     }
   };
 
-  const handleSubmitDraft = (license: LicenseRequest) => {
-    submitMutation.mutate(license.id);
+  const handleSubmitDraft = async (license: LicenseRequest) => {
+    try {
+      // Usar a função direta em vez da mutação
+      await submitDraftDirectly(license.id);
+      
+      // Atualizar a lista após o envio bem-sucedido
+      toast({
+        title: "Rascunho enviado com sucesso",
+        description: "O pedido de licença foi enviado para análise.",
+        variant: "success",
+      });
+      
+      // Atualizar os dados
+      onRefresh();
+    } catch (error) {
+      console.error("Erro ao enviar rascunho:", error);
+      toast({
+        title: "Erro ao enviar rascunho",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar o rascunho",
+        variant: "destructive",
+      });
+    }
   };
 
   const getLicenseTypeLabel = (type: string) => {
