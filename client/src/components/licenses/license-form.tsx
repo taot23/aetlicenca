@@ -158,7 +158,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       states: draft.states,
       isDraft: draft.isDraft,
       comments: draft.comments || undefined,
-      cargoType: undefined, // Adicionado para support ao tipo de carga
+      cargoType: draft.cargoType || undefined, // Usar o tipo de carga do rascunho ou undefined
     } : {
       type: "",
       transporterId: preSelectedTransporterId || undefined, // Usar o transportador pré-selecionado
@@ -176,7 +176,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       additionalPlatesDocuments: [],
       isDraft: true,
       comments: "",
-      cargoType: undefined, // Adicionado para support ao tipo de carga
+      cargoType: undefined, // Inicializar como undefined para validação de formulário
     },
   });
 
@@ -402,7 +402,32 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     // Verificar campos básicos
     if (!values.type) missingFields.push("Tipo de Conjunto");
     if (!values.transporterId) missingFields.push("Transportador");
-    if (!values.cargoType) missingFields.push("Tipo de Carga");
+    
+    // Verificação especial para o tipo de carga
+    if (!values.cargoType) {
+      missingFields.push("Tipo de Carga");
+      
+      // Definir o campo como erro no formulário
+      form.setError('cargoType', { 
+        type: 'manual', 
+        message: 'Selecione um tipo de carga para continuar' 
+      });
+      
+      // Se o tipo de licença estiver definido, fazer foco na seção de carga
+      if (values.type) {
+        // Destacar visualmente a seção de carga
+        const cargoTypeSection = document.getElementById('cargo-type-section');
+        if (cargoTypeSection) {
+          cargoTypeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Adicionar classe para destacar o campo com erro
+          cargoTypeSection.classList.add('border-red-300', 'bg-red-50');
+          setTimeout(() => {
+            cargoTypeSection.classList.remove('border-red-300', 'bg-red-50');
+          }, 3000);
+        }
+      }
+    }
+    
     if (!values.length) missingFields.push("Comprimento");
     if (!values.width) missingFields.push("Largura");
     if (!values.height) missingFields.push("Altura");
