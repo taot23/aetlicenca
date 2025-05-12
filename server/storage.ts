@@ -1327,16 +1327,33 @@ export class DatabaseStorage implements IStorage {
     // Sanitizar campos de dimensões e tipo de carga com valores padrão baseados no tipo de licença
     let width = currentDraft.width;
     let height = currentDraft.height;
+    let length = currentDraft.length;
     let cargoType = currentDraft.cargoType;
     
-    // Se a largura não estiver definida, usar valor padrão com base no tipo de licença
-    if (width === undefined || width === null) {
+    console.log("Valores antes da sanitização:", { 
+      width, 
+      height, 
+      length, 
+      cargoType, 
+      type: currentDraft.type 
+    });
+    
+    // Se a largura não estiver definida ou for inválida, usar valor padrão com base no tipo de licença
+    if (width === undefined || width === null || isNaN(Number(width))) {
       width = currentDraft.type === "flatbed" ? 320 : 260; // 3.20m ou 2.60m
+      console.log("Corrigindo largura para valor padrão:", width);
     }
     
-    // Se a altura não estiver definida, usar valor padrão com base no tipo de licença
-    if (height === undefined || height === null) {
+    // Se a altura não estiver definida ou for inválida, usar valor padrão com base no tipo de licença
+    if (height === undefined || height === null || isNaN(Number(height))) {
       height = currentDraft.type === "flatbed" ? 495 : 440; // 4.95m ou 4.40m
+      console.log("Corrigindo altura para valor padrão:", height);
+    }
+    
+    // Se o comprimento não estiver definido ou for inválido, usar valor padrão com base no tipo de licença
+    if (length === undefined || length === null || isNaN(Number(length))) {
+      length = currentDraft.type === "flatbed" ? 25 : 25; // 25m é um valor médio razoável
+      console.log("Corrigindo comprimento para valor padrão:", length);
     }
     
     // Se o tipo de carga não estiver definido, usar valor padrão com base no tipo de licença
@@ -1357,6 +1374,7 @@ export class DatabaseStorage implements IStorage {
       // Garantir que os campos de dimensão e tipo de carga estão corretos
       width: Number(width),
       height: Number(height),
+      length: Number(length),
       cargoType
     };
     
