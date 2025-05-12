@@ -706,6 +706,95 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     form.handleSubmit(onSubmit)();
   };
 
+  // Função para validar dimensões com base no tipo de licença e carga
+  const validateDimensions = (values: any) => {
+    // Obter o tipo de conjunto e de carga
+    const licenseType = values.type || 'default';
+    const cargoType = values.cargoType;
+    
+    // Verificar e converter valores de dimensão se necessário
+    // Se os valores estiverem em centímetros (acima de 100), converter para metros
+    const length = Number(values.length);
+    const width = Number(values.width);
+    const height = Number(values.height);
+    
+    console.log(`Validando comprimento:`, length, `tipo:`, typeof length);
+    console.log(`Valor em metros:`, length, `Está em centímetros:`, length > 100);
+    
+    console.log(`Validando largura:`, width, `tipo:`, typeof width);
+    console.log(`Largura em metros:`, width, `Está em centímetros:`, width > 100);
+    
+    console.log(`Validando altura:`, height, `tipo:`, typeof height);
+    console.log(`Altura em metros:`, height, `Está em centímetros:`, height > 100);
+    
+    // Determinar quais limites usar com base no tipo
+    let limits;
+    
+    if (licenseType === 'flatbed') {
+      // Para pranchas, usar limite específico
+      limits = DIMENSION_LIMITS.flatbed;
+    } else {
+      // Para outros tipos, usar limite padrão
+      limits = DIMENSION_LIMITS.default;
+    }
+    
+    // Para carga SUPERDIMENSIONADA, não há limites
+    if (cargoType === 'oversized') {
+      limits = DIMENSION_LIMITS.oversized;
+    }
+    
+    // Ajustar os valores no formulário se necessário (conversão de cm para m)
+    if (length > 100) {
+      const convertedLength = length / 100;
+      form.setValue('length', convertedLength);
+      console.log(`Convertendo comprimento de ${length}cm para ${convertedLength}m`);
+    }
+    
+    if (width > 100) {
+      const convertedWidth = width / 100;
+      form.setValue('width', convertedWidth);
+      console.log(`Convertendo largura de ${width}cm para ${convertedWidth}m`);
+    }
+    
+    if (height > 100) {
+      const convertedHeight = height / 100;
+      form.setValue('height', convertedHeight);
+      console.log(`Convertendo altura de ${height}cm para ${convertedHeight}m`);
+    }
+    
+    // Validação dos limites e mensagens de aviso
+    if (cargoType !== 'oversized') {
+      // Só validar limites para cargas que não são superdimensionadas
+      const updatedLength = Number(form.getValues('length'));
+      const updatedWidth = Number(form.getValues('width'));
+      const updatedHeight = Number(form.getValues('height'));
+      
+      if (updatedLength > limits.maxLength) {
+        toast({
+          title: "Aviso sobre dimensões",
+          description: `O comprimento (${updatedLength}m) excede o limite máximo de ${limits.maxLength}m para este tipo de conjunto. A licença pode ser recusada.`,
+          variant: "warning",
+        });
+      }
+      
+      if (updatedWidth > limits.maxWidth) {
+        toast({
+          title: "Aviso sobre dimensões",
+          description: `A largura (${updatedWidth}m) excede o limite máximo de ${limits.maxWidth}m para este tipo de conjunto. A licença pode ser recusada.`,
+          variant: "warning",
+        });
+      }
+      
+      if (updatedHeight > limits.maxHeight) {
+        toast({
+          title: "Aviso sobre dimensões",
+          description: `A altura (${updatedHeight}m) excede o limite máximo de ${limits.maxHeight}m para este tipo de conjunto. A licença pode ser recusada.`,
+          variant: "warning",
+        });
+      }
+    }
+  };
+
   const isProcessing = saveAsDraftMutation.isPending || submitRequestMutation.isPending;
 
   // Mutation para criar um novo veículo
