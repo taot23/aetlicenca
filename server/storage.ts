@@ -1340,8 +1340,12 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Se o tipo de carga não estiver definido, usar valor padrão com base no tipo de licença
-    if (cargoType === undefined || cargoType === null || cargoType === "") {
+    // Verificação mais ampla para casos de renovação onde o cargoType pode ser inválido
+    if (cargoType === undefined || cargoType === null || cargoType === "" || typeof cargoType !== 'string') {
+      console.log("cargoType inválido, usando valor padrão. Tipo atual:", typeof cargoType, "Valor atual:", cargoType);
       cargoType = currentDraft.type === "flatbed" ? "indivisible_cargo" : "dry_cargo";
+    } else {
+      console.log("cargoType válido:", cargoType);
     }
     
     // Sanitizar os dados importantes antes da submissão
