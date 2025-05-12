@@ -414,6 +414,35 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     const values = form.getValues();
     const missingFields = [];
     
+    // Verificar se é um pedido de renovação
+    const isRenewal = values.comments && 
+                     typeof values.comments === 'string' && 
+                     values.comments.toLowerCase().includes('renovação');
+    
+    console.log(`É pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
+    
+    // Se for renovação, adicionar campos adicionais para garantir validade
+    if (isRenewal) {
+      // Garantir que dimensões e tipo de carga estão preenchidos
+      if (!values.length) values.length = 25; // 25m
+      if (!values.width) values.width = 2.6;  // 2.6m
+      if (!values.height) values.height = 4.4; // 4.4m
+      if (!values.cargoType) values.cargoType = values.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
+      
+      console.log('Valores ajustados para renovação:', {
+        length: values.length,
+        width: values.width,
+        height: values.height,
+        cargoType: values.cargoType
+      });
+      
+      // Atualizar o formulário com os valores ajustados
+      form.setValue('length', values.length);
+      form.setValue('width', values.width);
+      form.setValue('height', values.height);
+      form.setValue('cargoType', values.cargoType as any);
+    }
+    
     // Verificar campos básicos
     if (!values.type) missingFields.push("Tipo de Conjunto");
     if (!values.transporterId) missingFields.push("Transportador");
