@@ -49,7 +49,8 @@ import {
   Building2, 
   Link as LinkIcon,
   FileUp,
-  Check
+  Check,
+  Send
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "wouter";
@@ -504,7 +505,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
   const handleSubmitRequest = () => {
     // Obter valores do formulário para verificação
     const values = form.getValues();
-    const missingFields = [];
+    const missingFields: string[] = [];
     
     // Verificar se é um pedido de renovação
     const isRenewal = values.comments && 
@@ -534,6 +535,50 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       form.setValue('height', values.height);
       form.setValue('cargoType', values.cargoType as any);
     }
+    
+    // Verificar campos obrigatórios básicos
+    if (!values.type) missingFields.push('Tipo de Conjunto');
+    if (!values.transporterId) missingFields.push('Transportador');
+    if (!values.mainVehiclePlate) missingFields.push('Placa do Veículo Principal');
+    if (!values.states || values.states.length === 0) missingFields.push('Estados');
+    
+    // Verificar campos específicos baseado no tipo de licença
+    if (values.type === 'bitrain_9_axles' || values.type === 'bitrain_7_axles' || values.type === 'bitrain_6_axles') {
+      if (!values.tractorUnitId) missingFields.push('Cavalo Mecânico');
+      if (!values.firstTrailerId) missingFields.push('1ª Carreta');
+      if (!values.secondTrailerId) missingFields.push('2ª Carreta');
+    } else if (values.type === 'roadtrain') {
+      if (!values.tractorUnitId) missingFields.push('Cavalo Mecânico');
+      if (!values.firstTrailerId) missingFields.push('1ª Carreta');
+      if (!values.secondTrailerId) missingFields.push('2ª Carreta');
+      if (!values.dollyId) missingFields.push('Dolly');
+    } else if (values.type === 'flatbed') {
+      if (!values.tractorUnitId) missingFields.push('Cavalo Mecânico');
+      if (!values.firstTrailerId) missingFields.push('Prancha');
+    } else if (values.type === 'romeo_and_juliet') {
+      if (!values.tractorUnitId) missingFields.push('Caminhão');
+      if (!values.firstTrailerId) missingFields.push('Reboque');
+    }
+    
+    // Verificar cargoType obrigatório
+    if (!values.cargoType) missingFields.push('Tipo de Carga');
+    
+    // Verificar se há campos faltantes e mostrar mensagem de erro
+    if (missingFields.length > 0) {
+      toast({
+        title: "Campos obrigatórios não preenchidos",
+        description: `Por favor, preencha os seguintes campos: ${missingFields.join(', ')}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validar dimensões
+    validateDimensions(values);
+    
+    // Atualizar o valor isDraft para false e submeter
+    form.setValue("isDraft", false);
+    form.handleSubmit(onSubmit)();
   };
   
   // Função para submeter um rascunho existente diretamente
