@@ -534,8 +534,45 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       form.setValue('height', values.height);
       form.setValue('cargoType', values.cargoType as any);
     }
+  };
+  
+  // Função para submeter um rascunho existente diretamente
+  const handleSubmitDraftDirectly = async () => {
+    if (!draft || !draft.id) {
+      toast({
+        title: "Erro",
+        description: "Não é possível enviar um rascunho que ainda não foi salvo",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    // Verificar campos básicos
+    try {
+      await submitDraftDirectly(draft.id);
+      
+      toast({
+        title: "Rascunho enviado com sucesso",
+        description: "O pedido de licença foi enviado para análise",
+        variant: "success",
+      });
+      
+      // Chamar onComplete para fechar o modal e atualizar a lista
+      onComplete();
+    } catch (error) {
+      console.error("Erro ao submeter rascunho:", error);
+      toast({
+        title: "Erro ao enviar rascunho",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar o rascunho",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Verificar campos básicos no handleSubmitRequest
+  const validateFields = () => {
+    const values = form.getValues();
+    const missingFields = [];
+    
     if (!values.type) missingFields.push("Tipo de Conjunto");
     if (!values.transporterId) missingFields.push("Transportador");
     
