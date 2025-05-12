@@ -387,71 +387,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     }
   };
 
-  // Função para verificar se os campos obrigatórios estão preenchidos
-  const checkRequiredFields = () => {
-    const values = form.getValues();
-    
-    // Verificar dimensões
-    const isWidthEmpty = values.width === undefined || values.width === null;
-    const isHeightEmpty = values.height === undefined || values.height === null;
-    const isLengthEmpty = values.length === undefined || values.length === null;
-    
-    // Verificar tipo de licença e carga
-    const isLicenseTypeEmpty = !values.type;
-    const isCargoTypeEmpty = !values.cargoType;
-    
-    // Verificar transportador
-    const isTransporterEmpty = !values.transporterId;
-    
-    // Verificar veículos - dependendo do tipo de licença
-    const isTractorUnitEmpty = !values.tractorUnitId;
-    
-    // Verificar estados selecionados
-    const isStatesEmpty = !values.states || values.states.length === 0;
-    
-    let missingRequiredVehicles = false;
-    
-    // Verificar veículos de acordo com o tipo de conjunto
-    if (values.type === 'bitrain_9_axles' || values.type === 'bitrain_7_axles' || values.type === 'bitrain_6_axles') {
-      // Para Bitrem, precisa de unidade tratora e dois semirreboques
-      const isFirstTrailerEmpty = !values.firstTrailerId;
-      const isSecondTrailerEmpty = !values.secondTrailerId;
-      missingRequiredVehicles = isTractorUnitEmpty || isFirstTrailerEmpty || isSecondTrailerEmpty;
-    } else if (values.type === 'flatbed') {
-      // Para Prancha, necessário apenas prancha
-      const isFlatbedEmpty = !values.flatbedId;
-      missingRequiredVehicles = isFlatbedEmpty;
-    } else if (values.type === 'romeo_and_juliet') {
-      // Para Romeu e Julieta, necessário caminhão e reboque
-      const isFirstTrailerEmpty = !values.firstTrailerId;
-      missingRequiredVehicles = isTractorUnitEmpty || isFirstTrailerEmpty;
-    }
-    
-    // Logger para debug
-    console.log('Validando formulário:', {
-      dimensões: { width: values.width, height: values.height, length: values.length },
-      transportador: values.transporterId,
-      licençaTipo: values.type,
-      cargaTipo: values.cargoType,
-      estados: values.states,
-      veículos: { 
-        unidadeTratora: values.tractorUnitId, 
-        primeiroReboque: values.firstTrailerId,
-        segundoReboque: values.secondTrailerId,
-        prancha: values.flatbedId
-      }
-    });
-    
-    // Retornar true se algum campo obrigatório estiver vazio
-    return isWidthEmpty || 
-           isHeightEmpty || 
-           isLengthEmpty || 
-           isLicenseTypeEmpty || 
-           isCargoTypeEmpty || 
-           isTransporterEmpty || 
-           isStatesEmpty || 
-           missingRequiredVehicles;
-  };
+  // Função de validação do formulário integrada diretamente ao handleSubmitRequest
 
   const handleSaveDraft = () => {
     form.setValue("isDraft", true);
@@ -459,19 +395,53 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
   };
 
   const handleSubmitRequest = () => {
-    // Verificar se os campos obrigatórios estão preenchidos
-    if (checkRequiredFields()) {
-      // Mostrar aviso e não prosseguir com a submissão
+    // Obter valores do formulário para verificação
+    const values = form.getValues();
+    const missingFields = [];
+    
+    // Verificar campos básicos
+    if (!values.type) missingFields.push("Tipo de Conjunto");
+    if (!values.transporterId) missingFields.push("Transportador");
+    if (!values.cargoType) missingFields.push("Tipo de Carga");
+    if (!values.length) missingFields.push("Comprimento");
+    if (!values.width) missingFields.push("Largura");
+    if (!values.height) missingFields.push("Altura");
+    if (!values.states || values.states.length === 0) missingFields.push("Estados");
+    
+    // Verificar veículos com base no tipo
+    if (values.type === 'bitrain_9_axles' || values.type === 'bitrain_7_axles' || values.type === 'bitrain_6_axles') {
+      if (!values.tractorUnitId) missingFields.push("Unidade Tratora");
+      if (!values.firstTrailerId) missingFields.push("1ª Carreta");
+      if (!values.secondTrailerId) missingFields.push("2ª Carreta");
+    } else if (values.type === 'flatbed') {
+      if (!values.flatbedId) missingFields.push("Prancha");
+    } else if (values.type === 'romeo_and_juliet') {
+      if (!values.tractorUnitId) missingFields.push("Caminhão");
+      if (!values.firstTrailerId) missingFields.push("Reboque");
+    }
+    
+    // Se encontrou campos faltando
+    if (missingFields.length > 0) {
+      // Mostrar aviso 
       setShowRequiredFieldsWarning(true);
       
       // Rolar para o topo para garantir que o usuário veja o aviso
       window.scrollTo({ top: 0, behavior: 'smooth' });
       
-      // Notificar o usuário através de toast
+      // Construir mensagem com os campos faltantes
+      const fieldsText = missingFields.join(", ");
+      
+      // Notificar o usuário através de toast com detalhamento
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios para enviar sua solicitação",
+        title: "Campos obrigatórios não preenchidos",
+        description: `Por favor, preencha os seguintes campos: ${fieldsText}`,
         variant: "destructive",
+      });
+      
+      // Registrar os valores atuais no console para debug
+      console.log('Formulário incompleto:', { 
+        camposFaltantes: missingFields,
+        valores: values 
       });
       
       return;
