@@ -289,7 +289,6 @@ export function LicenseList({
             size="icon"
             onClick={() => handleSubmitDraft(license)}
             className="text-green-600 hover:text-green-800 hover:bg-green-50 ml-1"
-            disabled={submitMutation.isPending}
           >
             <Send className="h-4 w-4" />
           </Button>
@@ -460,7 +459,6 @@ export function LicenseList({
                         size="sm"
                         onClick={() => handleSubmitDraft(license)}
                         className="text-green-600 border-green-200"
-                        disabled={submitMutation.isPending}
                       >
                         <Send className="h-4 w-4 mr-1" /> Enviar
                       </Button>
