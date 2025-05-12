@@ -474,6 +474,16 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     
     // Se tudo estiver preenchido, continuar com a submissão
     setShowRequiredFieldsWarning(false);
+    
+    // Antes de enviar, garantir que o cargoType esteja definido corretamente
+    // Se ainda não tiver valor, tentar usar o estado local
+    if (!values.cargoType && cargoType) {
+      form.setValue("cargoType", cargoType);
+    }
+    
+    // Registrar para debug o valor final que será enviado
+    console.log('Valores finais antes de enviar:', form.getValues());
+    
     form.setValue("isDraft", false);
     form.handleSubmit(onSubmit)();
   };
@@ -961,7 +971,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   const isEmpty = field.value === undefined || field.value === null || field.value === '';
                   
                   return (
-                    <FormItem>
+                    <FormItem id="cargo-type-section">
                       <FormLabel className="text-base font-medium flex items-center">
                         Tipo de Carga
                         {isEmpty && (
@@ -971,8 +981,16 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                         )}
                       </FormLabel>
                       <Select 
-                        onValueChange={field.onChange} 
+                        onValueChange={(value) => {
+                          // Garantir que o tipo de carga seja salvo no formulário
+                          field.onChange(value);
+                          // Atualizar o estado local para referência também
+                          setCargoType(value);
+                          // Remover erros relacionados a este campo
+                          form.clearErrors('cargoType');
+                        }} 
                         defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger className={`h-10 ${isEmpty ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}>
