@@ -132,6 +132,7 @@ export default function AdminLicensesPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [transporterFilter, setTransporterFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
+  const [stateFilter, setStateFilter] = useState("all");
   const [selectedLicense, setSelectedLicense] = useState<LicenseRequest | null>(null);
   const [licenseDetailsOpen, setLicenseDetailsOpen] = useState(false);
   const [stateStatusDialogOpen, setStateStatusDialogOpen] = useState(false);
@@ -382,6 +383,11 @@ export default function AdminLicensesPage() {
         license.transporterId != null && license.transporterId.toString() === transporterFilter
       );
       
+      // Filtro de estado
+      const matchesState = stateFilter === "all" || (
+        license.states && license.states.includes(stateFilter)
+      );
+      
       // Filtro de data
       let matchesDate = true;
       if (dateFilter) {
@@ -399,7 +405,7 @@ export default function AdminLicensesPage() {
         }
       }
       
-      return matchesSearch && matchesStatus && matchesTransporter && matchesDate;
+      return matchesSearch && matchesStatus && matchesTransporter && matchesState && matchesDate;
     })
     // Aplicar ordenação
     .sort((a, b) => {
@@ -603,7 +609,7 @@ export default function AdminLicensesPage() {
           <Card>
             <CardContent className="pt-4 px-3 md:pt-6 md:px-6">
               {/* Novo layout de pesquisa conforme mockup, similar ao da página "Acompanhar Licença" */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-5">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4 mb-5">
                 <div>
                   <div className="flex flex-col space-y-1">
                     <Label htmlFor="license-search" className="text-sm">Pesquisar</Label>
@@ -641,6 +647,25 @@ export default function AdminLicensesPage() {
                 
                 <div>
                   <div className="flex flex-col space-y-1">
+                    <Label htmlFor="state-filter" className="text-sm">Estado</Label>
+                    <Select value={stateFilter} onValueChange={setStateFilter}>
+                      <SelectTrigger id="state-filter" className="h-9 text-sm">
+                        <SelectValue placeholder="Todos os estados" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os estados</SelectItem>
+                        {brazilianStates.map((state) => (
+                          <SelectItem key={state} value={state}>
+                            {state}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex flex-col space-y-1">
                     <Label htmlFor="date-filter" className="text-sm">Data</Label>
                     <Input
                       id="date-filter"
@@ -652,7 +677,7 @@ export default function AdminLicensesPage() {
                   </div>
                 </div>
                 
-                <div className="md:col-span-3">
+                <div className="md:col-span-4">
                   <div className="flex flex-col space-y-1">
                     <Label htmlFor="transporter-filter" className="text-sm">Transportador</Label>
                     <Select value={transporterFilter} onValueChange={setTransporterFilter}>
