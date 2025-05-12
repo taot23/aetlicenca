@@ -2340,7 +2340,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             type="button" 
             variant="outline" 
             onClick={onCancel}
-            className="w-full sm:w-auto order-3 sm:order-1"
+            className="w-full sm:w-auto order-4 sm:order-1"
           >
             Cancelar
           </Button>
@@ -2349,19 +2349,31 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             variant="outline"
             onClick={handleSaveDraft}
             disabled={isProcessing}
-            className="w-full sm:w-auto order-2"
+            className="w-full sm:w-auto order-3 sm:order-2"
           >
             {saveAsDraftMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
             Salvar Rascunho
           </Button>
+          {/* Botão para envio direto de rascunho, mostrado apenas quando estamos editando um rascunho existente */}
+          {draft && draft.id && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSubmitDraftDirectly}
+              className="w-full sm:w-auto order-2 sm:order-3 bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+            >
+              <Send className="mr-2 h-4 w-4" />
+              Enviar Rascunho
+            </Button>
+          )}
           <Button
             type="button"
             onClick={handleSubmitRequest}
             disabled={isProcessing}
-            className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto order-1 sm:order-3"
+            className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto order-1 sm:order-4"
           >
             {submitRequestMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-            Enviar Pedido
+            Enviar Novo Pedido
           </Button>
         </div>
       </form>
