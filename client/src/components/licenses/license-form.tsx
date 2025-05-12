@@ -397,8 +397,71 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         return;
       }
       
-      // Enviar para o servidor
-      submitRequestMutation.mutate(requestData as any);
+      // Verificar se é um pedido de renovação
+      const isRenewal = requestData.comments && 
+                      typeof requestData.comments === 'string' && 
+                      requestData.comments.toLowerCase().includes('renovação');
+                      
+      console.log(`Verificação de renovação: ${isRenewal ? 'É renovação' : 'Não é renovação'}`);
+                      
+      // Abordagem especial para renovações para evitar problemas
+      if (isRenewal && draft?.id) {
+        console.log("Usando abordagem direta para renovação de licença");
+        
+        // Garantir que temos valores válidos para campos obrigatórios
+        if (!requestData.cargoType) {
+          requestData.cargoType = requestData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
+        }
+        
+        if (!requestData.length) requestData.length = 2500; // 25 metros em centímetros
+        if (!requestData.width) requestData.width = 260;    // 2.6 metros em centímetros
+        if (!requestData.height) requestData.height = 440;  // 4.4 metros em centímetros
+        
+        // Criar uma nova licença (não usando o endpoint de submit do rascunho)
+        const url = '/api/licenses';
+        const method = "POST";
+        
+        // Incluir o ID do rascunho a ser excluído após sucesso
+        const payload = {
+          ...requestData,
+          draftToDeleteId: draft.id // Campo adicional para que o backend remova o rascunho após criar a licença
+        };
+        
+        console.log("Enviando renovação com payload modificado:", payload);
+        
+        // Enviar usando o apiRequest em vez de fetch direto (evita uso de await no escopo do componente)
+        apiRequest(method, url, payload)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`Erro ao processar renovação: ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+          })
+          .then(data => {
+            // Notificar sucesso
+            toast({
+              title: "Renovação enviada",
+              description: "A solicitação de renovação de licença foi enviada com sucesso",
+            });
+            
+            // Invalidar cache e completar
+            queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
+            onComplete();
+          })
+          .catch(error => {
+            console.error("Erro ao processar renovação:", error);
+            toast({
+              title: "Erro na renovação",
+              description: error instanceof Error ? error.message : "Erro ao processar renovação",
+              variant: "destructive",
+            });
+          });
+      } else {
+        // Para solicitações normais, usar o fluxo padrão
+        console.log("Usando fluxo padrão para envio de solicitação");
+        submitRequestMutation.mutate(requestData as any);
+      }
     }
   };
 

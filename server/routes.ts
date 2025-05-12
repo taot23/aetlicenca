@@ -1330,12 +1330,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const licenseData = { ...req.body };
       
       console.log("Dados de licença recebidos:", JSON.stringify(licenseData, null, 2));
+      
+      // Verificar se é um pedido de renovação com rascunho que deve ser excluído
+      const draftToDeleteId = licenseData.draftToDeleteId;
+      if (draftToDeleteId) {
+        console.log(`Pedido de renovação detectado. Rascunho ${draftToDeleteId} será excluído após sucesso.`);
+        // Remover este campo para não interferir na validação
+        delete licenseData.draftToDeleteId;
+      }
+      
+      // Verificar se é uma renovação através dos comentários
+      const isRenewal = licenseData.comments && 
+                       typeof licenseData.comments === 'string' && 
+                       licenseData.comments.toLowerCase().includes('renovação');
+                       
+      if (isRenewal) {
+        console.log("Detectada renovação de licença com base nos comentários.");
+      }
+      
       console.log("Tipo de licença:", licenseData.type);
       console.log("Tipo de carga:", licenseData.cargoType);
       console.log("Comprimento:", licenseData.length);
       console.log("Largura:", licenseData.width);
       console.log("Altura:", licenseData.height);
-      console.log("Comprimento da licença:", licenseData.length);
       console.log("Tipo do valor do comprimento:", typeof licenseData.length);
       
       // Sanitização mais rigorosa dos campos de dimensões com valores padrão
