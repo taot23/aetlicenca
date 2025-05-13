@@ -199,8 +199,17 @@ export default function TrackLicensePage() {
       if (statusFilter && statusFilter !== "all_status") {
         console.log(`[DEBUG FILTRO] Licença ${license.requestNumber} - Status: "${license.status}", StatusEspecífico: "${license.specificStateStatus || 'N/A'}"`);
         
-        // Verifica correspondência direta
-        if (license.status === statusFilter || license.specificStateStatus === statusFilter) {
+        // Caso especial para "pending_registration"
+        if (statusFilter === "pending_registration") {
+          // Para "pending_registration", mostramos apenas licenças que NÃO têm status específico
+          // ou seja, só aquelas com specificStateStatus === "N/A" ou undefined
+          if (!license.specificStateStatus || license.specificStateStatus === "N/A") {
+            matchesStatus = true;
+            console.log(`[DEBUG FILTRO] ✓ MATCH para "pending_registration" (sem status específico)`);
+          }
+        } 
+        // Outros status - verifica correspondência direta
+        else if (license.status === statusFilter || license.specificStateStatus === statusFilter) {
           matchesStatus = true;
           console.log(`[DEBUG FILTRO] ✓ MATCH para "${statusFilter}"`);
         }
