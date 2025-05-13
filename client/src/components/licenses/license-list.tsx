@@ -21,7 +21,7 @@ import { format } from "date-fns";
 import { TransporterInfo } from "@/components/transporters/transporter-info";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SortableHeader } from "@/components/ui/sortable-header";
-import { submitDraftDirectly } from "./license-form";
+import { submitDraftDirectly, submitRenewalRequest } from "./license-form";
 
 interface LicenseListProps {
   licenses: LicenseRequest[];
@@ -87,23 +87,52 @@ export function LicenseList({
 
   const handleSubmitDraft = async (license: LicenseRequest) => {
     try {
-      // Usar a função direta em vez da mutação
-      await submitDraftDirectly(license.id);
+      // Verificar se é um pedido de renovação para usar a função especializada
+      const isRenewal = license.comments && 
+                       typeof license.comments === 'string' && 
+                       license.comments.toLowerCase().includes('renovação');
       
-      // Atualizar a lista após o envio bem-sucedido
-      toast({
-        title: "Rascunho enviado com sucesso",
-        description: "O pedido de licença foi enviado para análise.",
-        variant: "success",
-      });
+      console.log(`Verificação na lista - É renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
+      
+      if (isRenewal) {
+        // Preparar dados mínimos para renovação
+        const formData = {
+          ...license,
+          // Garantir campos mínimos para que a renovação funcione
+          length: license.length || 25,
+          width: license.width || 2.6, 
+          height: license.height || 4.4,
+          cargoType: license.cargoType || (license.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo'),
+          states: license.states || [],
+          isDraft: false
+        };
+        
+        // Usar função específica para renovações
+        await submitRenewalRequest(license.id, formData);
+        
+        toast({
+          title: "Renovação enviada com sucesso",
+          description: "O pedido de renovação foi enviado para análise.",
+          variant: "success",
+        });
+      } else {
+        // Para pedidos normais
+        await submitDraftDirectly(license.id);
+        
+        toast({
+          title: "Rascunho enviado com sucesso",
+          description: "O pedido de licença foi enviado para análise.",
+          variant: "success",
+        });
+      }
       
       // Atualizar os dados
       onRefresh();
     } catch (error) {
-      console.error("Erro ao enviar rascunho:", error);
+      console.error("Erro ao enviar rascunho/renovação:", error);
       toast({
-        title: "Erro ao enviar rascunho",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar o rascunho",
+        title: "Erro ao enviar",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao processar seu pedido",
         variant: "destructive",
       });
     }
