@@ -596,9 +596,30 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           requestData.cargoType = requestData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
         }
         
-        if (!requestData.length) requestData.length = 2500; // 25 metros em centímetros
-        if (!requestData.width) requestData.width = 260;    // 2.6 metros em centímetros
-        if (!requestData.height) requestData.height = 440;  // 4.4 metros em centímetros
+        // Garantir valores mínimos de dimensões
+        if (!requestData.length) {
+          requestData.length = 25; // 25 metros
+        } else if (Number(requestData.length) > 100) {
+          // Converter de centímetros para metros
+          requestData.length = Number(requestData.length) / 100;
+          console.log(`Convertendo comprimento de cm para m: ${requestData.length}m`);
+        }
+        
+        if (!requestData.width) {
+          requestData.width = 2.6; // 2.6 metros
+        } else if (Number(requestData.width) > 100) {
+          // Converter de centímetros para metros
+          requestData.width = Number(requestData.width) / 100;
+          console.log(`Convertendo largura de cm para m: ${requestData.width}m`);
+        }
+        
+        if (!requestData.height) {
+          requestData.height = 4.4; // 4.4 metros
+        } else if (Number(requestData.height) > 100) {
+          // Converter de centímetros para metros
+          requestData.height = Number(requestData.height) / 100;
+          console.log(`Convertendo altura de cm para m: ${requestData.height}m`);
+        }
         
         // Criar uma nova licença (não usando o endpoint de submit do rascunho)
         const url = '/api/licenses';
@@ -1037,6 +1058,26 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     
     // Se tudo estiver preenchido, continuar com a submissão
     setShowRequiredFieldsWarning(false);
+    
+    // Verificar e converter valores de dimensão se necessário
+    // Se os valores estiverem em centímetros (acima de 100), converter para metros
+    if (values.length && Number(values.length) > 100) {
+      const lengthInMeters = Number(values.length) / 100;
+      console.log(`[ENVIO_RASCUNHO] Convertendo comprimento de ${values.length}cm para ${lengthInMeters}m`);
+      form.setValue('length', lengthInMeters);
+    }
+    
+    if (values.width && Number(values.width) > 100) {
+      const widthInMeters = Number(values.width) / 100;
+      console.log(`[ENVIO_RASCUNHO] Convertendo largura de ${values.width}cm para ${widthInMeters}m`);
+      form.setValue('width', widthInMeters);
+    }
+    
+    if (values.height && Number(values.height) > 100) {
+      const heightInMeters = Number(values.height) / 100;
+      console.log(`[ENVIO_RASCUNHO] Convertendo altura de ${values.height}cm para ${heightInMeters}m`);
+      form.setValue('height', heightInMeters);
+    }
     
     // Antes de enviar, garantir que o cargoType esteja definido corretamente
     // Se ainda não tiver valor, tentar usar o estado local
