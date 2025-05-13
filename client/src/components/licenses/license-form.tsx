@@ -109,6 +109,60 @@ interface LicenseFormProps {
   preSelectedTransporterId?: number | null;
 }
 
+// Função para submeter uma renovação
+export async function submitRenewalRequest(draftId: number, formData: any) {
+  try {
+    console.log("Processando envio de renovação com ID:", draftId);
+    
+    // Garantir valores para campos essenciais
+    const requestData = { ...formData };
+    
+    if (!requestData.cargoType) {
+      requestData.cargoType = requestData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
+    }
+    
+    if (!requestData.length) requestData.length = 25; // 25 metros
+    if (!requestData.width) requestData.width = 2.6;  // 2.6 metros
+    if (!requestData.height) requestData.height = 4.4; // 4.4 metros
+    
+    // Transformar em request normal (não draft)
+    requestData.isDraft = false;
+    
+    console.log("Dados da renovação:", JSON.stringify(requestData));
+    
+    // Criar nova licença (contornando o endpoint de submit)
+    const url = '/api/licenses';
+    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        ...requestData,
+        draftToDeleteId: draftId // Para que o backend possa excluir o rascunho após criar
+      })
+    });
+    
+    // Verificar se há resposta de erro do servidor
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: `Erro ao processar renovação: ${response.status} ${response.statusText}` }));
+      throw new Error(errorData.message || `Erro ao processar renovação: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Invalidar cache
+    queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
+    
+    return data;
+  } catch (error) {
+    console.error("Erro ao submeter renovação:", error);
+    throw error;
+  }
+}
+
 // Função para submeter um rascunho diretamente (pode ser chamada de fora do componente)
 export async function submitDraftDirectly(draftId: number, formData?: any) {
   try {
@@ -121,49 +175,8 @@ export async function submitDraftDirectly(draftId: number, formData?: any) {
     
     // Tratamento especial para renovações
     if (isRenewal && formData) {
-      console.log("Usando tratamento especial para renovação");
-      
-      // Garantir valores para campos essenciais
-      const requestData = { ...formData };
-      
-      if (!requestData.cargoType) {
-        requestData.cargoType = requestData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
-      }
-      
-      if (!requestData.length) requestData.length = 25; // 25 metros
-      if (!requestData.width) requestData.width = 2.6;  // 2.6 metros
-      if (!requestData.height) requestData.height = 4.4; // 4.4 metros
-      
-      // Transformar em request normal (não draft)
-      requestData.isDraft = false;
-      
-      // Criar nova licença (contornando o endpoint de submit)
-      const url = '/api/licenses';
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          ...requestData,
-          draftToDeleteId: draftId // Para que o backend possa excluir o rascunho após criar
-        })
-      });
-      
-      // Verificar se há resposta de erro do servidor
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: `Erro ao processar renovação: ${response.status} ${response.statusText}` }));
-        throw new Error(errorData.message || `Erro ao processar renovação: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      // Invalidar cache
-      queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
-      
-      return data;
+      // Usar função dedicada para renovações
+      return await submitRenewalRequest(draftId, formData);
     } else {
       // Caminho normal para rascunhos que não são renovações
       const url = `/api/licenses/drafts/${draftId}/submit`;
@@ -591,15 +604,15 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       form.setValue('height', values.height);
       form.setValue('cargoType', values.cargoType as any);
       
-      // Para renovações, criar uma rota especial quando for um draft existente
+      // Para renovações, usar nossa função específica quando for um draft existente
       if (draft && draft.id) {
         // Validar campos antes de enviar
         const isValid = await validateFields();
         if (!isValid) return;
         
         try {
-          // Usar a mesma função que usamos para o botão Enviar Rascunho
-          await submitDraftDirectly(draft.id, values);
+          // Usar a função específica para renovações
+          await submitRenewalRequest(draft.id, values);
           
           toast({
             title: "Renovação enviada com sucesso",
@@ -655,7 +668,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     
     console.log(`É pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
     
-    // Se for renovação, adicionar campos adicionais para garantir validade
+    // Preparar valores para envio
     if (isRenewal) {
       // Garantir que dimensões e tipo de carga estão preenchidos
       if (!values.length) {
@@ -688,8 +701,31 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     if (!isValid) return;
     
     try {
-      // Passar os dados do formulário para que submitDraftDirectly possa lidar com renovações
-      await submitDraftDirectly(draft.id, values);
+      if (isRenewal) {
+        // Usar função específica para renovações
+        await submitRenewalRequest(draft.id, values);
+      } else {
+        // Usar função direta para rascunhos comuns (evitar recursão)
+        const url = `/api/licenses/drafts/${draft.id}/submit`;
+        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: `Erro ao enviar rascunho: ${response.status} ${response.statusText}` }));
+          throw new Error(errorData.message || `Erro ao enviar rascunho: ${response.status} ${response.statusText}`);
+        }
+        
+        await response.json();
+        
+        // Invalidar cache
+        queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
+      }
       
       toast({
         title: isRenewal ? "Renovação enviada com sucesso" : "Rascunho enviado com sucesso",
