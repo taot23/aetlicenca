@@ -1005,6 +1005,11 @@ export class DatabaseStorage implements IStorage {
     const results = await db.select().from(vehicles).where(eq(vehicles.id, id));
     return results[0];
   }
+  
+  async getVehicleByPlate(plate: string): Promise<Vehicle | undefined> {
+    const results = await db.select().from(vehicles).where(eq(vehicles.plate, plate));
+    return results[0];
+  }
 
   async getVehiclesByUserId(userId: number): Promise<Vehicle[]> {
     // Retorna todos os veículos quando userId=0 (caso especial para admin)
