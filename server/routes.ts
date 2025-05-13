@@ -1318,6 +1318,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: 'Selecione pelo menos um estado' });
         }
         
+        // Verificar veículos necessários
+        const requiredVehicleIds = [];
+        
+        // Veículo principal (tractorUnitId) - sempre obrigatório
+        if (licenseData.tractorUnitId) {
+          requiredVehicleIds.push(licenseData.tractorUnitId);
+        } else {
+          return res.status(400).json({ message: 'O veículo principal (cavalo/trator) não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
+        }
+        
+        // Primeiro reboque/semirreboque - obrigatório para todos os tipos, exceto flatbed
+        if (licenseData.type !== 'flatbed' && !licenseData.firstTrailerId) {
+          return res.status(400).json({ message: 'O primeiro semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
+        } else if (licenseData.firstTrailerId) {
+          requiredVehicleIds.push(licenseData.firstTrailerId);
+        }
+        
+        // Segundo reboque - obrigatório para bitrens e rodotrens
+        if ((licenseData.type.startsWith('bitrain') || licenseData.type === 'road_train') && !licenseData.secondTrailerId) {
+          return res.status(400).json({ message: 'O segundo semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
+        } else if (licenseData.secondTrailerId) {
+          requiredVehicleIds.push(licenseData.secondTrailerId);
+        }
+        
+        // Dolly - obrigatório para rodotrem
+        if (licenseData.type === 'road_train' && !licenseData.dollyId) {
+          return res.status(400).json({ message: 'O dolly não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
+        } else if (licenseData.dollyId) {
+          requiredVehicleIds.push(licenseData.dollyId);
+        }
+        
+        // Prancha - obrigatório para tipo flatbed
+        if (licenseData.type === 'flatbed' && !licenseData.flatbedId) {
+          return res.status(400).json({ message: 'A prancha não está cadastrada. Cadastre o veículo antes de submeter a licença.' });
+        } else if (licenseData.flatbedId) {
+          requiredVehicleIds.push(licenseData.flatbedId);
+        }
+        
+        // Verificar se todos os veículos existem no banco de dados
+        for (const vehicleId of requiredVehicleIds) {
+          const vehicle = await storage.getVehicleById(vehicleId);
+          if (!vehicle) {
+            return res.status(400).json({ 
+              message: `Um dos veículos necessários (ID: ${vehicleId}) não está registrado. Cadastre todos os veículos antes de submeter a licença.` 
+            });
+          }
+        }
+        
+        // Verificar se todas as placas adicionais estão cadastradas
+        if (licenseData.additionalPlates && licenseData.additionalPlates.length > 0) {
+          for (const plate of licenseData.additionalPlates) {
+            // Ignorar placas vazias
+            if (!plate || plate.trim() === '') continue;
+            
+            // Verificar se a placa está cadastrada
+            const vehicle = await storage.getVehicleByPlate(plate);
+            if (!vehicle) {
+              return res.status(400).json({
+                message: `A placa adicional ${plate} não está cadastrada. Cadastre todos os veículos adicionais antes de submeter a licença.`
+              });
+            }
+          }
+        }
+        
         // Prepara dados para criar a licença
         const requestNumber = `AET-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
         
