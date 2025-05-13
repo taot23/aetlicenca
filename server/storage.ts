@@ -58,6 +58,7 @@ export interface IStorage {
   
   // Vehicle methods
   getVehicleById(id: number): Promise<Vehicle | undefined>;
+  getVehicleByPlate(plate: string): Promise<Vehicle | undefined>;
   getVehiclesByUserId(userId: number): Promise<Vehicle[]>;
   getAllVehicles(): Promise<Vehicle[]>;
   createVehicle(userId: number, vehicle: InsertVehicle & { crlvUrl?: string | null }): Promise<Vehicle>;
@@ -363,6 +364,12 @@ export class MemStorage implements IStorage {
   // Vehicle methods
   async getVehicleById(id: number): Promise<Vehicle | undefined> {
     return this.vehicles.get(id);
+  }
+  
+  async getVehicleByPlate(plate: string): Promise<Vehicle | undefined> {
+    return Array.from(this.vehicles.values()).find(
+      (vehicle) => vehicle.plate === plate
+    );
   }
 
   async getVehiclesByUserId(userId: number): Promise<Vehicle[]> {
