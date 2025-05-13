@@ -117,8 +117,12 @@ export default function TrackLicensePage() {
   
   // Criar uma lista expandida de licenças separadas por estado (sem duplicação quando ordenadas)
   const expandedLicenses = useMemo(() => {
-    if (!licenses) return [];
+    if (!licenses) {
+      console.log("[DEBUG] Licenses é null ou undefined");
+      return [];
+    }
     
+    console.log(`[DEBUG] Expandindo ${licenses.length} licenças...`);
     const result: ExtendedLicenseWithId[] = [];
     
     licenses.forEach(license => {
@@ -164,6 +168,11 @@ export default function TrackLicensePage() {
       }
     });
     
+    console.log(`[DEBUG] Total de licenças expandidas: ${result.length}`);
+    if (result.length > 0) {
+      console.log(`[DEBUG] Exemplo da primeira licença expandida:`, result[0]);
+    }
+    
     return result;
   }, [licenses]);
   
@@ -172,22 +181,35 @@ export default function TrackLicensePage() {
     // Log do filtro atual para debug
     console.log(`[DEBUG] Aplicando filtro de status: "${statusFilter}"`);
     
+    // Se não temos licenças, retornamos lista vazia
+    if (!expandedLicenses || expandedLicenses.length === 0) {
+      console.log("[DEBUG] Lista de licenças vazia ou não definida");
+      return [];
+    }
+    
     const result = expandedLicenses.filter(license => {
       const matchesSearch = !searchTerm || 
         license.requestNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         license.mainVehiclePlate.toLowerCase().includes(searchTerm.toLowerCase());
       
       // Filtrar pelo status geral ou status específico do estado
-      const matchesStatus = !statusFilter || 
-                         statusFilter === "all_status" || 
-                         license.status === statusFilter || 
-                         license.specificStateStatus === statusFilter;
+      let matchesStatus = !statusFilter || statusFilter === "all_status";
+      
+      // Inicialmente log com os valores para depuração
+      if (statusFilter && statusFilter !== "all_status") {
+        console.log(`[DEBUG FILTRO] Licença ${license.requestNumber} - Status: "${license.status}", StatusEspecífico: "${license.specificStateStatus || 'N/A'}"`);
+        
+        // Verifica correspondência direta
+        if (license.status === statusFilter || license.specificStateStatus === statusFilter) {
+          matchesStatus = true;
+          console.log(`[DEBUG FILTRO] ✓ MATCH para "${statusFilter}"`);
+        }
+      }
       
       // Log detalhado para cada licença que não passa no filtro de status
       if (statusFilter && 
           statusFilter !== "all_status" && 
-          license.status !== statusFilter && 
-          license.specificStateStatus !== statusFilter) {
+          !matchesStatus) {
         console.log(`[DEBUG] Licença ${license.requestNumber} NÃO passou no filtro de status. Status atual: "${license.status}", Specific: "${license.specificStateStatus || 'N/A'}"`);
       }
       
