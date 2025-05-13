@@ -121,29 +121,43 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
       requestData.cargoType = requestData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
     }
     
-    // Garantir valores mínimos e converter para centímetros
+    // --- CONVERSÃO DE DIMENSÕES ---
+    // Primeiro: garantir valores padrão se não existirem
     if (!requestData.length) requestData.length = 25; // 25 metros
-    else if (typeof requestData.length === 'number' && requestData.length < 100) {
-      // Se já está em metros (valor < 100), converter para centímetros
-      requestData.length = requestData.length * 100;
-    }
-    
     if (!requestData.width) requestData.width = 2.6;  // 2.6 metros
-    else if (typeof requestData.width === 'number' && requestData.width < 100) {
-      // Se já está em metros (valor < 100), converter para centímetros
-      requestData.width = requestData.width * 100;
+    if (!requestData.height) requestData.height = 4.4; // 4.4 metros
+    
+    console.log("[RENOVAÇÃO_INICIO] Dimensões originais:", {
+      length: requestData.length,
+      width: requestData.width,
+      height: requestData.height,
+      "tipos": {
+        length: typeof requestData.length,
+        width: typeof requestData.width,
+        height: typeof requestData.height,
+      }
+    });
+    
+    // Segundo: verificar se as dimensões estão em metros (valor < 100) e converter para centímetros
+    // Comprimento
+    if (typeof requestData.length === 'number' && requestData.length < 100) {
+      requestData.length = Math.round(requestData.length * 100);
     }
     
-    if (!requestData.height) requestData.height = 4.4; // 4.4 metros
-    else if (typeof requestData.height === 'number' && requestData.height < 100) {
-      // Se já está em metros (valor < 100), converter para centímetros
-      requestData.height = requestData.height * 100;
+    // Largura
+    if (typeof requestData.width === 'number' && requestData.width < 100) {
+      requestData.width = Math.round(requestData.width * 100);
+    }
+    
+    // Altura
+    if (typeof requestData.height === 'number' && requestData.height < 100) {
+      requestData.height = Math.round(requestData.height * 100);
     }
     
     // Transformar em request normal (não draft)
     requestData.isDraft = false;
     
-    console.log("[RENOVAÇÃO_AJUSTE] Dimensões convertidas:", {
+    console.log("[RENOVAÇÃO_FINAL] Dimensões convertidas para centímetros:", {
       length: requestData.length,
       width: requestData.width,
       height: requestData.height
@@ -709,11 +723,33 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         form.setValue('cargoType', values.cargoType as any);
       }
       
-      console.log('Valores ajustados para renovação:', {
+      // Forçar conversão de metros para centímetros apenas para o envio
+      // Manter os valores originais no formulário (em metros)
+      const valuesOriginal = { ...values };
+      
+      // Converter para centímetros diretamente nos valores
+      if (typeof values.length === 'number' && values.length < 100) {
+        values.length = Math.round(values.length * 100);
+      }
+      
+      if (typeof values.width === 'number' && values.width < 100) {
+        values.width = Math.round(values.width * 100);
+      }
+      
+      if (typeof values.height === 'number' && values.height < 100) {
+        values.height = Math.round(values.height * 100);
+      }
+      
+      console.log('[RENOVAÇÃO] Valores originais (metros):', {
+        length: valuesOriginal.length,
+        width: valuesOriginal.width,
+        height: valuesOriginal.height,
+      });
+      
+      console.log('[RENOVAÇÃO] Valores convertidos (centímetros):', {
         length: values.length,
         width: values.width,
         height: values.height,
-        cargoType: values.cargoType
       });
     }
     
