@@ -221,10 +221,13 @@ export class TransactionalStorage implements IStorage {
   }
   
   async getVehicleByPlate(plate: string): Promise<Vehicle | undefined> {
-    const [vehicle] = await db
-      .select()
-      .from(vehicles)
-      .where(eq(vehicles.plate, plate));
+    // Garante que estamos trabalhando com a placa em letras maiúsculas
+    const plateUpper = plate.toUpperCase();
+    
+    const results = await db.select().from(vehicles);
+    
+    // Procura por correspondência de placa, ignorando diferenças de maiúsculas/minúsculas
+    const vehicle = results.find(v => v.plate.toUpperCase() === plateUpper);
     
     return vehicle;
   }

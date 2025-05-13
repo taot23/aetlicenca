@@ -568,16 +568,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Buscando veículo com a placa: ${plate}`);
       
-      // Buscar todos os veículos
-      const allVehicles = await storage.getAllVehicles();
-      console.log(`Total de veículos encontrados: ${allVehicles.length}`);
-      
-      // Buscar todas as placas disponíveis para debug
-      const availablePlates = allVehicles.map(v => v.plate);
-      console.log('Placas disponíveis:', availablePlates.join(', '));
-      
-      // Encontrar o veículo com a placa correspondente
-      const vehicle = allVehicles.find(v => v.plate.toUpperCase() === plate);
+      // Usar a função getVehicleByPlate que foi implementada
+      const vehicle = await storage.getVehicleByPlate(plate);
       
       if (!vehicle) {
         console.log(`Veículo não encontrado com a placa ${plate}`);

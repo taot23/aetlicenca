@@ -367,8 +367,11 @@ export class MemStorage implements IStorage {
   }
   
   async getVehicleByPlate(plate: string): Promise<Vehicle | undefined> {
+    // Garante que estamos trabalhando com a placa em letras maiúsculas
+    const plateUpper = plate.toUpperCase();
+    
     return Array.from(this.vehicles.values()).find(
-      (vehicle) => vehicle.plate === plate
+      (vehicle) => vehicle.plate.toUpperCase() === plateUpper
     );
   }
 
