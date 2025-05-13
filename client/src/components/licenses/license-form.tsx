@@ -139,19 +139,21 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
     });
     
     // Segundo: verificar se as dimensões estão em metros (valor < 100) e converter para centímetros
+    // Mantendo o tipo float para preservar as casas decimais
+    
     // Comprimento
     if (typeof requestData.length === 'number' && requestData.length < 100) {
-      requestData.length = Math.round(requestData.length * 100);
+      requestData.length = requestData.length * 100;
     }
     
     // Largura
     if (typeof requestData.width === 'number' && requestData.width < 100) {
-      requestData.width = Math.round(requestData.width * 100);
+      requestData.width = requestData.width * 100;
     }
     
     // Altura
     if (typeof requestData.height === 'number' && requestData.height < 100) {
-      requestData.height = Math.round(requestData.height * 100);
+      requestData.height = requestData.height * 100;
     }
     
     // Transformar em request normal (não draft)
@@ -505,11 +507,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     // Adjust dimensions from meters to centimeters for storage
+    // Mantendo os valores como float (sem arredondar)
     const dataToSubmit = {
       ...values,
-      length: Math.round((values.length || 0) * 100), // Convert to centimeters
-      width: values.width ? Math.round(values.width * 100) : undefined, // Convert to centimeters if exists
-      height: values.height ? Math.round(values.height * 100) : undefined, // Convert to centimeters if exists
+      length: (values.length || 0) * 100, // Convert to centimeters
+      width: values.width ? values.width * 100 : undefined, // Convert to centimeters if exists
+      height: values.height ? values.height * 100 : undefined, // Convert to centimeters if exists
     };
     
     if (values.isDraft) {
@@ -727,17 +730,17 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       // Manter os valores originais no formulário (em metros)
       const valuesOriginal = { ...values };
       
-      // Converter para centímetros diretamente nos valores
+      // Converter para centímetros diretamente nos valores, mantendo o tipo float
       if (typeof values.length === 'number' && values.length < 100) {
-        values.length = Math.round(values.length * 100);
+        values.length = values.length * 100;
       }
       
       if (typeof values.width === 'number' && values.width < 100) {
-        values.width = Math.round(values.width * 100);
+        values.width = values.width * 100;
       }
       
       if (typeof values.height === 'number' && values.height < 100) {
-        values.height = Math.round(values.height * 100);
+        values.height = values.height * 100;
       }
       
       console.log('[RENOVAÇÃO] Valores originais (metros):', {
