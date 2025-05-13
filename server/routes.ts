@@ -1797,8 +1797,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { licenseId, state } = req.body;
       
-      if (!licenseId || !state) {
-        return res.status(400).json({ message: 'ID da licença e estado são obrigatórios' });
+      // Validação mais detalhada dos dados de entrada
+      if (!licenseId) {
+        return res.status(400).json({ message: 'ID da licença é obrigatório' });
+      }
+      
+      if (!state) {
+        return res.status(400).json({ message: 'Estado é obrigatório' });
+      }
+      
+      // Verificar se o ID da licença é um número
+      if (isNaN(Number(licenseId))) {
+        return res.status(400).json({ message: 'ID da licença deve ser um número válido' });
+      }
+      
+      // Verificar se o estado é uma string válida de 2 caracteres
+      if (typeof state !== 'string' || state.length !== 2) {
+        return res.status(400).json({ message: 'Estado deve ser um código de 2 caracteres' });
       }
       
       const userId = req.user!.id;

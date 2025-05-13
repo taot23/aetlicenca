@@ -983,6 +983,25 @@ export default function IssuedLicensesPage() {
                   console.log("[RENOVAÇÃO_MODAL] Iniciando renovação da licença:", licenseToRenew);
                   
                   // Adicionar tratamento detalhado de erro
+                  // Validar dados obrigatórios antes de enviar
+                  if (!licenseToRenew.licenseId) {
+                    toast({
+                      title: "Erro na renovação",
+                      description: "ID da licença não fornecido. Impossível prosseguir com a renovação.",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  
+                  if (!licenseToRenew.state) {
+                    toast({
+                      title: "Erro na renovação",
+                      description: "Estado não selecionado. Selecione um estado para renovar a licença.",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  
                   try {
                     renewLicenseMutation.mutate({
                       licenseId: licenseToRenew.licenseId,

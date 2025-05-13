@@ -112,23 +112,58 @@ interface LicenseFormProps {
 // Função para submeter uma renovação
 export async function submitRenewalRequest(draftId: number, formData: any) {
   try {
-    console.log("Processando envio de renovação com ID:", draftId);
+    console.log("[RENOVAÇÃO] Processando envio de renovação com ID:", draftId);
+    
+    // Validar o ID do rascunho
+    if (!draftId || isNaN(draftId) || draftId <= 0) {
+      throw new Error("ID de rascunho inválido para renovação");
+    }
+    
+    // Validar formData obrigatório
+    if (!formData) {
+      throw new Error("Dados do formulário não fornecidos para renovação");
+    }
+    
+    // Validar tipo de licença
+    if (!formData.type) {
+      throw new Error("Tipo de licença não especificado");
+    }
     
     // Garantir valores para campos essenciais
     const requestData = { ...formData };
     
+    // Adicionar registro da validação
+    console.log("[RENOVAÇÃO] Validando campos obrigatórios para renovação");
+    
     if (!requestData.cargoType) {
+      console.log("[RENOVAÇÃO] Tipo de carga não definido, usando valor padrão baseado no tipo de licença");
       requestData.cargoType = requestData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
     }
     
-    if (!requestData.length) requestData.length = 25; // 25 metros
-    if (!requestData.width) requestData.width = 2.6;  // 2.6 metros
-    if (!requestData.height) requestData.height = 4.4; // 4.4 metros
+    if (!requestData.length) {
+      console.log("[RENOVAÇÃO] Comprimento não definido, usando valor padrão de 25m");
+      requestData.length = 25; // 25 metros
+    }
+    
+    if (!requestData.width) {
+      console.log("[RENOVAÇÃO] Largura não definida, usando valor padrão de 2.6m");
+      requestData.width = 2.6;  // 2.6 metros
+    }
+    
+    if (!requestData.height) {
+      console.log("[RENOVAÇÃO] Altura não definida, usando valor padrão de 4.4m");
+      requestData.height = 4.4; // 4.4 metros
+    }
+    
+    // Verificar se há estados selecionados
+    if (!requestData.states || !Array.isArray(requestData.states) || requestData.states.length === 0) {
+      throw new Error("Nenhum estado selecionado para a renovação");
+    }
     
     // Transformar em request normal (não draft)
     requestData.isDraft = false;
     
-    console.log("Dados da renovação:", JSON.stringify(requestData));
+    console.log("[RENOVAÇÃO] Dados validados e prontos para envio:", JSON.stringify(requestData));
     
     // Criar nova licença (contornando o endpoint de submit)
     const url = '/api/licenses';
