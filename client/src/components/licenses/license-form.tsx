@@ -121,8 +121,10 @@ export async function submitDraftDirectly(draftId: number) {
       credentials: 'include',
     });
     
+    // Verificar se há resposta de erro do servidor
     if (!response.ok) {
-      throw new Error(`Erro ao enviar rascunho: ${response.status} ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({ message: `Erro ao enviar rascunho: ${response.status} ${response.statusText}` }));
+      throw new Error(errorData.message || `Erro ao enviar rascunho: ${response.status} ${response.statusText}`);
     }
     
     const data = await response.json();

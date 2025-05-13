@@ -1032,6 +1032,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Usuário ${user.id} (${user.role}) autorizado a submeter rascunho ${draftId}`);
       
+      // Verificar se todos os veículos necessários estão cadastrados
+      const requiredVehicleIds = [];
+      
+      // Veículo principal (tractorUnitId) - sempre obrigatório
+      if (existingDraft.tractorUnitId) {
+        requiredVehicleIds.push(existingDraft.tractorUnitId);
+      } else {
+        return res.status(400).json({ message: 'O veículo principal (cavalo/trator) não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
+      }
+      
+      // Primeiro reboque/semirreboque - obrigatório para todos os tipos, exceto flatbed
+      if (existingDraft.type !== 'flatbed' && !existingDraft.firstTrailerId) {
+        return res.status(400).json({ message: 'O primeiro semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
+      } else if (existingDraft.firstTrailerId) {
+        requiredVehicleIds.push(existingDraft.firstTrailerId);
+      }
+      
+      // Segundo reboque - obrigatório para bitrens e rodotrens
+      if ((existingDraft.type.startsWith('bitrain') || existingDraft.type === 'road_train') && !existingDraft.secondTrailerId) {
+        return res.status(400).json({ message: 'O segundo semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
+      } else if (existingDraft.secondTrailerId) {
+        requiredVehicleIds.push(existingDraft.secondTrailerId);
+      }
+      
+      // Dolly - obrigatório para rodotrem
+      if (existingDraft.type === 'road_train' && !existingDraft.dollyId) {
+        return res.status(400).json({ message: 'O dolly não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
+      } else if (existingDraft.dollyId) {
+        requiredVehicleIds.push(existingDraft.dollyId);
+      }
+      
+      // Prancha - obrigatório para tipo flatbed
+      if (existingDraft.type === 'flatbed' && !existingDraft.flatbedId) {
+        return res.status(400).json({ message: 'A prancha não está cadastrada. Cadastre o veículo antes de submeter a licença.' });
+      } else if (existingDraft.flatbedId) {
+        requiredVehicleIds.push(existingDraft.flatbedId);
+      }
+      
+      // Verificar se todos os veículos existem no banco de dados
+      for (const vehicleId of requiredVehicleIds) {
+        const vehicle = await storage.getVehicleById(vehicleId);
+        if (!vehicle) {
+          return res.status(400).json({ 
+            message: `Um dos veículos necessários (ID: ${vehicleId}) não está registrado. Cadastre todos os veículos antes de submeter a licença.` 
+          });
+        }
+      }
       
       // Garantir que todos os campos obrigatórios não sejam nulos antes de submeter
       const draftData = { ...existingDraft };
