@@ -168,17 +168,11 @@ export default function TrackLicensePage() {
         license.requestNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         license.mainVehiclePlate.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Modo compatibilidade: filtrar pelo status geral ou status específico do estado
-      let matchesStatus = !statusFilter || statusFilter === "all_status";
-      
-      // Tratamento especial para "pedido em cadastramento"
-      if (statusFilter === "pending_cadastramento") {
-        // Mostrar apenas licenças com status "pending_registration"
-        matchesStatus = license.status === "pending_registration";
-      } else if (statusFilter && statusFilter !== "all_status") {
-        // Para outros status, usar o filtro normal
-        matchesStatus = license.status === statusFilter || license.specificStateStatus === statusFilter;
-      }
+      // Filtrar pelo status geral ou status específico do estado
+      const matchesStatus = !statusFilter || 
+                         statusFilter === "all_status" || 
+                         license.status === statusFilter || 
+                         license.specificStateStatus === statusFilter;
       
       const matchesDate = !dateFilter || (
         license.createdAt && 
