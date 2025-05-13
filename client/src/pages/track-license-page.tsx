@@ -49,6 +49,12 @@ export default function TrackLicensePage() {
       
       const data = await res.json();
       
+      // Logging para depuração dos status
+      console.log("[DEBUG] Status das licenças:");
+      data.forEach((license, index) => {
+        console.log(`Licença #${index + 1} (${license.requestNumber}): status = "${license.status}", specificStateStatus = "${license.specificStateStatus || 'N/A'}"`);
+      });
+      
       // Filtrar para remover quaisquer rascunhos de renovação que possam ter passado pelo filtro do backend
       const filteredData = data.filter((license) => {
         // Exclui qualquer licença que seja rascunho E tenha 'Renovação' no campo comments
@@ -163,7 +169,10 @@ export default function TrackLicensePage() {
   
   // Aplicar filtros à lista expandida
   const filteredLicenses = useMemo(() => {
-    return expandedLicenses.filter(license => {
+    // Log do filtro atual para debug
+    console.log(`[DEBUG] Aplicando filtro de status: "${statusFilter}"`);
+    
+    const result = expandedLicenses.filter(license => {
       const matchesSearch = !searchTerm || 
         license.requestNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         license.mainVehiclePlate.toLowerCase().includes(searchTerm.toLowerCase());
@@ -174,6 +183,14 @@ export default function TrackLicensePage() {
                          license.status === statusFilter || 
                          license.specificStateStatus === statusFilter;
       
+      // Log detalhado para cada licença que não passa no filtro de status
+      if (statusFilter && 
+          statusFilter !== "all_status" && 
+          license.status !== statusFilter && 
+          license.specificStateStatus !== statusFilter) {
+        console.log(`[DEBUG] Licença ${license.requestNumber} NÃO passou no filtro de status. Status atual: "${license.status}", Specific: "${license.specificStateStatus || 'N/A'}"`);
+      }
+      
       const matchesDate = !dateFilter || (
         license.createdAt && 
         format(new Date(license.createdAt), "yyyy-MM-dd") === dateFilter
@@ -181,6 +198,9 @@ export default function TrackLicensePage() {
       
       return matchesSearch && matchesStatus && matchesDate;
     });
+    
+    console.log(`[DEBUG] Total de licenças após filtro: ${result.length}`);
+    return result;
   }, [expandedLicenses, searchTerm, statusFilter, dateFilter]);
 
   // Ordenar licenças filtradas (sem duplicações)
