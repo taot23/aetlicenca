@@ -39,41 +39,10 @@ export function RenewLicenseDialog({
 
   const renewMutation = useMutation({
     mutationFn: async (newDate: string) => {
-      // Validar parâmetros antes de chamar a API
-      if (!licenseId || isNaN(licenseId) || licenseId <= 0) {
-        throw new Error("ID de licença inválido para renovação");
-      }
-      
-      if (!state || typeof state !== 'string' || state.length !== 2) {
-        throw new Error("Estado inválido ou não selecionado");
-      }
-      
-      if (!newDate) {
-        throw new Error("Data de validade não informada");
-      }
-      
-      // Log para facilitar debug
-      console.log("[RENOVAÇÃO_DIALOG] Iniciando renovação:", {
-        licenseId,
-        state,
-        validityDate: newDate
-      });
-      
       const res = await apiRequest("POST", `/api/licenses/${licenseId}/renew`, {
         state,
         validityDate: newDate
       });
-      
-      if (!res.ok) {
-        // Extrair mensagem de erro quando possível
-        try {
-          const errorData = await res.json();
-          throw new Error(errorData.message || "Erro ao renovar licença");
-        } catch (parseError) {
-          throw new Error(`Erro ao renovar licença: ${res.status} ${res.statusText}`);
-        }
-      }
-      
       return await res.json();
     },
     onSuccess: (data) => {

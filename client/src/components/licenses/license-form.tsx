@@ -112,77 +112,25 @@ interface LicenseFormProps {
 // Função para submeter uma renovação
 export async function submitRenewalRequest(draftId: number, formData: any) {
   try {
-    console.log("[RENOVAÇÃO] Iniciando processo de renovação com ID:", draftId);
-    console.log("[RENOVAÇÃO] Dados originais:", JSON.stringify(formData));
+    console.log("Processando envio de renovação com ID:", draftId);
     
-    // Validar o ID do rascunho
-    if (!draftId || isNaN(draftId) || draftId <= 0) {
-      throw new Error("ID de rascunho inválido para renovação");
-    }
-    
-    // Validar formData obrigatório
-    if (!formData) {
-      throw new Error("Dados do formulário não fornecidos para renovação");
-    }
-    
-    // Validar tipo de licença
-    if (!formData.type) {
-      throw new Error("Tipo de licença não especificado");
-    }
-    
-    // Garantir valores para campos essenciais (fazendo cópia para não modificar objeto original)
+    // Garantir valores para campos essenciais
     const requestData = { ...formData };
     
-    // Mostrar claramente no console todos os valores antes de ajustes
-    console.log("[RENOVAÇÃO] Validando e definindo valores padrão para campos essenciais:");
-    console.log("- Tipo: ", requestData.type);
-    console.log("- Tipo Carga: ", requestData.cargoType);
-    console.log("- Comprimento: ", requestData.length);
-    console.log("- Largura: ", requestData.width);
-    console.log("- Altura: ", requestData.height);
-    console.log("- Estados: ", requestData.states);
-    console.log("- Transportadora: ", requestData.transporterId);
-    
-    // Verificar e definir valores padrão para campos obrigatórios
     if (!requestData.cargoType) {
-      console.log("[RENOVAÇÃO] Tipo de carga não definido, usando valor padrão baseado no tipo de licença");
       requestData.cargoType = requestData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
     }
     
-    if (!requestData.length) {
-      console.log("[RENOVAÇÃO] Comprimento não definido, usando valor padrão de 25m");
-      requestData.length = 25; // 25 metros
-    }
-    
-    if (!requestData.width) {
-      console.log("[RENOVAÇÃO] Largura não definida, usando valor padrão de 2.6m");
-      requestData.width = 2.6;  // 2.6 metros
-    }
-    
-    if (!requestData.height) {
-      console.log("[RENOVAÇÃO] Altura não definida, usando valor padrão de 4.4m");
-      requestData.height = 4.4; // 4.4 metros
-    }
-    
-    // Verificar se há estados selecionados
-    if (!requestData.states || !Array.isArray(requestData.states) || requestData.states.length === 0) {
-      throw new Error("Nenhum estado selecionado para a renovação");
-    }
-    
-    // Verificar se há transportadora selecionada
-    if (!requestData.transporterId) {
-      throw new Error("Nenhuma transportadora selecionada para a renovação");
-    }
+    if (!requestData.length) requestData.length = 25; // 25 metros
+    if (!requestData.width) requestData.width = 2.6;  // 2.6 metros
+    if (!requestData.height) requestData.height = 4.4; // 4.4 metros
     
     // Transformar em request normal (não draft)
     requestData.isDraft = false;
     
-    // Log final dos dados validados
-    console.log("[RENOVAÇÃO] Dados finais após validação:", JSON.stringify(requestData));
+    console.log("Dados da renovação:", JSON.stringify(requestData));
     
-    // Criar nova licença
-    console.log("[RENOVAÇÃO] Enviando para API na rota /api/licenses");
-    
+    // Criar nova licença (contornando o endpoint de submit)
     const url = '/api/licenses';
     const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
       method: 'POST',
@@ -196,43 +144,13 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
       })
     });
     
-    // Log da resposta para depuração
-    console.log("[RENOVAÇÃO] Status da resposta:", response.status);
-    // Converter headers em objeto sem usar entries() que pode causar problemas
-    const headersObj: Record<string, string> = {};
-    response.headers.forEach((value, key) => {
-      headersObj[key] = value;
-    });
-    console.log("[RENOVAÇÃO] Headers da resposta:", headersObj);
-    
     // Verificar se há resposta de erro do servidor
     if (!response.ok) {
-      // Tentar obter o texto da resposta para debugging
-      const responseText = await response.text();
-      console.error("[RENOVAÇÃO] Erro na resposta:", responseText);
-      
-      try {
-        // Tentar analisar como JSON
-        const errorData = JSON.parse(responseText);
-        throw new Error(errorData.message || `Erro ao processar renovação: ${response.status} ${response.statusText}`);
-      } catch (jsonError) {
-        // Se não for JSON válido, usar o texto completo
-        throw new Error(`Erro ao processar renovação: ${response.status} ${response.statusText}. Detalhes: ${responseText.substring(0, 150)}...`);
-      }
+      const errorData = await response.json().catch(() => ({ message: `Erro ao processar renovação: ${response.status} ${response.statusText}` }));
+      throw new Error(errorData.message || `Erro ao processar renovação: ${response.status} ${response.statusText}`);
     }
     
-    // Obter dados da resposta de forma mais robusta
-    const responseText = await response.text();
-    let data;
-    
-    try {
-      data = JSON.parse(responseText);
-      console.log("[RENOVAÇÃO] Dados da resposta:", data);
-    } catch (jsonError) {
-      console.error("[RENOVAÇÃO] Erro ao analisar resposta JSON:", jsonError);
-      console.log("[RENOVAÇÃO] Texto da resposta:", responseText.substring(0, 150));
-      data = { success: true }; // Fornecer objeto básico para não quebrar o fluxo
-    }
+    const data = await response.json();
     
     // Invalidar cache
     queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
@@ -296,7 +214,6 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
   const [cargoType, setCargoType] = useState<string>("");
   const [showVehicleDialog, setShowVehicleDialog] = useState(false);
   const [showRequiredFieldsWarning, setShowRequiredFieldsWarning] = useState(false);
-  const [isManualProcessing, setIsManualProcessing] = useState(false);
 
   // Fetch vehicles for the dropdown selectors
   const { data: vehicles, isLoading: isLoadingVehicles } = useQuery<Vehicle[]>({
@@ -596,30 +513,9 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           requestData.cargoType = requestData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
         }
         
-        // Garantir valores mínimos de dimensões
-        if (!requestData.length) {
-          requestData.length = 25; // 25 metros
-        } else if (Number(requestData.length) > 100) {
-          // Converter de centímetros para metros
-          requestData.length = Number(requestData.length) / 100;
-          console.log(`Convertendo comprimento de cm para m: ${requestData.length}m`);
-        }
-        
-        if (!requestData.width) {
-          requestData.width = 2.6; // 2.6 metros
-        } else if (Number(requestData.width) > 100) {
-          // Converter de centímetros para metros
-          requestData.width = Number(requestData.width) / 100;
-          console.log(`Convertendo largura de cm para m: ${requestData.width}m`);
-        }
-        
-        if (!requestData.height) {
-          requestData.height = 4.4; // 4.4 metros
-        } else if (Number(requestData.height) > 100) {
-          // Converter de centímetros para metros
-          requestData.height = Number(requestData.height) / 100;
-          console.log(`Convertendo altura de cm para m: ${requestData.height}m`);
-        }
+        if (!requestData.length) requestData.length = 2500; // 25 metros em centímetros
+        if (!requestData.width) requestData.width = 260;    // 2.6 metros em centímetros
+        if (!requestData.height) requestData.height = 440;  // 4.4 metros em centímetros
         
         // Criar uma nova licença (não usando o endpoint de submit do rascunho)
         const url = '/api/licenses';
@@ -721,7 +617,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           toast({
             title: "Renovação enviada com sucesso",
             description: "O pedido de renovação foi enviado para análise",
-            variant: "default",
+            variant: "success",
           });
           
           // Chamar onComplete para fechar o modal e atualizar a lista
@@ -751,13 +647,9 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     form.handleSubmit(onSubmit)();
   };
   
-  // Função para submeter um rascunho existente diretamente - versão reforçada
+  // Função para submeter um rascunho existente diretamente
   const handleSubmitDraftDirectly = async () => {
-    console.log("[ENVIO_RASCUNHO] Iniciando envio do rascunho");
-    
-    // Verificar se o rascunho existe
     if (!draft || !draft.id) {
-      console.error("[ENVIO_RASCUNHO] Rascunho não encontrado");
       toast({
         title: "Erro",
         description: "Não é possível enviar um rascunho que ainda não foi salvo",
@@ -766,67 +658,37 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       return;
     }
     
-    console.log("[ENVIO_RASCUNHO] ID do rascunho:", draft.id);
-    
     // Obter valores do formulário para verificação
     const values = form.getValues();
-    console.log("[ENVIO_RASCUNHO] Valores do formulário:", values);
     
     // Verificar se é um pedido de renovação
     const isRenewal = values.comments && 
                      typeof values.comments === 'string' && 
                      values.comments.toLowerCase().includes('renovação');
     
-    console.log(`[ENVIO_RASCUNHO] É pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
-    
-    // Verificações adicionais - independente do tipo de pedido
-    if (!values.transporterId) {
-      console.error("[ENVIO_RASCUNHO] Transportadora não selecionada");
-      toast({
-        title: "Transportadora obrigatória",
-        description: "Selecione uma transportadora antes de enviar o pedido",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!values.states || !Array.isArray(values.states) || values.states.length === 0) {
-      console.error("[ENVIO_RASCUNHO] Nenhum estado selecionado");
-      toast({
-        title: "Estados obrigatórios",
-        description: "Selecione pelo menos um estado para o pedido",
-        variant: "destructive",
-      });
-      return;
-    }
+    console.log(`É pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
     
     // Preparar valores para envio
     if (isRenewal) {
-      console.log("[ENVIO_RASCUNHO] Preparando dados para renovação");
-      
       // Garantir que dimensões e tipo de carga estão preenchidos
       if (!values.length) {
-        console.log("[ENVIO_RASCUNHO] Definindo comprimento padrão");
         values.length = 25; // 25m
         form.setValue('length', values.length);
       }
       if (!values.width) {
-        console.log("[ENVIO_RASCUNHO] Definindo largura padrão");
         values.width = 2.6;  // 2.6m
         form.setValue('width', values.width);
       }
       if (!values.height) {
-        console.log("[ENVIO_RASCUNHO] Definindo altura padrão");
         values.height = 4.4; // 4.4m
         form.setValue('height', values.height);
       }
       if (!values.cargoType) {
-        console.log("[ENVIO_RASCUNHO] Definindo tipo de carga padrão");
         values.cargoType = values.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
         form.setValue('cargoType', values.cargoType as any);
       }
       
-      console.log('[ENVIO_RASCUNHO] Valores ajustados para renovação:', {
+      console.log('Valores ajustados para renovação:', {
         length: values.length,
         width: values.width,
         height: values.height,
@@ -835,28 +697,16 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     }
     
     // Validar campos antes de enviar
-    console.log("[ENVIO_RASCUNHO] Validando campos");
     const isValid = await validateFields();
-    if (!isValid) {
-      console.error("[ENVIO_RASCUNHO] Validação falhou");
-      return;
-    }
+    if (!isValid) return;
     
     try {
-      // Marcar que estamos processando o pedido
-      setIsManualProcessing(true);
-      
       if (isRenewal) {
-        console.log("[ENVIO_RASCUNHO] Iniciando fluxo de renovação");
         // Usar função específica para renovações
         await submitRenewalRequest(draft.id, values);
-        console.log("[ENVIO_RASCUNHO] Renovação concluída com sucesso");
       } else {
-        console.log("[ENVIO_RASCUNHO] Iniciando fluxo de envio de rascunho normal");
         // Usar função direta para rascunhos comuns (evitar recursão)
         const url = `/api/licenses/drafts/${draft.id}/submit`;
-        console.log("[ENVIO_RASCUNHO] Enviando para URL:", url);
-        
         const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
           method: 'POST',
           headers: {
@@ -865,60 +715,35 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           credentials: 'include',
         });
         
-        console.log("[ENVIO_RASCUNHO] Status da resposta:", response.status);
-        
-        // Verificar e processar erros
         if (!response.ok) {
-          const responseText = await response.text();
-          console.error("[ENVIO_RASCUNHO] Erro na resposta:", responseText);
-          
-          try {
-            const errorData = JSON.parse(responseText);
-            throw new Error(errorData.message || `Erro ao enviar rascunho: ${response.status} ${response.statusText}`);
-          } catch (parseError) {
-            throw new Error(`Erro ao enviar rascunho: ${response.status} ${response.statusText}. Detalhes: ${responseText.substring(0, 150)}...`);
-          }
+          const errorData = await response.json().catch(() => ({ message: `Erro ao enviar rascunho: ${response.status} ${response.statusText}` }));
+          throw new Error(errorData.message || `Erro ao enviar rascunho: ${response.status} ${response.statusText}`);
         }
         
-        // Processar resposta bem-sucedida
-        const responseText = await response.text();
-        try {
-          const data = JSON.parse(responseText);
-          console.log("[ENVIO_RASCUNHO] Resposta processada:", data);
-        } catch (parseError) {
-          console.warn("[ENVIO_RASCUNHO] Não foi possível analisar resposta como JSON:", responseText.substring(0, 150));
-        }
+        await response.json();
         
         // Invalidar cache
-        console.log("[ENVIO_RASCUNHO] Invalidando cache");
         queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
         queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
       }
       
-      // Mostrar mensagem de sucesso
       toast({
         title: isRenewal ? "Renovação enviada com sucesso" : "Rascunho enviado com sucesso",
         description: isRenewal 
           ? "O pedido de renovação foi enviado para análise" 
           : "O pedido de licença foi enviado para análise",
-        variant: "default",
+        variant: "success",
       });
-      
-      console.log("[ENVIO_RASCUNHO] Processo concluído com sucesso");
       
       // Chamar onComplete para fechar o modal e atualizar a lista
       onComplete();
     } catch (error) {
-      console.error("[ENVIO_RASCUNHO] Erro crítico:", error);
-      // Mostrar mensagem de erro detalhada
+      console.error("Erro ao submeter rascunho:", error);
       toast({
         title: "Erro ao enviar rascunho",
         description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar o rascunho",
         variant: "destructive",
       });
-    } finally {
-      // Remover estado de processamento
-      setIsManualProcessing(false);
     }
   };
   
@@ -1059,26 +884,6 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     // Se tudo estiver preenchido, continuar com a submissão
     setShowRequiredFieldsWarning(false);
     
-    // Verificar e converter valores de dimensão se necessário
-    // Se os valores estiverem em centímetros (acima de 100), converter para metros
-    if (values.length && Number(values.length) > 100) {
-      const lengthInMeters = Number(values.length) / 100;
-      console.log(`[ENVIO_RASCUNHO] Convertendo comprimento de ${values.length}cm para ${lengthInMeters}m`);
-      form.setValue('length', lengthInMeters);
-    }
-    
-    if (values.width && Number(values.width) > 100) {
-      const widthInMeters = Number(values.width) / 100;
-      console.log(`[ENVIO_RASCUNHO] Convertendo largura de ${values.width}cm para ${widthInMeters}m`);
-      form.setValue('width', widthInMeters);
-    }
-    
-    if (values.height && Number(values.height) > 100) {
-      const heightInMeters = Number(values.height) / 100;
-      console.log(`[ENVIO_RASCUNHO] Convertendo altura de ${values.height}cm para ${heightInMeters}m`);
-      form.setValue('height', heightInMeters);
-    }
-    
     // Antes de enviar, garantir que o cargoType esteja definido corretamente
     // Se ainda não tiver valor, tentar usar o estado local
     if (!values.cargoType && cargoType) {
@@ -1112,19 +917,6 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     
     console.log(`Validando altura:`, height, `tipo:`, typeof height);
     console.log(`Altura em metros:`, height, `Está em centímetros:`, height > 100);
-    
-    // Converter valores para metros se estiverem em centímetros
-    if (length > 100) {
-      form.setValue('length', length / 100);
-    }
-    
-    if (width > 100) {
-      form.setValue('width', width / 100);
-    }
-    
-    if (height > 100) {
-      form.setValue('height', height / 100);
-    }
     
     // Determinar quais limites usar com base no tipo
     let limits;
@@ -1172,7 +964,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         toast({
           title: "Aviso sobre dimensões",
           description: `O comprimento (${updatedLength}m) excede o limite máximo de ${limits.maxLength}m para este tipo de conjunto. A licença pode ser recusada.`,
-          variant: "default",
+          variant: "warning",
         });
       }
       
@@ -1180,7 +972,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         toast({
           title: "Aviso sobre dimensões",
           description: `A largura (${updatedWidth}m) excede o limite máximo de ${limits.maxWidth}m para este tipo de conjunto. A licença pode ser recusada.`,
-          variant: "default",
+          variant: "warning",
         });
       }
       
@@ -1188,13 +980,13 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         toast({
           title: "Aviso sobre dimensões",
           description: `A altura (${updatedHeight}m) excede o limite máximo de ${limits.maxHeight}m para este tipo de conjunto. A licença pode ser recusada.`,
-          variant: "default",
+          variant: "warning",
         });
       }
     }
   };
 
-  const isMutationProcessing = saveAsDraftMutation.isPending || submitRequestMutation.isPending;
+  const isProcessing = saveAsDraftMutation.isPending || submitRequestMutation.isPending;
 
   // Mutation para criar um novo veículo
   const createVehicleMutation = useMutation({
@@ -2881,7 +2673,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             type="button"
             variant="outline"
             onClick={handleSaveDraft}
-            disabled={isMutationProcessing || isManualProcessing}
+            disabled={isProcessing}
             className="w-full sm:w-auto order-3 sm:order-2"
           >
             {saveAsDraftMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
@@ -2902,7 +2694,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           <Button
             type="button"
             onClick={handleSubmitRequest}
-            disabled={isMutationProcessing || isManualProcessing}
+            disabled={isProcessing}
             className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto order-1 sm:order-4"
           >
             {submitRequestMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
