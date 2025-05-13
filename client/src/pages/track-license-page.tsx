@@ -169,9 +169,16 @@ export default function TrackLicensePage() {
         license.mainVehiclePlate.toLowerCase().includes(searchTerm.toLowerCase());
       
       // Modo compatibilidade: filtrar pelo status geral ou status específico do estado
-      const matchesStatus = !statusFilter || statusFilter === "all_status" || 
-        license.status === statusFilter || 
-        license.specificStateStatus === statusFilter;
+      let matchesStatus = !statusFilter || statusFilter === "all_status";
+      
+      // Tratamento especial para "pedido em cadastramento"
+      if (statusFilter === "pending_cadastramento") {
+        // Mostrar apenas licenças com status "pending_registration"
+        matchesStatus = license.status === "pending_registration";
+      } else if (statusFilter && statusFilter !== "all_status") {
+        // Para outros status, usar o filtro normal
+        matchesStatus = license.status === statusFilter || license.specificStateStatus === statusFilter;
+      }
       
       const matchesDate = !dateFilter || (
         license.createdAt && 
@@ -291,7 +298,7 @@ export default function TrackLicensePage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all_status">Todos os status</SelectItem>
-                <SelectItem value="pending_registration">Pedido em Cadastramento</SelectItem>
+                <SelectItem value="pending_cadastramento">Pedido em Cadastramento</SelectItem>
                 <SelectItem value="registration_in_progress">Cadastro em Andamento</SelectItem>
                 <SelectItem value="rejected">Reprovado</SelectItem>
                 <SelectItem value="under_review">Análise do Órgão</SelectItem>
