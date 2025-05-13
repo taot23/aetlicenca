@@ -1118,7 +1118,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         toast({
           title: "Aviso sobre dimensões",
           description: `O comprimento (${updatedLength}m) excede o limite máximo de ${limits.maxLength}m para este tipo de conjunto. A licença pode ser recusada.`,
-          variant: "warning",
+          variant: "default",
         });
       }
       
@@ -1126,7 +1126,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         toast({
           title: "Aviso sobre dimensões",
           description: `A largura (${updatedWidth}m) excede o limite máximo de ${limits.maxWidth}m para este tipo de conjunto. A licença pode ser recusada.`,
-          variant: "warning",
+          variant: "default",
         });
       }
       
@@ -1134,7 +1134,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         toast({
           title: "Aviso sobre dimensões",
           description: `A altura (${updatedHeight}m) excede o limite máximo de ${limits.maxHeight}m para este tipo de conjunto. A licença pode ser recusada.`,
-          variant: "warning",
+          variant: "default",
         });
       }
     }

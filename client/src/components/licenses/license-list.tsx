@@ -113,7 +113,7 @@ export function LicenseList({
         toast({
           title: "Renovação enviada com sucesso",
           description: "O pedido de renovação foi enviado para análise.",
-          variant: "success",
+          variant: "default",
         });
       } else {
         // Para pedidos normais
@@ -122,7 +122,7 @@ export function LicenseList({
         toast({
           title: "Rascunho enviado com sucesso",
           description: "O pedido de licença foi enviado para análise.",
-          variant: "success",
+          variant: "default",
         });
       }
       
