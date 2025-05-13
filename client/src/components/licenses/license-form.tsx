@@ -121,12 +121,33 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
       requestData.cargoType = requestData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
     }
     
+    // Garantir valores mínimos e converter para centímetros
     if (!requestData.length) requestData.length = 25; // 25 metros
+    else if (typeof requestData.length === 'number' && requestData.length < 100) {
+      // Se já está em metros (valor < 100), converter para centímetros
+      requestData.length = requestData.length * 100;
+    }
+    
     if (!requestData.width) requestData.width = 2.6;  // 2.6 metros
+    else if (typeof requestData.width === 'number' && requestData.width < 100) {
+      // Se já está em metros (valor < 100), converter para centímetros
+      requestData.width = requestData.width * 100;
+    }
+    
     if (!requestData.height) requestData.height = 4.4; // 4.4 metros
+    else if (typeof requestData.height === 'number' && requestData.height < 100) {
+      // Se já está em metros (valor < 100), converter para centímetros
+      requestData.height = requestData.height * 100;
+    }
     
     // Transformar em request normal (não draft)
     requestData.isDraft = false;
+    
+    console.log("[RENOVAÇÃO_AJUSTE] Dimensões convertidas:", {
+      length: requestData.length,
+      width: requestData.width,
+      height: requestData.height
+    });
     
     console.log("Dados da renovação:", JSON.stringify(requestData));
     
