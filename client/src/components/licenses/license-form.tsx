@@ -594,6 +594,10 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       return;
     }
     
+    // Validar campos antes de enviar
+    const isValid = await validateFields();
+    if (!isValid) return;
+    
     try {
       await submitDraftDirectly(draft.id);
       
@@ -615,8 +619,36 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     }
   };
   
+  // Verificar se uma placa está cadastrada no sistema (função auxiliar)
+  const verifyPlateRegistered = async (plate: string): Promise<boolean> => {
+    try {
+      // Ignorar placas vazias
+      if (!plate || plate.trim() === '') return true;
+      
+      console.log(`Buscando veículo com placa: ${plate}`);
+      const response = await fetch(`/api/public/vehicle-by-plate/${plate}`);
+      
+      if (response.status === 404) {
+        console.log(`Resposta para ${plate}: Veículo não encontrado`);
+        return false;
+      }
+      
+      if (!response.ok) {
+        console.error(`Erro ao verificar placa ${plate}: ${response.statusText}`);
+        return false;
+      }
+      
+      const data = await response.json();
+      console.log(`Resposta para ${plate}:`, data);
+      return true;
+    } catch (error) {
+      console.error(`Erro ao verificar placa ${plate}:`, error);
+      return false;
+    }
+  };
+  
   // Verificar campos básicos no handleSubmitRequest
-  const validateFields = () => {
+  const validateFields = async () => {
     const values = form.getValues();
     const missingFields = [];
     
@@ -689,7 +721,36 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         valores: values 
       });
       
-      return;
+      return false;
+    }
+    
+    // Verificar se todas as placas adicionais estão cadastradas
+    if (values.additionalPlates && values.additionalPlates.length > 0) {
+      const notRegisteredPlates = [];
+      
+      for (const plate of values.additionalPlates) {
+        // Ignorar placas vazias
+        if (!plate || plate.trim() === '') continue;
+        
+        const isRegistered = await verifyPlateRegistered(plate);
+        if (!isRegistered) {
+          notRegisteredPlates.push(plate);
+        }
+      }
+      
+      if (notRegisteredPlates.length > 0) {
+        // Formatar lista de placas para exibição
+        const platesList = notRegisteredPlates.join(", ");
+        
+        // Notificar o usuário através de toast com detalhamento
+        toast({
+          title: "Placas adicionais não cadastradas",
+          description: `As seguintes placas adicionais não estão cadastradas no sistema: ${platesList}. Cadastre todos os veículos antes de submeter a licença.`,
+          variant: "destructive",
+        });
+        
+        return false;
+      }
     }
     
     // Se tudo estiver preenchido, continuar com a submissão
