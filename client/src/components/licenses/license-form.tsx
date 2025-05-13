@@ -1072,6 +1072,19 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     console.log(`Validando altura:`, height, `tipo:`, typeof height);
     console.log(`Altura em metros:`, height, `Está em centímetros:`, height > 100);
     
+    // Converter valores para metros se estiverem em centímetros
+    if (length > 100) {
+      form.setValue('length', length / 100);
+    }
+    
+    if (width > 100) {
+      form.setValue('width', width / 100);
+    }
+    
+    if (height > 100) {
+      form.setValue('height', height / 100);
+    }
+    
     // Determinar quais limites usar com base no tipo
     let limits;
     
