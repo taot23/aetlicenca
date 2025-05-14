@@ -1814,8 +1814,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Pedido de licença não encontrado' });
       }
       
-      // Verificar se o usuário é o dono da licença ou tem papel administrativo
-      if (originalLicense.userId !== userId && !isAdminUser(req.user!)) {
+      // Verificar se o usuário é o dono da licença, está associado ao transportador, ou tem papel administrativo
+      const userTransporters = await storage.getTransportersByUserId(userId);
+      const userTransporterIds = userTransporters.map(t => t.id);
+      const isAssociatedWithTransporter = userTransporterIds.includes(originalLicense.transporterId);
+      
+      if (originalLicense.userId !== userId && !isAssociatedWithTransporter && !isAdminUser(req.user!)) {
         return res.status(403).json({ message: 'Você não tem permissão para renovar esta licença' });
       }
       

@@ -10,6 +10,7 @@ interface DimensionFieldProps {
   placeholder: string;
   description: string;
   fieldType?: "comprimento" | "largura" | "altura"; // Tipo de campo para comportamento específico
+  disabled?: boolean; // Adiciona propriedade para desabilitar o campo
 }
 
 export function DimensionField({ 
@@ -17,7 +18,8 @@ export function DimensionField({
   label, 
   placeholder, 
   description, 
-  fieldType = "comprimento" 
+  fieldType = "comprimento",
+  disabled = false 
 }: DimensionFieldProps) {
   const [displayValue, setDisplayValue] = useState<string>('');
 
@@ -194,17 +196,20 @@ export function DimensionField({
           inputMode="decimal"
           placeholder={placeholder}
           value={displayValue}
-          className={`mobile-input h-10 ${isEmpty ? 'border-amber-500 focus:ring-amber-500' : ''}`}
+          disabled={disabled}
+          className={`mobile-input h-10 ${isEmpty ? 'border-amber-500 focus:ring-amber-500' : ''} ${disabled ? 'bg-gray-100 opacity-90' : ''}`}
           onFocus={(e) => {
-            document.body.classList.add('keyboard-active');
-            window.scrollTo(0, 0);
-            setTimeout(() => {
-              e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 300);
+            if (!disabled) {
+              document.body.classList.add('keyboard-active');
+              window.scrollTo(0, 0);
+              setTimeout(() => {
+                e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 300);
+            }
           }}
           onBlur={handleBlur}
-          onChange={processInput}
-          onKeyDown={handleKeyDown}
+          onChange={disabled ? undefined : processInput}
+          onKeyDown={disabled ? undefined : handleKeyDown}
         />
       </FormControl>
       {isEmpty && (
