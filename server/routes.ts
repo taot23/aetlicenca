@@ -1609,35 +1609,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         delete licenseData.draftToDeleteId;
       }
       
-      // Aplicar lógica de tratamento para renovações
+      // Verificar se deve pular validação e conversão de dimensões
+      const skipDimensionValidation = licenseData.skipDimensionValidation === true;
+      
+      // Remover a flag para não interferir na validação do banco
+      if (licenseData.skipDimensionValidation !== undefined) {
+        delete licenseData.skipDimensionValidation;
+      }
+      
+      // Aplicar lógica de tratamento para renovações apenas se não estiver pulando validações
       if (isRenewal) {
-        console.log("Detectada renovação de licença, ajustando tratamento de dimensões.");
+        console.log("Detectada renovação de licença");
         
-        // Para renovações, precisamos verificar se as dimensões estão em metros
-        // e convertê-las para centímetros se necessário
-        
-        if (licenseData.length !== undefined && licenseData.length !== null) {
-          // Se o valor for menor que 100, assumimos que está em metros e precisamos converter
-          if (typeof licenseData.length === 'number' && licenseData.length < 100) {
-            console.log("[RENOVAÇÃO] Valor original do comprimento (metros):", licenseData.length);
-            licenseData.length = licenseData.length * 100;
-            console.log("[RENOVAÇÃO] Valor convertido para centímetros:", licenseData.length);
+        if (skipDimensionValidation) {
+          console.log("[RENOVAÇÃO] Pulando validação e conversão de dimensões conforme solicitado");
+          console.log("[RENOVAÇÃO] Mantendo valores originais:");
+          console.log("  Comprimento:", licenseData.length);
+          console.log("  Largura:", licenseData.width); 
+          console.log("  Altura:", licenseData.height);
+        } else {
+          console.log("[RENOVAÇÃO] Processando conversões normalmente");
+          
+          // Para renovações, verificar se as dimensões estão em metros
+          // e convertê-las para centímetros se necessário
+          if (licenseData.length !== undefined && licenseData.length !== null) {
+            // Se o valor for menor que 100, assumimos que está em metros e precisamos converter
+            if (typeof licenseData.length === 'number' && licenseData.length < 100) {
+              console.log("[RENOVAÇÃO] Valor original do comprimento (metros):", licenseData.length);
+              licenseData.length = licenseData.length * 100;
+              console.log("[RENOVAÇÃO] Valor convertido para centímetros:", licenseData.length);
+            }
           }
-        }
-        
-        if (licenseData.width !== undefined && licenseData.width !== null) {
-          if (typeof licenseData.width === 'number' && licenseData.width < 100) {
-            console.log("[RENOVAÇÃO] Valor original da largura (metros):", licenseData.width);
-            licenseData.width = licenseData.width * 100;
-            console.log("[RENOVAÇÃO] Valor convertido para centímetros:", licenseData.width);
+          
+          if (licenseData.width !== undefined && licenseData.width !== null) {
+            if (typeof licenseData.width === 'number' && licenseData.width < 100) {
+              console.log("[RENOVAÇÃO] Valor original da largura (metros):", licenseData.width);
+              licenseData.width = licenseData.width * 100;
+              console.log("[RENOVAÇÃO] Valor convertido para centímetros:", licenseData.width);
+            }
           }
-        }
-        
-        if (licenseData.height !== undefined && licenseData.height !== null) {
-          if (typeof licenseData.height === 'number' && licenseData.height < 100) {
-            console.log("[RENOVAÇÃO] Valor original da altura (metros):", licenseData.height);
-            licenseData.height = licenseData.height * 100;
-            console.log("[RENOVAÇÃO] Valor convertido para centímetros:", licenseData.height);
+          
+          if (licenseData.height !== undefined && licenseData.height !== null) {
+            if (typeof licenseData.height === 'number' && licenseData.height < 100) {
+              console.log("[RENOVAÇÃO] Valor original da altura (metros):", licenseData.height);
+              licenseData.height = licenseData.height * 100;
+              console.log("[RENOVAÇÃO] Valor convertido para centímetros:", licenseData.height);
+            }
           }
         }
       }
