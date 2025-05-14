@@ -984,10 +984,16 @@ export default function IssuedLicensesPage() {
                   
                   // Adicionar tratamento detalhado de erro
                   try {
-                    renewLicenseMutation.mutate({
+                    // Garantir que a informação de renovação esteja presente
+                    const renovationInfo = {
                       licenseId: licenseToRenew.licenseId,
-                      state: licenseToRenew.state
-                    });
+                      state: licenseToRenew.state,
+                      // Indicar explicitamente que é uma renovação para o servidor
+                      isRenewal: true
+                    };
+                    
+                    console.log("Enviando informação de renovação:", renovationInfo);
+                    renewLicenseMutation.mutate(renovationInfo);
                     // Não fechar automaticamente, aguardar resultado da mutação
                   } catch (error) {
                     console.error("[RENOVAÇÃO_MODAL] Erro ao iniciar renovação:", error);
