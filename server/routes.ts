@@ -1283,6 +1283,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (licenseData.width !== undefined) {
             licenseData.width = Number(licenseData.width);
+            // Para não-pranchas, se o valor estiver no formato antigo (260), converter para decimal (2.60)
+            if (!isPrancha && licenseData.width > 10) {
+              licenseData.width = Number((licenseData.width / 100).toFixed(2));
+              console.log(`Convertendo largura de cm para metros: ${licenseData.width}`);
+            }
+            // Para não-pranchas, se o valor estiver no formato antigo (440), converter para decimal (4.40)
+            if (!isPrancha && licenseData.height > 10) {
+              licenseData.height = Number((licenseData.height / 100).toFixed(2));
+              console.log(`Convertendo altura de cm para metros: ${licenseData.height}`);
+            }
+            
+            // Forçar valor padrão para não-pranchas
+            if (!isPrancha) {
+              licenseData.height = 4.40;
+              console.log(`Forçando valor padrão para altura não-prancha: ${licenseData.height}`);
+            }
+            
+            // Forçar valor padrão para não-pranchas
+            if (!isPrancha) {
+              licenseData.width = 2.60;
+              console.log(`Forçando valor padrão para largura não-prancha: ${licenseData.width}`);
+            }
             console.log("Largura normalizada:", licenseData.width);
           }
           
@@ -1610,6 +1632,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Garantir que é um número
         licenseData.height = Number(licenseData.height);
+        // Para não-pranchas, se o valor estiver no formato antigo (440), converter para decimal (4.40)
+        if (!isPrancha && licenseData.height > 10) {
+          licenseData.height = Number((licenseData.height / 100).toFixed(2));
+          console.log(`Convertendo altura de cm para metros: ${licenseData.height}`);
+        }
+        
+        // Forçar valor padrão para não-pranchas
+        if (!isPrancha) {
+          licenseData.height = 4.40;
+          console.log(`Forçando valor padrão para altura não-prancha: ${licenseData.height}`);
+        }
         console.log(`Convertendo altura para número: ${licenseData.height}`);
       }
       
@@ -1776,6 +1809,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!licenseData.mainVehiclePlate) {
           return res.status(400).json({ message: "A placa principal é obrigatória" });
         }
+        // Para não-pranchas, se o valor estiver no formato antigo (260), converter para decimal (2.60)
+        if (!isPrancha && licenseData.width > 10) {
+          licenseData.width = Number((licenseData.width / 100).toFixed(2));
+          console.log(`Convertendo largura de cm para metros: ${licenseData.width}`);
+        }
+        
+        // Forçar valor padrão para não-pranchas
+        if (!isPrancha) {
+          licenseData.width = 2.60;
+          console.log(`Forçando valor padrão para largura não-prancha: ${licenseData.width}`);
+        }
         
         if (!licenseData.length || licenseData.length <= 0) {
           return res.status(400).json({ message: "O comprimento deve ser positivo" });
@@ -1786,6 +1830,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Sanitização mais rigorosa dos campos de dimensões com valores padrão
+        // Para não-pranchas, se o valor estiver no formato antigo (440), converter para decimal (4.40)
+        if (!isPrancha && licenseData.height > 10) {
+          licenseData.height = Number((licenseData.height / 100).toFixed(2));
+          console.log(`Convertendo altura de cm para metros: ${licenseData.height}`);
+        }
+        
+        // Forçar valor padrão para não-pranchas
+        if (!isPrancha) {
+          licenseData.height = 4.40;
+          console.log(`Forçando valor padrão para altura não-prancha: ${licenseData.height}`);
+        }
       console.log("Sanitizando dados para tipo " + licenseData.type);
       
       // Valores padrão baseados no tipo de licença - prancha tem limites diferentes
