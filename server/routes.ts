@@ -1945,14 +1945,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Criar um novo rascunho baseado na licença original, mas apenas com o estado escolhido
       // Aqui, precisamos garantir que os campos opcionais sejam tratados corretamente
+      
+      // Obter dimensões originais e verificar se estão em metros
+      let length = originalLicense.length || 0;
+      let width = originalLicense.width || (originalLicense.type === "flatbed" ? 320 : 260);
+      let height = originalLicense.height || (originalLicense.type === "flatbed" ? 495 : 440);
+      
+      // Se é uma renovação explícita, pode ser necessário converter medidas de metros para centímetros
+      if (isRenewal) {
+        // Conversão de comprimento, se necessário (se < 100, assume-se que está em metros)
+        if (length > 0 && length < 100) {
+          console.log("[RENOVAÇÃO] Conversão do comprimento de metros para centímetros:", length, "m →", length * 100, "cm");
+          length = length * 100;
+        }
+        
+        // Conversão de largura, se necessário
+        if (width > 0 && width < 100) {
+          console.log("[RENOVAÇÃO] Conversão da largura de metros para centímetros:", width, "m →", width * 100, "cm");
+          width = width * 100;
+        }
+        
+        // Conversão de altura, se necessário
+        if (height > 0 && height < 100) {
+          console.log("[RENOVAÇÃO] Conversão da altura de metros para centímetros:", height, "m →", height * 100, "cm");
+          height = height * 100;
+        }
+      }
+      
       const draftData: any = {
         transporterId: originalLicense.transporterId || null,
         mainVehiclePlate: originalLicense.mainVehiclePlate,
-        length: originalLicense.length || 0,
+        length: length,
         type: originalLicense.type,
-        // Valores padrão para campos opcionais
-        width: originalLicense.width || (originalLicense.type === "flatbed" ? 320 : 260),
-        height: originalLicense.height || (originalLicense.type === "flatbed" ? 495 : 440),
+        // Valores atualizados com possível conversão de unidades
+        width: width,
+        height: height,
         cargoType: originalLicense.cargoType || (originalLicense.type === "flatbed" ? "indivisible_cargo" : "dry_cargo"),
         // Incluir apenas o estado específico sendo renovado
         states: [state],
