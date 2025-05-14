@@ -985,20 +985,19 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     const licenseType = values.type || 'default';
     const cargoType = values.cargoType;
     
-    // Verificar e converter valores de dimensão se necessário
-    // Se os valores estiverem em centímetros (acima de 100), converter para metros
+    // Manter os valores dimensionais em metros sem verificar ou converter
     const length = Number(values.length);
     const width = Number(values.width);
     const height = Number(values.height);
     
     console.log(`Validando comprimento:`, length, `tipo:`, typeof length);
-    console.log(`Valor em metros:`, length, `Está em centímetros:`, length > 100);
+    console.log(`Valor em metros:`, length);
     
     console.log(`Validando largura:`, width, `tipo:`, typeof width);
-    console.log(`Largura em metros:`, width, `Está em centímetros:`, width > 100);
+    console.log(`Largura em metros:`, width);
     
     console.log(`Validando altura:`, height, `tipo:`, typeof height);
-    console.log(`Altura em metros:`, height, `Está em centímetros:`, height > 100);
+    console.log(`Altura em metros:`, height);
     
     // Determinar quais limites usar com base no tipo
     let limits;
@@ -1016,24 +1015,10 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       limits = DIMENSION_LIMITS.oversized;
     }
     
-    // Ajustar os valores no formulário se necessário (conversão de cm para m)
-    if (length > 100) {
-      const convertedLength = length / 100;
-      form.setValue('length', convertedLength);
-      console.log(`Convertendo comprimento de ${length}cm para ${convertedLength}m`);
-    }
-    
-    if (width > 100) {
-      const convertedWidth = width / 100;
-      form.setValue('width', convertedWidth);
-      console.log(`Convertendo largura de ${width}cm para ${convertedWidth}m`);
-    }
-    
-    if (height > 100) {
-      const convertedHeight = height / 100;
-      form.setValue('height', convertedHeight);
-      console.log(`Convertendo altura de ${height}cm para ${convertedHeight}m`);
-    }
+    // Não converter mais os valores, manter tudo em metros
+    console.log(`Mantendo comprimento em metros: ${length}m`);
+    console.log(`Mantendo largura em metros: ${width}m`);
+    console.log(`Mantendo altura em metros: ${height}m`);
     
     // Validação dos limites e mensagens de aviso
     if (cargoType !== 'oversized') {

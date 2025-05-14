@@ -1559,16 +1559,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isRenewal) {
         console.log("É pedido de renovação? SIM");
         
-        // Verificar se os valores estão em metros (valores típicos menores que 100)
-        // e convertê-los para centímetros
-        const valuesInMeters = {
+        // Manter os valores em metros sem conversão
+        const values = {
           length: licenseData.length,
           width: licenseData.width,
           height: licenseData.height,
           cargoType: licenseData.cargoType
         };
         
-        console.log("[RENOVAÇÃO] Valores originais (metros):", valuesInMeters);
+        console.log("[RENOVAÇÃO] Valores mantidos em metros:", values);
         
         // Aplicar valores de cargoType padrão se estiver faltando
         if (!licenseData.cargoType) {
