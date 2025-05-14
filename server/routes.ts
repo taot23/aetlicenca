@@ -843,21 +843,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Verificar width (largura)
       if (draftData.width === undefined || draftData.width === null || draftData.width === "") {
-        draftData.width = isPrancha ? 320 : 260; // 3.20m para prancha, 2.60m para outros
+        draftData.width = isPrancha ? 320 : 2.60; // 3.20m para prancha (inteiro), 2.60m para outros (float)
         console.log(`Aplicando valor padrão para largura: ${draftData.width}`);
       } else {
         // Garantir que é um número
         draftData.width = Number(draftData.width);
+        
+        // Se não for prancha, manter como float de duas casas decimais
+        if (!isPrancha && (draftData.width === 260 || draftData.width >= 250 && draftData.width <= 270)) {
+          draftData.width = 2.60;
+        }
+        
         console.log(`Convertendo largura para número: ${draftData.width}`);
       }
       
       // Verificar height (altura)
       if (draftData.height === undefined || draftData.height === null || draftData.height === "") {
-        draftData.height = isPrancha ? 495 : 440; // 4.95m para prancha, 4.40m para outros
+        draftData.height = isPrancha ? 495 : 4.40; // 4.95m para prancha (inteiro), 4.40m para outros (float)
         console.log(`Aplicando valor padrão para altura: ${draftData.height}`);
       } else {
         // Garantir que é um número
         draftData.height = Number(draftData.height);
+        
+        // Se não for prancha, manter como float de duas casas decimais
+        if (!isPrancha && (draftData.height === 440 || draftData.height >= 430 && draftData.height <= 450)) {
+          draftData.height = 4.40;
+        }
+        
         console.log(`Convertendo altura para número: ${draftData.height}`);
       }
       

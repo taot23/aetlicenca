@@ -141,19 +141,31 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
     // Segundo: verificar se as dimensões estão em metros (valor < 100) e converter para centímetros
     // Mantendo o tipo float para preservar as casas decimais
     
-    // Comprimento
+    // Verificar se é uma prancha
+    const isPrancha = requestData.type === 'flatbed';
+    
+    // Comprimento sempre em centímetros no banco de dados
     if (typeof requestData.length === 'number' && requestData.length < 100) {
       requestData.length = requestData.length * 100;
     }
     
-    // Largura
-    if (typeof requestData.width === 'number' && requestData.width < 100) {
-      requestData.width = requestData.width * 100;
-    }
-    
-    // Altura
-    if (typeof requestData.height === 'number' && requestData.height < 100) {
-      requestData.height = requestData.height * 100;
+    // Para não-prancha, manter valores originais em float para largura e altura
+    if (!isPrancha) {
+      console.log("[RENOVAÇÃO] Mantendo valores originais conforme solicitado, sem conversão:");
+      // Para não-prancha, forçar os valores padrão
+      requestData.width = 2.60;  // Valor padrão com duas casas decimais para não-prancha
+      requestData.height = 4.40; // Valor padrão com duas casas decimais para não-prancha
+    } else {
+      // Para prancha, converter normalmente
+      // Largura
+      if (typeof requestData.width === 'number' && requestData.width < 100) {
+        requestData.width = requestData.width * 100;
+      }
+      
+      // Altura
+      if (typeof requestData.height === 'number' && requestData.height < 100) {
+        requestData.height = requestData.height * 100;
+      }
     }
     
     // Transformar em request normal (não draft)
@@ -567,14 +579,14 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         if (isPrancha && !requestData.width) {
           requestData.width = 320; // 3.2m em centímetros para prancha
         } else if (!isPrancha) {
-          requestData.width = 260; // Forçar 2.6m em centímetros para não-prancha
+          requestData.width = 2.60; // Forçar 2.60m como float para não-prancha
         }
         
         // Para conjuntos que não são prancha, forçar sempre 4,40m de altura
         if (isPrancha && !requestData.height) {
           requestData.height = 495; // 4.95m em centímetros para prancha
         } else if (!isPrancha) {
-          requestData.height = 440; // Forçar 4.4m em centímetros para não-prancha
+          requestData.height = 4.40; // Forçar 4.40m como float para não-prancha
         }
         
         // Criar uma nova licença (não usando o endpoint de submit do rascunho)
