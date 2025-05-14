@@ -584,22 +584,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         const url = '/api/licenses';
         const method = "POST";
         
-        // IMPORTANTE: Converter dimensões de metros para centímetros
-        // Este é o ponto crítico que estava causando o problema
-        if (requestData.length < 100) {
-          console.log(`[RENOVAÇÃO] Convertendo comprimento: ${requestData.length}m → ${Math.round(requestData.length * 100)}cm`);
-          requestData.length = Math.round(requestData.length * 100);
-        }
-        
-        if (requestData.width < 100) {
-          console.log(`[RENOVAÇÃO] Convertendo largura: ${requestData.width}m → ${Math.round(requestData.width * 100)}cm`);
-          requestData.width = Math.round(requestData.width * 100);
-        }
-        
-        if (requestData.height < 100) {
-          console.log(`[RENOVAÇÃO] Convertendo altura: ${requestData.height}m → ${Math.round(requestData.height * 100)}cm`);
-          requestData.height = Math.round(requestData.height * 100);
-        }
+        // IMPORTANTE: Não converter dimensões para renovações
+        // Apenas logar os valores que serão enviados sem alteração
+        console.log(`[RENOVAÇÃO DIRETA] Mantendo dimensões originais sem conversão:`);
+        console.log(`  Comprimento: ${requestData.length}m`);
+        console.log(`  Largura: ${requestData.width}m`);
+        console.log(`  Altura: ${requestData.height}m`);
         
         // Incluir o ID do rascunho a ser excluído após sucesso
         const payload = {
@@ -695,33 +685,10 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     
     // Se for renovação, adicionar campos adicionais para garantir validade
     if (isRenewal) {
-      // Para renovações, já indicar explicitamente que é renovação
-      values.isRenewal = true;
-      
-      // Garantir que dimensões e tipo de carga estão preenchidos
-      if (!values.length) values.length = 25; // 25m
-      if (!values.width) values.width = 2.6;  // 2.6m
-      if (!values.height) values.height = 4.4; // 4.4m
-      if (!values.cargoType) values.cargoType = values.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
-      
-      // Valores originais antes da conversão (para logs)
-      console.log('[RENOVAÇÃO] Valores originais (metros):', {
-        length: values.length,
-        width: values.width,
-        height: values.height
-      });
-      
-      // IMPORTANTE: Converter para centímetros aqui no cliente
-      // antes mesmo de enviar ao servidor
-      if (values.length < 100) values.length = values.length * 100;
-      if (values.width < 100) values.width = values.width * 100;
-      if (values.height < 100) values.height = values.height * 100;
-      
-      console.log('[RENOVAÇÃO] Valores convertidos (centímetros):', {
-        length: values.length,
-        width: values.width,
-        height: values.height
-      });
+      // Para renovações, apenas marcar como renovação sem fazer validações ou conversões
+      console.log('[RENOVAÇÃO] Detectada - pulando validações e conversões conforme solicitado');
+      values.skipDimensionValidation = true; // Flag para pular validações
+      values.isRenewal = true; // Indicar que é renovação
       
       // Atualizar o formulário com os valores ajustados
       form.setValue('length', values.length);
@@ -1051,9 +1018,9 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                       typeof values.comments === 'string' && 
                       values.comments.toLowerCase().includes('renovação');
     
-    // Para renovações, não aplicamos validação dimensional
-    if (isRenewal) {
-      console.log("Pedido de renovação detectado - pulando validação dimensional");
+    // Para renovações, não aplicamos validação dimensional - NUNCA
+    if (isRenewal || values.skipDimensionValidation) {
+      console.log("[RENOVAÇÃO] Pulando validação dimensional conforme solicitado explicitamente");
       return { isValid: true, errors: [] };
     }
     
