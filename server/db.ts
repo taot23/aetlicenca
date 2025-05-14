@@ -18,9 +18,7 @@ export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 10, // Reduzido para evitar muitas conexões simultâneas
   idleTimeoutMillis: 30000, 
-  connectionTimeoutMillis: 10000, // Aumentado para dar mais tempo para conectar
-  retryLimit: 5, // Tenta reconectar até 5 vezes
-  retryDelay: 500 // Espera 500ms entre tentativas
+  connectionTimeoutMillis: 10000 // Aumentado para dar mais tempo para conectar
 });
 
 // Manipulador de erro para o pool
@@ -36,13 +34,14 @@ export const db = drizzle({ client: pool, schema });
  * @returns Resultado da execução do callback
  */
 export async function withTransaction<T>(
-  callback: (tx: typeof db) => Promise<T>
+  callback: (tx: any) => Promise<T>
 ): Promise<T> {
   const client = await pool.connect();
   
   try {
     await client.query('BEGIN');
-    const tx = drizzle({ client, schema });
+    // Usando any para evitar erros de tipos com PoolClient vs Pool
+    const tx = drizzle({ client, schema } as any);
     const result = await callback(tx);
     await client.query('COMMIT');
     return result;

@@ -30,10 +30,13 @@ export class TransactionalStorage implements IStorage {
   sessionStore: any;
 
   constructor() {
+    // Manter a implementação original com PostgreSQL
     this.sessionStore = new PostgresSessionStore({
       pool,
-      createTableIfMissing: true
+      createTableIfMissing: true,
+      tableName: 'session' // garantir nome da tabela explícito
     });
+    console.log("[INFO] Usando armazenamento de sessão PostgreSQL");
   }
   
   // Métodos relacionados a Usuários
