@@ -713,7 +713,6 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           toast({
             title: "Renovação enviada com sucesso",
             description: "O pedido de renovação foi enviado para análise",
-            variant: "success",
           });
           
           // Chamar onComplete para fechar o modal e atualizar a lista
@@ -743,9 +742,10 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       validateDimensions(values);
     } else {
       console.log("[RENOVAÇÃO] Pulando validação de dimensões no envio da licença");
-      // Adicionar flags para renovação
-      values.isRenewal = true;
-      values.skipDimensionValidation = true;
+      // Adicionar flags para renovação como parte do formulário
+      const formValues = values as any;
+      formValues.isRenewal = true;
+      formValues.skipDimensionValidation = true;
     }
     
     // Atualizar o valor isDraft para false e submeter

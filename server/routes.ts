@@ -1609,8 +1609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sanitização mais rigorosa dos campos de dimensões com valores padrão
       console.log("Sanitizando dados para tipo " + licenseData.type);
       
-      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes
-      const isPrancha = licenseData.type === "flatbed";
+      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes já definidos anteriormente
       
       // Se for renovação com skip de validação, preservar os valores originais
       if (skipDimensionValidation) {
@@ -1902,8 +1901,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       console.log("Sanitizando dados para tipo " + licenseData.type);
       
-      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes
-      const isPrancha = licenseData.type === "flatbed";
+      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes (já definido anteriormente)
       
       // Verificar width (largura)
       if (licenseData.width === undefined || licenseData.width === null || licenseData.width === "") {
