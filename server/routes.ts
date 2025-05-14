@@ -1593,8 +1593,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isPrancha = licenseData.type === "flatbed";
       
       // Verificar se é um pedido de renovação com rascunho que deve ser excluído
-      const draftToDeleteId = licenseData.draftToDeleteId;
-      if (draftToDeleteId) {
+      // Declarar a variável aqui para que ela tenha escopo em toda a função
+      let draftToDeleteId: number | null = null;
+      
+      if (licenseData.draftToDeleteId) {
+        draftToDeleteId = Number(licenseData.draftToDeleteId);
         console.log(`Pedido de renovação detectado. Rascunho ${draftToDeleteId} será excluído após sucesso.`);
         // Remover este campo para não interferir na validação
         delete licenseData.draftToDeleteId;
@@ -1979,9 +1982,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Excluir o rascunho original de renovação, se existir um ID para excluir
       if (draftToDeleteId) {
         try {
-          console.log(`[RENOVAÇÃO] Excluindo rascunho original com ID ${draftToDeleteId} após criar licença com sucesso`);
-          await storage.deleteLicenseRequest(Number(draftToDeleteId));
-          console.log(`[RENOVAÇÃO] Rascunho ${draftToDeleteId} excluído com sucesso`);
+          // Converter explicitamente para número e garantir que existe
+          const draftId = Number(draftToDeleteId);
+          if (!isNaN(draftId)) {
+            console.log(`[RENOVAÇÃO] Excluindo rascunho original com ID ${draftId} após criar licença com sucesso`);
+            
+            // Verificar se o rascunho existe antes de tentar excluir
+            const draft = await storage.getLicenseRequestById(draftId);
+            if (draft) {
+              await storage.deleteLicenseRequest(draftId);
+              console.log(`[RENOVAÇÃO] Rascunho ${draftId} excluído com sucesso`);
+            } else {
+              console.log(`[RENOVAÇÃO] Rascunho ${draftId} não encontrado, não foi excluído`);
+            }
+          } else {
+            console.error(`[RENOVAÇÃO] ID de rascunho inválido: ${draftToDeleteId}`);
+          }
         } catch (deleteError) {
           // Não falhar a operação principal se a exclusão do rascunho falhar
           console.error(`[RENOVAÇÃO] Erro ao excluir rascunho ${draftToDeleteId}:`, deleteError);
