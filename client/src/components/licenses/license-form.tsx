@@ -138,32 +138,22 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
       }
     });
     
-    // Segundo: verificar se as dimensões estão em metros (valor < 100) e converter para centímetros
-    // Mantendo o tipo float para preservar as casas decimais
-    
-    // Comprimento
-    if (typeof requestData.length === 'number' && requestData.length < 100) {
-      requestData.length = requestData.length * 100;
-    }
-    
-    // Largura
-    if (typeof requestData.width === 'number' && requestData.width < 100) {
-      requestData.width = requestData.width * 100;
-    }
-    
-    // Altura
-    if (typeof requestData.height === 'number' && requestData.height < 100) {
-      requestData.height = requestData.height * 100;
-    }
+    // NÃO FAZER NENHUMA CONVERSÃO PARA RENOVAÇÕES
+    // Apenas logar os valores que serão enviados
+    console.log("[RENOVAÇÃO] Mantendo valores originais conforme solicitado, sem conversão:");
     
     // Transformar em request normal (não draft)
     requestData.isDraft = false;
     
-    console.log("[RENOVAÇÃO_FINAL] Dimensões convertidas para centímetros:", {
+    console.log("[RENOVAÇÃO_FINAL] Dimensões originais mantidas sem conversão:", {
       length: requestData.length,
       width: requestData.width,
       height: requestData.height
     });
+    
+    // Adicionar flags para o servidor
+    requestData.isRenewal = true;
+    requestData.skipDimensionValidation = true;
     
     console.log("Dados da renovação:", JSON.stringify(requestData));
     
