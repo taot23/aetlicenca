@@ -138,22 +138,32 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
       }
     });
     
-    // NÃO FAZER NENHUMA CONVERSÃO PARA RENOVAÇÕES
-    // Apenas logar os valores que serão enviados
-    console.log("[RENOVAÇÃO] Mantendo valores originais conforme solicitado, sem conversão:");
+    // Segundo: verificar se as dimensões estão em metros (valor < 100) e converter para centímetros
+    // Mantendo o tipo float para preservar as casas decimais
+    
+    // Comprimento
+    if (typeof requestData.length === 'number' && requestData.length < 100) {
+      requestData.length = requestData.length * 100;
+    }
+    
+    // Largura
+    if (typeof requestData.width === 'number' && requestData.width < 100) {
+      requestData.width = requestData.width * 100;
+    }
+    
+    // Altura
+    if (typeof requestData.height === 'number' && requestData.height < 100) {
+      requestData.height = requestData.height * 100;
+    }
     
     // Transformar em request normal (não draft)
     requestData.isDraft = false;
     
-    console.log("[RENOVAÇÃO_FINAL] Dimensões originais mantidas sem conversão:", {
+    console.log("[RENOVAÇÃO_FINAL] Dimensões convertidas para centímetros:", {
       length: requestData.length,
       width: requestData.width,
       height: requestData.height
     });
-    
-    // Adicionar flags para o servidor
-    requestData.isRenewal = true;
-    requestData.skipDimensionValidation = true;
     
     console.log("Dados da renovação:", JSON.stringify(requestData));
     
@@ -542,53 +552,42 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       if (isRenewal && draft?.id) {
         console.log("Usando abordagem direta para renovação de licença");
         
-        // Para renovações, não aplicamos conversão para centímetros no cliente
-        // O servidor fará essa conversão automaticamente ao detectar renovação
-        // Garantimos apenas que temos valores válidos para campos obrigatórios
-        
+        // Garantir que temos valores válidos para campos obrigatórios
         const isPrancha = requestData.type === 'flatbed';
         if (!requestData.cargoType) {
           requestData.cargoType = isPrancha ? 'indivisible_cargo' : 'dry_cargo';
         }
         
-        // Definir valores com base no tipo de conjunto (em metros para renovações)
+        // Definir valores com base no tipo de conjunto
         if (!requestData.length) {
-          requestData.length = isPrancha ? 25 : 30; // Em metros para renovação
+          requestData.length = isPrancha ? 2500 : 3000; // 25m ou 30m em centímetros
         }
         
         // Para conjuntos que não são prancha, forçar sempre 2,60m de largura
         if (isPrancha && !requestData.width) {
-          requestData.width = 3.2; // Em metros para renovação
+          requestData.width = 320; // 3.2m em centímetros para prancha
         } else if (!isPrancha) {
-          requestData.width = 2.6; // Em metros para renovação
+          requestData.width = 260; // Forçar 2.6m em centímetros para não-prancha
         }
         
         // Para conjuntos que não são prancha, forçar sempre 4,40m de altura
         if (isPrancha && !requestData.height) {
-          requestData.height = 4.95; // Em metros para renovação
+          requestData.height = 495; // 4.95m em centímetros para prancha
         } else if (!isPrancha) {
-          requestData.height = 4.4; // Em metros para renovação
+          requestData.height = 440; // Forçar 4.4m em centímetros para não-prancha
         }
         
         // Criar uma nova licença (não usando o endpoint de submit do rascunho)
         const url = '/api/licenses';
         const method = "POST";
         
-        // IMPORTANTE: Não converter dimensões para renovações
-        // Apenas logar os valores que serão enviados sem alteração
-        console.log(`[RENOVAÇÃO DIRETA] Mantendo dimensões originais sem conversão:`);
-        console.log(`  Comprimento: ${requestData.length}m`);
-        console.log(`  Largura: ${requestData.width}m`);
-        console.log(`  Altura: ${requestData.height}m`);
-        
         // Incluir o ID do rascunho a ser excluído após sucesso
         const payload = {
           ...requestData,
-          isRenewal: true, // Forçar flag de renovação
           draftToDeleteId: draft.id // Campo adicional para que o backend remova o rascunho após criar a licença
         };
         
-        console.log("[RENOVAÇÃO] Enviando payload com dimensões convertidas:", payload);
+        console.log("Enviando renovação com payload modificado:", payload);
         
         // Enviar usando o apiRequest em vez de fetch direto (evita uso de await no escopo do componente)
         apiRequest(method, url, payload)
@@ -630,35 +629,6 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
 
   const handleSaveDraft = () => {
     form.setValue("isDraft", true);
-    
-    // Verificar se é uma renovação para converter unidades antes de salvar
-    const values = form.getValues();
-    const isRenewal = values.comments && typeof values.comments === 'string' && 
-                      values.comments.toLowerCase().includes('renovação');
-    
-    if (isRenewal) {
-      console.log("[RENOVAÇÃO] Detectada em salvamento de rascunho");
-      
-      // Converter medidas de metros para centímetros, se necessário
-      if (values.length && values.length < 100) {
-        const lengthInCm = values.length * 100;
-        console.log(`[RENOVAÇÃO] Convertendo comprimento de ${values.length}m para ${lengthInCm}cm`);
-        form.setValue('length', lengthInCm);
-      }
-      
-      if (values.width && values.width < 100) {
-        const widthInCm = values.width * 100;
-        console.log(`[RENOVAÇÃO] Convertendo largura de ${values.width}m para ${widthInCm}cm`);
-        form.setValue('width', widthInCm);
-      }
-      
-      if (values.height && values.height < 100) {
-        const heightInCm = values.height * 100;
-        console.log(`[RENOVAÇÃO] Convertendo altura de ${values.height}m para ${heightInCm}cm`);
-        form.setValue('height', heightInCm);
-      }
-    }
-    
     form.handleSubmit(onSubmit)();
   };
 
@@ -675,10 +645,18 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     
     // Se for renovação, adicionar campos adicionais para garantir validade
     if (isRenewal) {
-      // Para renovações, apenas marcar como renovação sem fazer validações ou conversões
-      console.log('[RENOVAÇÃO] Detectada - pulando validações e conversões conforme solicitado');
-      values.skipDimensionValidation = true; // Flag para pular validações
-      values.isRenewal = true; // Indicar que é renovação
+      // Garantir que dimensões e tipo de carga estão preenchidos
+      if (!values.length) values.length = 25; // 25m
+      if (!values.width) values.width = 2.6;  // 2.6m
+      if (!values.height) values.height = 4.4; // 4.4m
+      if (!values.cargoType) values.cargoType = values.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
+      
+      console.log('Valores ajustados para renovação:', {
+        length: values.length,
+        width: values.width,
+        height: values.height,
+        cargoType: values.cargoType
+      });
       
       // Atualizar o formulário com os valores ajustados
       form.setValue('length', values.length);
@@ -770,12 +748,30 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         form.setValue('cargoType', values.cargoType as any);
       }
       
-      // Não fazer conversão para renovações, apenas adicionar flags para o servidor
-      values.skipDimensionValidation = true;
-      values.isRenewal = true;
+      // Forçar conversão de metros para centímetros apenas para o envio
+      // Manter os valores originais no formulário (em metros)
+      const valuesOriginal = { ...values };
       
-      console.log('[RENOVAÇÃO] Detectada - pulando validações e conversões conforme solicitado');
-      console.log('[RENOVAÇÃO] Valores mantidos sem conversão:', {
+      // Converter para centímetros diretamente nos valores, mantendo o tipo float
+      if (typeof values.length === 'number' && values.length < 100) {
+        values.length = values.length * 100;
+      }
+      
+      if (typeof values.width === 'number' && values.width < 100) {
+        values.width = values.width * 100;
+      }
+      
+      if (typeof values.height === 'number' && values.height < 100) {
+        values.height = values.height * 100;
+      }
+      
+      console.log('[RENOVAÇÃO] Valores originais (metros):', {
+        length: valuesOriginal.length,
+        width: valuesOriginal.width,
+        height: valuesOriginal.height,
+      });
+      
+      console.log('[RENOVAÇÃO] Valores convertidos (centímetros):', {
         length: values.length,
         width: values.width,
         height: values.height,
@@ -985,17 +981,6 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
 
   // Função para validar dimensões com base no tipo de licença e carga
   const validateDimensions = (values: any) => {
-    // Verificar se é um pedido de renovação
-    const isRenewal = values.comments && 
-                      typeof values.comments === 'string' && 
-                      values.comments.toLowerCase().includes('renovação');
-    
-    // Para renovações, não aplicamos validação dimensional - NUNCA
-    if (isRenewal || values.skipDimensionValidation) {
-      console.log("[RENOVAÇÃO] Pulando validação dimensional conforme solicitado explicitamente");
-      return { isValid: true, errors: [] };
-    }
-    
     // Obter o tipo de conjunto e de carga
     const licenseType = values.type || 'default';
     const cargoType = values.cargoType;
@@ -2778,7 +2763,18 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             {saveAsDraftMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
             Salvar Rascunho
           </Button>
-          {/* Botão para envio direto de rascunho foi removido conforme solicitado */}
+          {/* Botão para envio direto de rascunho, mostrado apenas quando estamos editando um rascunho existente */}
+          {draft && draft.id && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSubmitDraftDirectly}
+              className="w-full sm:w-auto order-2 sm:order-3 bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+            >
+              <Send className="mr-2 h-4 w-4" />
+              Enviar Rascunho
+            </Button>
+          )}
           <Button
             type="button"
             onClick={handleSubmitRequest}

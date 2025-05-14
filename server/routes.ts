@@ -88,9 +88,6 @@ const processVehicleData = (req: any, res: any, next: any) => {
     // Garantir que números são convertidos corretamente
     if (req.body.tare) req.body.tare = Number(req.body.tare);
     if (req.body.crlvYear) req.body.crlvYear = Number(req.body.crlvYear);
-    if (req.body.year) req.body.year = Number(req.body.year);
-    if (req.body.axleCount) req.body.axleCount = Number(req.body.axleCount);
-    if (req.body.cmt) req.body.cmt = Number(req.body.cmt);
   }
   // Caso 3: JSON direto (nossa nova abordagem para requests sem arquivo)
   else if (contentType.includes('application/json')) {
@@ -952,11 +949,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Garantir que os campos obrigatórios sejam enviados corretamente para o banco de dados
-      // Arredondamos os valores para inteiros, para garantir compatibilidade com o banco de dados
       const sanitizedData = {
         ...draftData,
-        width: draftData.width !== undefined ? Math.round(Number(draftData.width)) : existingDraft.width,
-        height: draftData.height !== undefined ? Math.round(Number(draftData.height)) : existingDraft.height,
+        width: draftData.width !== undefined ? Number(draftData.width) : existingDraft.width,
+        height: draftData.height !== undefined ? Number(draftData.height) : existingDraft.height,
         cargoType: draftData.cargoType || existingDraft.cargoType,
       };
       
@@ -1257,16 +1253,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Generate a real request number
         const requestNumber = `AET-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
         
-        // Identificar se é um pedido de renovação (via comentários ou via flag explícita)
-        const isRenewal = (licenseData.isRenewal === true) || (
-                          licenseData.comments && 
+        // Identificar se é um pedido de renovação
+        const isRenewal = licenseData.comments && 
                           typeof licenseData.comments === 'string' && 
-                          licenseData.comments.toLowerCase().includes('renovação'));
-                          
-        // Remover a flag isRenewal para não interferir em validações
-        if (licenseData.isRenewal !== undefined) {
-          delete licenseData.isRenewal;
-        }
+                          licenseData.comments.toLowerCase().includes('renovação');
 
         console.log(`É pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
         
@@ -1421,13 +1411,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Prepara dados para criar a licença
         const requestNumber = `AET-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
         
-        // Verifica se é uma renovação para tratamento especial
-        const isRenewal = licenseData.comments && 
-                         typeof licenseData.comments === 'string' && 
-                         licenseData.comments.toLowerCase().includes('renovação');
-                         
-        console.log("Verificação de renovação:", isRenewal ? "É renovação" : "Não é renovação");
-        
         // Converte estados solicitados para o formato esperado no backend
         licenseData.states = licenseData.requestedStates || licenseData.states || [];
         console.log("Estados processados para envio:", licenseData.states);
@@ -1439,29 +1422,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!licenseData.length) {
           licenseData.length = 2000; // 20 metros em centímetros
-        }
-        
-        // Para pedidos de renovação, os valores de dimensão podem vir em metros
-        // Precisamos converter para centímetros ou aceitar como estão
-        if (isRenewal) {
-          console.log("Processando dimensões para renovação:", {
-            length: licenseData.length,
-            width: licenseData.width,
-            height: licenseData.height,
-          });
-          
-          // Forçar valores manualmente para teste
-          if (typeof licenseData.length === 'number') {
-            // Para renovações, aceitamos diretamente os valores sem conversão
-            // Se estiverem em metros (valores pequenos como 25, 2.6, 4.4), os usamos diretamente
-            console.log("Usando valores diretos para renovação sem conversão");
-          }
-          
-          console.log("Dimensões após processamento:", {
-            length: licenseData.length,
-            width: licenseData.width,
-            height: licenseData.height,
-          });
         }
         
         // Sanitizar campos de dimensões e tipo de carga
@@ -1486,20 +1446,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isDraft: false
         });
         
-        // Cria a licença com valores dependendo do tipo (renovação ou não)
-        const processedLicenseData = {
+        // Cria a licença
+        const licenseRequest = await storage.createLicenseRequest(user.id, {
           ...licenseData,
-          
-          // Renovações agora usam diretamente os valores sem conversão
-          width: licenseData.width ? Number(licenseData.width) : 260,
-          height: licenseData.height ? Number(licenseData.height) : 440,
-          length: licenseData.length ? Number(licenseData.length) : 2500,
           requestNumber,
           isDraft: false,
-        };
-
-        console.log("Dados de licença processados para criação:", processedLicenseData);
-        const licenseRequest = await storage.createLicenseRequest(user.id, processedLicenseData);
+        });
         
         console.log("Nova licença criada com sucesso:", licenseRequest.id);
         return res.json(licenseRequest);
@@ -1588,19 +1540,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Dados de licença recebidos:", JSON.stringify(licenseData, null, 2));
       
-      // Verificar se é um pedido de renovação (via comentários ou via flag explícita)
-      const isRenewal = (licenseData.isRenewal === true) || (
-                        licenseData.comments && 
-                        typeof licenseData.comments === 'string' && 
-                        licenseData.comments.toLowerCase().includes('renovação'));
-      
-      console.log("É pedido de renovação?", isRenewal ? "SIM" : "NÃO");
-      
-      // Remover a flag isRenewal para não interferir nas validações
-      if (licenseData.isRenewal !== undefined) {
-        delete licenseData.isRenewal;
-      }
-      
       // Verificar se é um pedido de renovação com rascunho que deve ser excluído
       const draftToDeleteId = licenseData.draftToDeleteId;
       if (draftToDeleteId) {
@@ -1609,54 +1548,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         delete licenseData.draftToDeleteId;
       }
       
-      // Verificar se deve pular validação e conversão de dimensões
-      const skipDimensionValidation = licenseData.skipDimensionValidation === true;
-      
-      // Remover a flag para não interferir na validação do banco
-      if (licenseData.skipDimensionValidation !== undefined) {
-        delete licenseData.skipDimensionValidation;
-      }
-      
-      // Aplicar lógica de tratamento para renovações apenas se não estiver pulando validações
+      // Verificar se é uma renovação através dos comentários
+      const isRenewal = licenseData.comments && 
+                       typeof licenseData.comments === 'string' && 
+                       licenseData.comments.toLowerCase().includes('renovação');
+                       
       if (isRenewal) {
-        console.log("Detectada renovação de licença");
-        
-        if (skipDimensionValidation) {
-          console.log("[RENOVAÇÃO] Pulando validação e conversão de dimensões conforme solicitado");
-          console.log("[RENOVAÇÃO] Mantendo valores originais:");
-          console.log("  Comprimento:", licenseData.length);
-          console.log("  Largura:", licenseData.width); 
-          console.log("  Altura:", licenseData.height);
-        } else {
-          console.log("[RENOVAÇÃO] Processando conversões normalmente");
-          
-          // Para renovações, verificar se as dimensões estão em metros
-          // e convertê-las para centímetros se necessário
-          if (licenseData.length !== undefined && licenseData.length !== null) {
-            // Se o valor for menor que 100, assumimos que está em metros e precisamos converter
-            if (typeof licenseData.length === 'number' && licenseData.length < 100) {
-              console.log("[RENOVAÇÃO] Valor original do comprimento (metros):", licenseData.length);
-              licenseData.length = licenseData.length * 100;
-              console.log("[RENOVAÇÃO] Valor convertido para centímetros:", licenseData.length);
-            }
-          }
-          
-          if (licenseData.width !== undefined && licenseData.width !== null) {
-            if (typeof licenseData.width === 'number' && licenseData.width < 100) {
-              console.log("[RENOVAÇÃO] Valor original da largura (metros):", licenseData.width);
-              licenseData.width = licenseData.width * 100;
-              console.log("[RENOVAÇÃO] Valor convertido para centímetros:", licenseData.width);
-            }
-          }
-          
-          if (licenseData.height !== undefined && licenseData.height !== null) {
-            if (typeof licenseData.height === 'number' && licenseData.height < 100) {
-              console.log("[RENOVAÇÃO] Valor original da altura (metros):", licenseData.height);
-              licenseData.height = licenseData.height * 100;
-              console.log("[RENOVAÇÃO] Valor convertido para centímetros:", licenseData.height);
-            }
-          }
-        }
+        console.log("Detectada renovação de licença com base nos comentários.");
       }
       
       console.log("Tipo de licença:", licenseData.type);
@@ -1727,32 +1625,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "O comprimento deve ser positivo" });
         }
         
-        // Se for uma renovação com skipDimensionValidation, pular todas as validações de dimensões
-        if (isRenewal && skipDimensionValidation) {
-          console.log("[RENOVAÇÃO] Pulando validações de limites de dimensões por ser uma renovação com flag skipDimensionValidation");
-        }
-        // Caso contrário, aplicar as validações normais
-        else {
-          // Ajustar o comprimento com base no tipo de licença
-          if (licenseData.type === 'flatbed') {
-            console.log("Este é um tipo prancha, aplicando regras específicas");
-            if (licenseData.cargoType === 'oversized') {
-              console.log("Carga superdimensionada: sem limite de dimensões");
-              // Não precisa fazer nenhuma validação
-            } else {
-              console.log("Prancha normal: máximo 25m, sem mínimo");
-              if (licenseData.length > 2500) { // centímetros
-                return res.status(400).json({ message: "O comprimento máximo para prancha é de 25,00 metros" });
-              }
-            }
+        // Ajustar o comprimento com base no tipo de licença
+        if (licenseData.type === 'flatbed') {
+          console.log("Este é um tipo prancha, aplicando regras específicas");
+          if (licenseData.cargoType === 'oversized') {
+            console.log("Carga superdimensionada: sem limite de dimensões");
+            // Não precisa fazer nenhuma validação
           } else {
-            console.log("Não é prancha: min 19.8m, max 30m");
-            if (licenseData.length < 1980) { // centímetros
-              return res.status(400).json({ message: "O comprimento mínimo é de 19,80 metros para este tipo de conjunto" });
+            console.log("Prancha normal: máximo 25m, sem mínimo");
+            if (licenseData.length > 2500) { // centímetros
+              return res.status(400).json({ message: "O comprimento máximo para prancha é de 25,00 metros" });
             }
-            if (licenseData.length > 3000) { // centímetros
-              return res.status(400).json({ message: "O comprimento máximo é de 30,00 metros para este tipo de conjunto" });
-            }
+          }
+        } else {
+          console.log("Não é prancha: min 19.8m, max 30m");
+          if (licenseData.length < 1980) { // centímetros
+            return res.status(400).json({ message: "O comprimento mínimo é de 19,80 metros para este tipo de conjunto" });
+          }
+          if (licenseData.length > 3000) { // centímetros
+            return res.status(400).json({ message: "O comprimento máximo é de 30,00 metros para este tipo de conjunto" });
           }
         }
       } catch (error: any) {
@@ -1930,14 +1821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Renovar licença para um estado específico
   app.post('/api/licenses/renew', requireAuth, async (req, res) => {
     try {
-      const { licenseId, state, isRenewal, skipDimensionValidation } = req.body;
-      
-      console.log("[RENOVAÇÃO] Iniciando renovação com dados:", {
-        licenseId, 
-        state, 
-        isRenewal: isRenewal ? "SIM" : "NÃO",
-        skipDimensionValidation: skipDimensionValidation ? "SIM" : "NÃO"
-      });
+      const { licenseId, state } = req.body;
       
       if (!licenseId || !state) {
         return res.status(400).json({ message: 'ID da licença e estado são obrigatórios' });
@@ -1970,50 +1854,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Criar um novo rascunho baseado na licença original, mas apenas com o estado escolhido
       // Aqui, precisamos garantir que os campos opcionais sejam tratados corretamente
-      
-      // Obter dimensões originais e verificar se estão em metros
-      let length = originalLicense.length || 0;
-      let width = originalLicense.width || (originalLicense.type === "flatbed" ? 320 : 260);
-      let height = originalLicense.height || (originalLicense.type === "flatbed" ? 495 : 440);
-      
-      // Se devemos pular validação de dimensões, manter os valores originais
-      if (skipDimensionValidation === true) {
-        console.log("[RENOVAÇÃO] skipDimensionValidation = true, mantendo valores originais sem conversão:");
-        console.log(`  Comprimento: ${length}`);
-        console.log(`  Largura: ${width}`);
-        console.log(`  Altura: ${height}`);
-      }
-      // Caso contrário, se é uma renovação explícita, pode ser necessário converter medidas
-      else if (isRenewal) {
-        console.log("[RENOVAÇÃO] Verificando necessidade de conversão de unidades");
-        
-        // Conversão de comprimento, se necessário (se < 100, assume-se que está em metros)
-        if (length > 0 && length < 100) {
-          console.log("[RENOVAÇÃO] Conversão do comprimento de metros para centímetros:", length, "m →", length * 100, "cm");
-          length = length * 100;
-        }
-        
-        // Conversão de largura, se necessário
-        if (width > 0 && width < 100) {
-          console.log("[RENOVAÇÃO] Conversão da largura de metros para centímetros:", width, "m →", width * 100, "cm");
-          width = width * 100;
-        }
-        
-        // Conversão de altura, se necessário
-        if (height > 0 && height < 100) {
-          console.log("[RENOVAÇÃO] Conversão da altura de metros para centímetros:", height, "m →", height * 100, "cm");
-          height = height * 100;
-        }
-      }
-      
       const draftData: any = {
         transporterId: originalLicense.transporterId || null,
         mainVehiclePlate: originalLicense.mainVehiclePlate,
-        length: length,
+        length: originalLicense.length || 0,
         type: originalLicense.type,
-        // Valores atualizados com possível conversão de unidades
-        width: width,
-        height: height,
+        // Valores padrão para campos opcionais
+        width: originalLicense.width || (originalLicense.type === "flatbed" ? 320 : 260),
+        height: originalLicense.height || (originalLicense.type === "flatbed" ? 495 : 440),
         cargoType: originalLicense.cargoType || (originalLicense.type === "flatbed" ? "indivisible_cargo" : "dry_cargo"),
         // Incluir apenas o estado específico sendo renovado
         states: [state],
@@ -3270,43 +3118,6 @@ app.patch('/api/admin/licenses/:id/status', requireOperational, upload.single('l
       console.error('Erro na migração de números AET:', error);
       res.status(500).json({ message: 'Erro durante migração de números AET' });
     }
-  });
-  
-  // Rota de teste para conversão de unidades (para debug)
-  app.post("/api/test-conversion", (req, res) => {
-    const { length, width, height, isRenewal } = req.body;
-    
-    console.log("[TESTE CONVERSÃO] Dados recebidos:", { length, width, height, isRenewal });
-    
-    let convertedLength = length;
-    let convertedWidth = width;
-    let convertedHeight = height;
-    
-    // Se for renovação, aplicar conversão de unidades
-    if (isRenewal) {
-      if (length && length < 100) {
-        convertedLength = Math.round(length * 100);
-      }
-      
-      if (width && width < 100) {
-        convertedWidth = Math.round(width * 100);
-      }
-      
-      if (height && height < 100) {
-        convertedHeight = Math.round(height * 100);
-      }
-    }
-    
-    console.log("[TESTE CONVERSÃO] Dados convertidos:", { 
-      length: convertedLength, 
-      width: convertedWidth, 
-      height: convertedHeight 
-    });
-    
-    res.json({
-      original: { length, width, height },
-      converted: { length: convertedLength, width: convertedWidth, height: convertedHeight }
-    });
   });
 
   return httpServer;

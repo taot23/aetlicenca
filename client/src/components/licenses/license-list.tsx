@@ -113,29 +113,17 @@ export function LicenseList({
         const isPrancha = license.type === 'flatbed';
         
         // Preparar dados mínimos para renovação
-        // Precisamos converter comprimento de cm para metros se necessário
-        let lengthValue = license.length || (isPrancha ? 25 : 30);
-        
-        // Se o valor estiver em centímetros (acima de 100), converter para metros
-        if (typeof lengthValue === 'number' && lengthValue > 100) {
-          lengthValue = lengthValue / 100;
-          console.log(`[RENOVAÇÃO] Convertendo comprimento de ${license.length}cm para ${lengthValue}m`);
-        }
-        
         const formData = {
           ...license,
-          // Usar o valor de comprimento já ajustado
-          length: lengthValue,
+          // Garantir campos mínimos para que a renovação funcione
+          length: license.length || (isPrancha ? 25 : 30),
           // Para não-prancha, forçar o padrão de 2,60 metros para largura
           width: isPrancha ? (license.width || 3.2) : 2.6,
           // Para não-prancha, forçar o padrão de 4,40 metros para altura
           height: isPrancha ? (license.height || 4.95) : 4.4,
           cargoType: license.cargoType || (isPrancha ? 'indivisible_cargo' : 'dry_cargo'),
           states: license.states || [],
-          isDraft: false,
-          // Flags para o servidor saber que é uma renovação
-          isRenewal: true,
-          skipDimensionValidation: true
+          isDraft: false
         };
         
         // Usar função específica para renovações
