@@ -552,29 +552,32 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       if (isRenewal && draft?.id) {
         console.log("Usando abordagem direta para renovação de licença");
         
-        // Garantir que temos valores válidos para campos obrigatórios
+        // Para renovações, não aplicamos conversão para centímetros no cliente
+        // O servidor fará essa conversão automaticamente ao detectar renovação
+        // Garantimos apenas que temos valores válidos para campos obrigatórios
+        
         const isPrancha = requestData.type === 'flatbed';
         if (!requestData.cargoType) {
           requestData.cargoType = isPrancha ? 'indivisible_cargo' : 'dry_cargo';
         }
         
-        // Definir valores com base no tipo de conjunto
+        // Definir valores com base no tipo de conjunto (em metros para renovações)
         if (!requestData.length) {
-          requestData.length = isPrancha ? 2500 : 3000; // 25m ou 30m em centímetros
+          requestData.length = isPrancha ? 25 : 30; // Em metros para renovação
         }
         
         // Para conjuntos que não são prancha, forçar sempre 2,60m de largura
         if (isPrancha && !requestData.width) {
-          requestData.width = 320; // 3.2m em centímetros para prancha
+          requestData.width = 3.2; // Em metros para renovação
         } else if (!isPrancha) {
-          requestData.width = 260; // Forçar 2.6m em centímetros para não-prancha
+          requestData.width = 2.6; // Em metros para renovação
         }
         
         // Para conjuntos que não são prancha, forçar sempre 4,40m de altura
         if (isPrancha && !requestData.height) {
-          requestData.height = 495; // 4.95m em centímetros para prancha
+          requestData.height = 4.95; // Em metros para renovação
         } else if (!isPrancha) {
-          requestData.height = 440; // Forçar 4.4m em centímetros para não-prancha
+          requestData.height = 4.4; // Em metros para renovação
         }
         
         // Criar uma nova licença (não usando o endpoint de submit do rascunho)
