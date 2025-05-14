@@ -1976,6 +1976,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('License request saved to database:', JSON.stringify(licenseRequest, null, 2));
       
+      // Excluir o rascunho original de renovação, se existir um ID para excluir
+      if (draftToDeleteId) {
+        try {
+          console.log(`[RENOVAÇÃO] Excluindo rascunho original com ID ${draftToDeleteId} após criar licença com sucesso`);
+          await storage.deleteLicenseRequest(Number(draftToDeleteId));
+          console.log(`[RENOVAÇÃO] Rascunho ${draftToDeleteId} excluído com sucesso`);
+        } catch (deleteError) {
+          // Não falhar a operação principal se a exclusão do rascunho falhar
+          console.error(`[RENOVAÇÃO] Erro ao excluir rascunho ${draftToDeleteId}:`, deleteError);
+          console.log('[RENOVAÇÃO] Continuando operação principal apesar do erro na exclusão do rascunho');
+        }
+      }
+      
       res.json(licenseRequest);
     } catch (error) {
       console.error('Error submitting license request:', error);
