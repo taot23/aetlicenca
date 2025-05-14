@@ -1581,16 +1581,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Converter dimensões de metros para centímetros se estiverem em metros
-        if (typeof licenseData.length === 'number' && licenseData.length <= 100) {
+        if (typeof licenseData.length === 'number' && licenseData.length > 0 && licenseData.length <= 100) {
+          console.log("Validando comprimento:", licenseData.length, "tipo:", typeof licenseData.length);
+          console.log("Valor em metros:", licenseData.length, "Está em centímetros:", false);
           licenseData.length = Math.round(licenseData.length * 100);
+          console.log("Comprimento convertido para centímetros:", licenseData.length);
         }
         
-        if (typeof licenseData.width === 'number' && licenseData.width <= 10) {
+        if (typeof licenseData.width === 'number' && licenseData.width > 0 && licenseData.width <= 10) {
+          console.log("Validando largura:", licenseData.width, "tipo:", typeof licenseData.width);
+          console.log("Largura em metros:", licenseData.width, "Está em centímetros:", false);
           licenseData.width = Math.round(licenseData.width * 100);
+          console.log("Largura convertida para centímetros:", licenseData.width);
         }
         
-        if (typeof licenseData.height === 'number' && licenseData.height <= 10) {
+        if (typeof licenseData.height === 'number' && licenseData.height > 0 && licenseData.height <= 10) {
+          console.log("Validando altura:", licenseData.height, "tipo:", typeof licenseData.height);
+          console.log("Altura em metros:", licenseData.height, "Está em centímetros:", false);
           licenseData.height = Math.round(licenseData.height * 100);
+          console.log("Altura convertida para centímetros:", licenseData.height);
         }
         
         console.log("[RENOVAÇÃO] Valores convertidos (centímetros):", {
