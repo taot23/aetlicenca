@@ -139,17 +139,41 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
     // Verificar se é uma prancha
     const isPrancha = requestData.type === 'flatbed';
     
-    // Comprimento sempre em centímetros no banco de dados
-    if (typeof requestData.length === 'number' && requestData.length < 100) {
-      requestData.length = requestData.length * 100;
+    // Tratar comprimento para garantir formato float com casa decimal
+    if (typeof requestData.length === 'number') {
+      let lengthValue = requestData.length;
+      
+      // Se o valor está em metros (abaixo de 100), converter para centímetros
+      if (lengthValue < 100) {
+        lengthValue = lengthValue * 100;
+        console.log(`[RENOVAÇÃO] Comprimento convertido de metros para centímetros: ${lengthValue}`);
+      }
+      
+      // Garantir que o comprimento seja salvo como float no formato correto (25.00)
+      const lengthStr = lengthValue.toString();
+      if (!lengthStr.includes('.')) {
+        // Formatar o número adicionando o ponto após os dois primeiros dígitos
+        const firstPart = lengthStr.substring(0, 2);
+        const secondPart = lengthStr.substring(2);
+        requestData.length = parseFloat(`${firstPart}.${secondPart}`);
+        console.log(`[RENOVAÇÃO] Comprimento formatado com ponto decimal: ${requestData.length}`);
+      } else {
+        // Se já tem ponto decimal, manter o valor
+        requestData.length = lengthValue;
+      }
     }
     
     // Para não-prancha, manter valores originais em float para largura e altura
     if (!isPrancha) {
       console.log("[RENOVAÇÃO] Mantendo valores originais conforme solicitado, sem conversão:");
-      // Para não-prancha, forçar os valores padrão
-      requestData.width = 2.60;  // Valor padrão com duas casas decimais para não-prancha
-      requestData.height = 4.40; // Valor padrão com duas casas decimais para não-prancha
+      // Para não-prancha, forçar os valores padrão como float com duas casas decimais
+      requestData.width = parseFloat("2.60");  // Valor padrão com duas casas decimais para não-prancha
+      requestData.height = parseFloat("4.40"); // Valor padrão com duas casas decimais para não-prancha
+      
+      // Garantir que sempre sejam números com duas casas decimais
+      console.log(`[RENOVAÇÃO] Definindo largura e altura para valores padrão com duas casas decimais:`);
+      console.log(`  - Largura: ${requestData.width.toFixed(2)}`);
+      console.log(`  - Altura: ${requestData.height.toFixed(2)}`);
       
       // Adicionar parâmetros para indicar que são valores em metros (não centímetros)
       requestData.isRenewal = true;
