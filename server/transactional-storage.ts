@@ -881,13 +881,52 @@ export class TransactionalStorage implements IStorage {
   }
   
   async deleteLicenseRequest(id: number): Promise<void> {
-    const result = await db
-      .delete(licenseRequests)
+    // Primeiro, verificar se a licença existe
+    const license = await db
+      .select()
+      .from(licenseRequests)
       .where(eq(licenseRequests.id, id))
-      .returning();
-    
-    if (!result.length) {
+      .limit(1);
+      
+    if (!license.length) {
       throw new Error("Pedido de licença não encontrado");
+    }
+    
+    // Se for um rascunho, posso excluir diretamente, se não, preciso excluir histórico primeiro
+    if (license[0].isDraft) {
+      // Excluir diretamente, pois rascunhos não devem ter histórico
+      const result = await db
+        .delete(licenseRequests)
+        .where(eq(licenseRequests.id, id))
+        .returning();
+      
+      if (!result.length) {
+        throw new Error("Falha ao excluir rascunho");
+      }
+    } else {
+      // Primeiro excluir quaisquer registros de histórico de status
+      try {
+        // Tentar excluir usando transação
+        return await withTransaction(async (tx) => {
+          // 1. Excluir registros de histórico de status
+          await tx
+            .delete(statusHistories)
+            .where(eq(statusHistories.licenseId, id));
+            
+          // 2. Excluir a licença
+          const result = await tx
+            .delete(licenseRequests)
+            .where(eq(licenseRequests.id, id))
+            .returning();
+            
+          if (!result.length) {
+            throw new Error("Falha ao excluir licença");
+          }
+        });
+      } catch (error) {
+        console.error("Erro ao excluir licença com histórico:", error);
+        throw error;
+      }
     }
   }
   

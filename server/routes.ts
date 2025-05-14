@@ -986,7 +986,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verificar acesso - usuários staff (admin, operacional, supervisor) podem excluir qualquer rascunho
       const isStaff = isAdminUser(user) || user.role === 'operational' || user.role === 'supervisor';
       
-      if (!isStaff && existingDraft.userId !== user.id) {
+      // Verificar se o usuário é dono direto do rascunho
+      const isOwner = existingDraft.userId === user.id;
+      
+      // Verificar se o usuário tem acesso ao transportador associado ao rascunho
+      let hasTransporterAccess = false;
+      
+      if (!isOwner && !isStaff && existingDraft.transporterId) {
+        // Verificar se o usuário tem acesso ao transportador
+        const userTransporters = await db.select()
+          .from(transporters)
+          .where(eq(transporters.userId, user.id));
+          
+        const transporterIds = userTransporters.map(t => t.id);
+        hasTransporterAccess = transporterIds.includes(existingDraft.transporterId);
+        
+        console.log(`Usuário ${user.id} tem acesso aos transportadores: ${transporterIds.join(', ')}`);
+        console.log(`Rascunho pertence ao transportador: ${existingDraft.transporterId}`);
+        console.log(`Usuário tem acesso ao transportador? ${hasTransporterAccess ? 'SIM' : 'NÃO'}`);
+      }
+      
+      // Permitir excluir se o usuário é staff, dono do rascunho ou tem acesso ao transportador
+      if (!isStaff && !isOwner && !hasTransporterAccess) {
         console.log(`Usuário ${user.id} (${user.role}) tentou excluir rascunho ${draftId} do usuário ${existingDraft.userId}`);
         return res.status(403).json({ message: 'Acesso negado' });
       }
