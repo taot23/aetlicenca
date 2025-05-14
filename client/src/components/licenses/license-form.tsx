@@ -1032,17 +1032,29 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                      typeof values.comments === 'string' && 
                      values.comments.toLowerCase().includes('renovação');
     
-    console.log(`Validando comprimento:`, length, `tipo:`, typeof length);
-    const lengthInCentimeters = isRenewal ? true : length > 100;
-    console.log(`Valor em metros:`, length, `Está em centímetros:`, lengthInCentimeters);
-    
-    console.log(`Validando largura:`, width, `tipo:`, typeof width);
-    const widthInCentimeters = isRenewal ? true : width > 100;
-    console.log(`Largura em metros:`, width, `Está em centímetros:`, widthInCentimeters);
-    
-    console.log(`Validando altura:`, height, `tipo:`, typeof height);
-    const heightInCentimeters = isRenewal ? true : height > 100;
-    console.log(`Altura em metros:`, height, `Está em centímetros:`, heightInCentimeters);
+    // Se for renovação, pular todas as validações e tratamentos de unidades
+    if (isRenewal) {
+      console.log(`[RENOVAÇÃO] Pulando validações de dimensões. Mantendo valores originais:`, {
+        length, width, height
+      });
+      
+      // Forçar flags para renovação
+      values.isRenewal = true;
+      values.skipDimensionValidation = true;
+    } else {
+      // Somente validar para novas licenças (não renovações)
+      console.log(`Validando comprimento:`, length, `tipo:`, typeof length);
+      const lengthInCentimeters = length > 100;
+      console.log(`Valor em metros:`, length, `Está em centímetros:`, lengthInCentimeters);
+      
+      console.log(`Validando largura:`, width, `tipo:`, typeof width);
+      const widthInCentimeters = width > 100;
+      console.log(`Largura em metros:`, width, `Está em centímetros:`, widthInCentimeters);
+      
+      console.log(`Validando altura:`, height, `tipo:`, typeof height);
+      const heightInCentimeters = height > 100;
+      console.log(`Altura em metros:`, height, `Está em centímetros:`, heightInCentimeters);
+    }
     
     // Determinar quais limites usar com base no tipo
     let limits;
@@ -1061,22 +1073,29 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     }
     
     // Ajustar os valores no formulário se necessário (conversão de cm para m)
-    if (lengthInCentimeters) {
-      const convertedLength = length / 100;
-      form.setValue('length', convertedLength);
-      console.log(`Convertendo comprimento de ${length}cm para ${convertedLength}m`);
-    }
-    
-    if (widthInCentimeters) {
-      const convertedWidth = width / 100;
-      form.setValue('width', convertedWidth);
-      console.log(`Convertendo largura de ${width}cm para ${convertedWidth}m`);
-    }
-    
-    if (heightInCentimeters) {
-      const convertedHeight = height / 100;
-      form.setValue('height', convertedHeight);
-      console.log(`Convertendo altura de ${height}cm para ${convertedHeight}m`);
+    // Pular as conversões para renovações
+    if (!isRenewal) {
+      if (length > 100) {
+        const convertedLength = length / 100;
+        form.setValue('length', convertedLength);
+        console.log(`Convertendo comprimento de ${length}cm para ${convertedLength}m`);
+      }
+      
+      if (width > 100) {
+        const convertedWidth = width / 100;
+        form.setValue('width', convertedWidth);
+        console.log(`Convertendo largura de ${width}cm para ${convertedWidth}m`);
+      }
+      
+      if (height > 100) {
+        const convertedHeight = height / 100;
+        form.setValue('height', convertedHeight);
+        console.log(`Convertendo altura de ${height}cm para ${convertedHeight}m`);
+      }
+    } else {
+      console.log(`[RENOVAÇÃO] Mantendo valores originais sem conversão:`, {
+        length, width, height
+      });
     }
     
     // Validação dos limites e mensagens de aviso
