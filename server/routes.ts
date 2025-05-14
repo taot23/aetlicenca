@@ -1302,7 +1302,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             // Forçar valor padrão para não-pranchas
-            if (!isPrancha) {
+            if (!isPranchaType) {
               licenseData.width = 2.60;
               console.log(`Forçando valor padrão para largura não-prancha: ${licenseData.width}`);
             }
