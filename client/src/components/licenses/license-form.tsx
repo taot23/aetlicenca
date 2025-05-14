@@ -2873,8 +2873,31 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   isRenewal: true
                 };
                 
-                // Enviar a requisição
-                submitRenewalRequest(draft?.id || 0, requestData);
+                // Usar função assíncrona dentro de uma função regular para evitar o await na arrow function
+                submitRenewalRequest(draft?.id || 0, requestData)
+                  .then((data) => {
+                    // Sucesso: Mostrar mensagem de renovação enviada
+                    toast({
+                      title: "Renovação enviada com sucesso",
+                      description: "O pedido de renovação foi enviado para análise.",
+                    });
+                    
+                    // Atualizar cache e chamar onComplete
+                    queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
+                    
+                    // Chamar onComplete para fechar o modal
+                    onComplete();
+                  })
+                  .catch((error) => {
+                    // Erro: Mostrar mensagem de erro
+                    console.error("Erro ao enviar renovação:", error);
+                    toast({
+                      title: "Erro ao enviar renovação",
+                      description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar a renovação",
+                      variant: "destructive",
+                    });
+                  });
               }}
               disabled={isProcessing}
               className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto order-2 sm:order-3"
