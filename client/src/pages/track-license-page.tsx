@@ -306,9 +306,25 @@ export default function TrackLicensePage() {
 
   return (
     <MainLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Acompanhar Licença</h1>
-        <p className="text-gray-600 mt-1">Acompanhe o status de todas as suas licenças solicitadas</p>
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Acompanhar Licença</h1>
+          <p className="text-gray-600 mt-1">Acompanhe o status de todas as suas licenças solicitadas</p>
+        </div>
+        <Button 
+          onClick={() => refetch()} 
+          variant="outline" 
+          className="w-full sm:w-auto"
+          title="Atualizar lista de licenças"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+            <path d="M21 3v5h-5"></path>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+            <path d="M8 16H3v5"></path>
+          </svg>
+          Atualizar
+        </Button>
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow mb-6">
