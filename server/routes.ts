@@ -1584,7 +1584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Verificar width (largura)
       if (licenseData.width === undefined || licenseData.width === null || licenseData.width === "") {
-        licenseData.width = isPrancha ? 320 : 260; // 3.20m para prancha, 2.60m para outros
+        licenseData.width = isPrancha ? 320 : 2.60; // 3.20m para prancha, 2.60m para outros
         console.log(`Aplicando valor padrão para largura: ${licenseData.width}`);
       } else {
         // Garantir que é um número
@@ -1594,7 +1594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Verificar height (altura)
       if (licenseData.height === undefined || licenseData.height === null || licenseData.height === "") {
-        licenseData.height = isPrancha ? 495 : 440; // 4.95m para prancha, 4.40m para outros
+        licenseData.height = isPrancha ? 495 : 4.40; // 4.95m para prancha, 4.40m para outros
         console.log(`Aplicando valor padrão para altura: ${licenseData.height}`);
       } else {
         // Garantir que é um número
