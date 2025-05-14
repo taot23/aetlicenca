@@ -176,6 +176,12 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
       height: requestData.height
     });
     
+    console.log("[RENOVAÇÃO] Valores convertidos (centímetros):", {
+      length: requestData.length,
+      width: requestData.width,
+      height: requestData.height
+    });
+    
     console.log("Dados da renovação:", JSON.stringify(requestData));
     
     // Criar nova licença (contornando o endpoint de submit)
