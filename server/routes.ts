@@ -2032,15 +2032,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Criar um novo rascunho baseado na licença original, mas apenas com o estado escolhido
       // Aqui, precisamos garantir que os campos opcionais sejam tratados corretamente
+      
+      // Verificar se é uma prancha ou não para determinar como tratar as dimensões
+      const isPrancha = originalLicense.type === "flatbed";
+      
+      // Usar os valores originais da licença ou valores padrão em centímetros
+      let lengthValue = originalLicense.length || (isPrancha ? 2500 : 3000);
+      let widthValue = originalLicense.width || (isPrancha ? 320 : 260);
+      let heightValue = originalLicense.height || (isPrancha ? 495 : 440);
+      
+      // Para não-prancha, se largura for inteira (ex: 260), converter para formato decimal (ex: 2.6)
+      if (!isPrancha && widthValue >= 100) {
+        console.log(`[RENOVAÇÃO] Convertendo largura de ${widthValue}cm para formato decimal: ${(widthValue / 100).toFixed(2)}m`);
+        // Manter em centímetros para o banco de dados
+      }
+      
+      // Para não-prancha, se altura for inteira (ex: 440), converter para formato decimal (ex: 4.4)
+      if (!isPrancha && heightValue >= 100) {
+        console.log(`[RENOVAÇÃO] Convertendo altura de ${heightValue}cm para formato decimal: ${(heightValue / 100).toFixed(2)}m`);
+        // Manter em centímetros para o banco de dados
+      }
+      
       const draftData: any = {
         transporterId: originalLicense.transporterId || null,
         mainVehiclePlate: originalLicense.mainVehiclePlate,
-        length: originalLicense.length || 0,
+        length: lengthValue,
         type: originalLicense.type,
-        // Valores padrão para campos opcionais
-        width: originalLicense.width || (originalLicense.type === "flatbed" ? 320 : 260),
-        height: originalLicense.height || (originalLicense.type === "flatbed" ? 495 : 440),
-        cargoType: originalLicense.cargoType || (originalLicense.type === "flatbed" ? "indivisible_cargo" : "dry_cargo"),
+        // Sempre usar os valores em centímetros para o banco
+        width: widthValue,
+        height: heightValue,
+        cargoType: originalLicense.cargoType || (isPrancha ? "indivisible_cargo" : "dry_cargo"),
         // Incluir apenas o estado específico sendo renovado
         states: [state],
         requestNumber,
