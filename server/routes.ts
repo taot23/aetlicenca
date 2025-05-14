@@ -1257,10 +1257,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Generate a real request number
         const requestNumber = `AET-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
         
-        // Identificar se é um pedido de renovação
-        const isRenewal = licenseData.comments && 
+        // Identificar se é um pedido de renovação (via comentários ou via flag explícita)
+        const isRenewal = (licenseData.isRenewal === true) || (
+                          licenseData.comments && 
                           typeof licenseData.comments === 'string' && 
-                          licenseData.comments.toLowerCase().includes('renovação');
+                          licenseData.comments.toLowerCase().includes('renovação'));
+                          
+        // Remover a flag isRenewal para não interferir em validações
+        if (licenseData.isRenewal !== undefined) {
+          delete licenseData.isRenewal;
+        }
 
         console.log(`É pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
         
@@ -1582,6 +1588,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Dados de licença recebidos:", JSON.stringify(licenseData, null, 2));
       
+      // Verificar se é um pedido de renovação (via comentários ou via flag explícita)
+      const isRenewal = (licenseData.isRenewal === true) || (
+                        licenseData.comments && 
+                        typeof licenseData.comments === 'string' && 
+                        licenseData.comments.toLowerCase().includes('renovação'));
+      
+      console.log("É pedido de renovação?", isRenewal ? "SIM" : "NÃO");
+      
+      // Remover a flag isRenewal para não interferir nas validações
+      if (licenseData.isRenewal !== undefined) {
+        delete licenseData.isRenewal;
+      }
+      
       // Verificar se é um pedido de renovação com rascunho que deve ser excluído
       const draftToDeleteId = licenseData.draftToDeleteId;
       if (draftToDeleteId) {
@@ -1590,13 +1609,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         delete licenseData.draftToDeleteId;
       }
       
-      // Verificar se é uma renovação através dos comentários
-      const isRenewal = licenseData.comments && 
-                       typeof licenseData.comments === 'string' && 
-                       licenseData.comments.toLowerCase().includes('renovação');
-                       
+      // Aplicar lógica de tratamento para renovações
       if (isRenewal) {
-        console.log("Detectada renovação de licença com base nos comentários.");
+        console.log("Detectada renovação de licença, ajustando tratamento de dimensões.");
+        
+        // Para renovações, precisamos verificar se as dimensões estão em metros
+        // e convertê-las para centímetros se necessário
+        
+        if (licenseData.length !== undefined && licenseData.length !== null) {
+          // Se o valor for menor que 100, assumimos que está em metros e precisamos converter
+          if (typeof licenseData.length === 'number' && licenseData.length < 100) {
+            console.log("[RENOVAÇÃO] Valor original do comprimento (metros):", licenseData.length);
+            licenseData.length = licenseData.length * 100;
+            console.log("[RENOVAÇÃO] Valor convertido para centímetros:", licenseData.length);
+          }
+        }
+        
+        if (licenseData.width !== undefined && licenseData.width !== null) {
+          if (typeof licenseData.width === 'number' && licenseData.width < 100) {
+            console.log("[RENOVAÇÃO] Valor original da largura (metros):", licenseData.width);
+            licenseData.width = licenseData.width * 100;
+            console.log("[RENOVAÇÃO] Valor convertido para centímetros:", licenseData.width);
+          }
+        }
+        
+        if (licenseData.height !== undefined && licenseData.height !== null) {
+          if (typeof licenseData.height === 'number' && licenseData.height < 100) {
+            console.log("[RENOVAÇÃO] Valor original da altura (metros):", licenseData.height);
+            licenseData.height = licenseData.height * 100;
+            console.log("[RENOVAÇÃO] Valor convertido para centímetros:", licenseData.height);
+          }
+        }
       }
       
       console.log("Tipo de licença:", licenseData.type);
