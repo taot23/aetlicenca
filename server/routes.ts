@@ -762,7 +762,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Se for usuário administrativo, buscar todos os rascunhos
       if (isAdminUser(user)) {
         console.log(`Usuário ${user.email} (${user.role}) tem acesso administrativo. Buscando todos os rascunhos.`);
-        allDrafts = await storage.getLicenseDraftsByUserId(0); // 0 = todos os rascunhos
+        // Garantindo explicitamente que apenas rascunhos reais são retornados
+        const rascunhos = await storage.getLicenseDraftsByUserId(0);
+        allDrafts = rascunhos.filter(draft => draft.isDraft === true);
+        console.log(`Total de rascunhos encontrados: ${rascunhos.length}, filtrados (apenas isDraft=true): ${allDrafts.length}`);
       } else {
         console.log(`Usuário ${user.email} (${user.role}) tem acesso comum. Buscando apenas seus rascunhos.`);
         
@@ -781,7 +784,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (transporterIds.length > 0) {
           rascunhosNoBanco = await db.select()
             .from(licenseRequests)
-            .where(eq(licenseRequests.isDraft, true))
+            .where(eq(licenseRequests.isDraft, true)) // Garantir que o campo isDraft é true
             .where(
               or(
                 eq(licenseRequests.userId, user.id),
@@ -794,13 +797,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Se não houver transportadores, buscar apenas por userId
           rascunhosNoBanco = await db.select()
             .from(licenseRequests)
-            .where(eq(licenseRequests.isDraft, true))
+            .where(eq(licenseRequests.isDraft, true)) // Garantir que o campo isDraft é true
             .where(eq(licenseRequests.userId, user.id));
             
           console.log(`[DEBUG RASCUNHOS] Encontrados ${rascunhosNoBanco.length} rascunhos para usuário ${user.id} sem transportadores associados`);
         }
         
-        allDrafts = rascunhosNoBanco;
+        // Garantia adicional de que apenas rascunhos reais sejam retornados
+        allDrafts = rascunhosNoBanco.filter(draft => draft.isDraft === true);
+        console.log(`Garantia adicional: ${rascunhosNoBanco.length} encontrados, ${allDrafts.length} após filtro de isDraft`);
       }
       
       // Verificar se deve incluir rascunhos de renovação
