@@ -735,10 +735,8 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     const isValid = await validateFields();
     if (!isValid) return;
     
-    // Verificar se é um pedido de renovação
-    const isRenewal = values.comments && 
-                     typeof values.comments === 'string' && 
-                     values.comments.toLowerCase().includes('renovação');
+    // Já verificamos se é renovação no início da função, usar a mesma variável
+    // Re-verificar se é renovação antes de validar dimensões
     
     // Validar dimensões, mas pular se for renovação
     if (!isRenewal) {

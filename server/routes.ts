@@ -1574,6 +1574,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Dados de licença recebidos:", JSON.stringify(licenseData, null, 2));
       
+      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes
+      const isPrancha = licenseData.type === "flatbed";
+      
       // Verificar se é um pedido de renovação com rascunho que deve ser excluído
       const draftToDeleteId = licenseData.draftToDeleteId;
       if (draftToDeleteId) {
@@ -1868,6 +1871,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Sanitização mais rigorosa dos campos de dimensões com valores padrão
+        // Verificar se é uma renovação com flag de skip validação
+        const isRenewal = (licenseData.comments && 
+                          typeof licenseData.comments === 'string' && 
+                          licenseData.comments.toLowerCase().includes('renovação')) ||
+                          licenseData.isRenewal === true;
+        
+        const skipDimensionValidation = isRenewal || licenseData.skipDimensionValidation === true;
+        
         if (skipDimensionValidation) {
           console.log(`[RENOVAÇÃO SERVER] Preservando valores originais de altura na validação:`);
           console.log(`[RENOVAÇÃO SERVER] - Altura: ${licenseData.height}`);
