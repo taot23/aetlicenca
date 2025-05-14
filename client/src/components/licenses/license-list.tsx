@@ -108,14 +108,19 @@ export function LicenseList({
       console.log(`Verificação na lista - É renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
       
       if (isRenewal) {
+        // Definir valores padrão para dimensões com base no tipo de licença
+        const isPrancha = license.type === 'flatbed';
+        
         // Preparar dados mínimos para renovação
         const formData = {
           ...license,
           // Garantir campos mínimos para que a renovação funcione
-          length: license.length || 25,
-          width: license.width || 2.6, 
-          height: license.height || 4.4,
-          cargoType: license.cargoType || (license.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo'),
+          length: license.length || (isPrancha ? 25 : 30),
+          // Para não-prancha, forçar o padrão de 2,60 metros para largura
+          width: isPrancha ? (license.width || 3.2) : 2.6,
+          // Para não-prancha, forçar o padrão de 4,40 metros para altura
+          height: isPrancha ? (license.height || 4.95) : 4.4,
+          cargoType: license.cargoType || (isPrancha ? 'indivisible_cargo' : 'dry_cargo'),
           states: license.states || [],
           isDraft: false
         };

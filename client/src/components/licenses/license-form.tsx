@@ -367,6 +367,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             : DIMENSION_LIMITS.flatbed;
         }
         
+        // Para conjuntos que não são prancha, forçar os valores padrão de largura e altura
+        if (currentType !== 'flatbed' && name === "type") {
+          form.setValue('width', 2.6);  // Largura fixa de 2,60m
+          form.setValue('height', 4.4); // Altura fixa de 4,40m
+        }
+        
         // Aplicar validações de comprimento específicas
         if (currentType === 'flatbed' && currentCargoType === 'oversized') {
           // Sem limites para carga superdimensionada
@@ -547,13 +553,29 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         console.log("Usando abordagem direta para renovação de licença");
         
         // Garantir que temos valores válidos para campos obrigatórios
+        const isPrancha = requestData.type === 'flatbed';
         if (!requestData.cargoType) {
-          requestData.cargoType = requestData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
+          requestData.cargoType = isPrancha ? 'indivisible_cargo' : 'dry_cargo';
         }
         
-        if (!requestData.length) requestData.length = 2500; // 25 metros em centímetros
-        if (!requestData.width) requestData.width = 260;    // 2.6 metros em centímetros
-        if (!requestData.height) requestData.height = 440;  // 4.4 metros em centímetros
+        // Definir valores com base no tipo de conjunto
+        if (!requestData.length) {
+          requestData.length = isPrancha ? 2500 : 3000; // 25m ou 30m em centímetros
+        }
+        
+        // Para conjuntos que não são prancha, forçar sempre 2,60m de largura
+        if (isPrancha && !requestData.width) {
+          requestData.width = 320; // 3.2m em centímetros para prancha
+        } else if (!isPrancha) {
+          requestData.width = 260; // Forçar 2.6m em centímetros para não-prancha
+        }
+        
+        // Para conjuntos que não são prancha, forçar sempre 4,40m de altura
+        if (isPrancha && !requestData.height) {
+          requestData.height = 495; // 4.95m em centímetros para prancha
+        } else if (!isPrancha) {
+          requestData.height = 440; // Forçar 4.4m em centímetros para não-prancha
+        }
         
         // Criar uma nova licença (não usando o endpoint de submit do rascunho)
         const url = '/api/licenses';
@@ -1630,12 +1652,13 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   fieldType="largura"
                   label="Largura do Conjunto (metros)"
                   placeholder="Ex.: 2,60"
+                  disabled={licenseType !== 'flatbed'} // Desabilitar para conjuntos não-prancha
                   description={
                     licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
                       ? 'Informe a largura total do conjunto em metros (sem limite para carga superdimensionada)'
                       : licenseType === 'flatbed'
                         ? 'Informe a largura total do conjunto em metros (max: 3,20)'
-                        : 'Informe a largura total do conjunto em metros (max: 2,60)'
+                        : 'Largura padrão de 2,60 metros para este tipo de conjunto (não editável)'
                   }
                 />
               )}
@@ -1650,12 +1673,13 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   fieldType="altura"
                   label="Altura do Conjunto (metros)"
                   placeholder="Ex.: 4,40"
+                  disabled={licenseType !== 'flatbed'} // Desabilitar para conjuntos não-prancha
                   description={
                     licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
                       ? 'Informe a altura total do conjunto em metros (sem limite para carga superdimensionada)'
                       : licenseType === 'flatbed'
                         ? 'Informe a altura total do conjunto em metros (max: 4,95)'
-                        : 'Informe a altura total do conjunto em metros (max: 4,40)'
+                        : 'Altura padrão de 4,40 metros para este tipo de conjunto (não editável)'
                   }
                 />
               )}
