@@ -1284,18 +1284,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (licenseData.width !== undefined) {
             licenseData.width = Number(licenseData.width);
             // Para não-pranchas, se o valor estiver no formato antigo (260), converter para decimal (2.60)
-            if (!isPrancha && licenseData.width > 10) {
+            const isPranchaType = licenseData.type === "flatbed";
+            if (!isPranchaType && licenseData.width > 10) {
               licenseData.width = Number((licenseData.width / 100).toFixed(2));
               console.log(`Convertendo largura de cm para metros: ${licenseData.width}`);
             }
             // Para não-pranchas, se o valor estiver no formato antigo (440), converter para decimal (4.40)
-            if (!isPrancha && licenseData.height > 10) {
+            if (!isPranchaType && licenseData.height > 10) {
               licenseData.height = Number((licenseData.height / 100).toFixed(2));
               console.log(`Convertendo altura de cm para metros: ${licenseData.height}`);
             }
             
             // Forçar valor padrão para não-pranchas
-            if (!isPrancha) {
+            if (!isPranchaType) {
               licenseData.height = 4.40;
               console.log(`Forçando valor padrão para altura não-prancha: ${licenseData.height}`);
             }
