@@ -1863,7 +1863,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Renovar licença para um estado específico
   app.post('/api/licenses/renew', requireAuth, async (req, res) => {
     try {
-      const { licenseId, state } = req.body;
+      const { licenseId, state, isRenewal } = req.body;
+      
+      console.log("[RENOVAÇÃO] Iniciando renovação com dados:", {
+        licenseId, 
+        state, 
+        isRenewal: isRenewal ? "SIM" : "NÃO"
+      });
       
       if (!licenseId || !state) {
         return res.status(400).json({ message: 'ID da licença e estado são obrigatórios' });
