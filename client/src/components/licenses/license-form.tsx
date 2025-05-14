@@ -202,7 +202,13 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
       height: requestData.height
     });
     
-    console.log("Dados da renovação:", JSON.stringify(requestData));
+    // Garantir que o draftToDeleteId seja definido explicitamente
+    requestData.draftToDeleteId = draftId;
+    
+    console.log("[RENOVAÇÃO] Dados finais com draftToDeleteId:", JSON.stringify({
+      ...requestData,
+      draftToDeleteId: draftId
+    }));
     
     // Criar nova licença (contornando o endpoint de submit)
     const url = '/api/licenses';
@@ -2870,8 +2876,11 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   cargoType: formValues.cargoType || (isPrancha ? 'indivisible_cargo' : 'dry_cargo'),
                   isDraft: false,
                   skipDimensionValidation: true,
-                  isRenewal: true
+                  isRenewal: true,
+                  draftToDeleteId: draft?.id // Adicionar o ID do rascunho a ser excluído
                 };
+                
+                console.log(`[RENOVAÇÃO] Envio direto do rascunho com ID ${draft?.id}. Adicionando draftToDeleteId para exclusão.`);
                 
                 // Usar função assíncrona dentro de uma função regular para evitar o await na arrow function
                 submitRenewalRequest(draft?.id || 0, requestData)
