@@ -87,6 +87,19 @@ export function LicenseList({
 
   const handleSubmitDraft = async (license: LicenseRequest) => {
     try {
+      // Verificar se o item realmente é um rascunho
+      if (!license.isDraft) {
+        console.error("Tentativa de enviar um item que não é rascunho:", license);
+        toast({
+          title: "Erro ao enviar",
+          description: "Este item não é um rascunho ou já foi enviado anteriormente.",
+          variant: "destructive",
+        });
+        // Forçar a atualização da lista para remover o item inválido
+        onRefresh();
+        return;
+      }
+      
       // Verificar se é um pedido de renovação para usar a função especializada
       const isRenewal = license.comments && 
                        typeof license.comments === 'string' && 
@@ -113,7 +126,6 @@ export function LicenseList({
         toast({
           title: "Renovação enviada com sucesso",
           description: "O pedido de renovação foi enviado para análise.",
-          variant: "success",
         });
       } else {
         // Para pedidos normais
@@ -122,7 +134,6 @@ export function LicenseList({
         toast({
           title: "Rascunho enviado com sucesso",
           description: "O pedido de licença foi enviado para análise.",
-          variant: "success",
         });
       }
       
@@ -130,9 +141,23 @@ export function LicenseList({
       onRefresh();
     } catch (error) {
       console.error("Erro ao enviar rascunho/renovação:", error);
+      
+      // Tratar mensagens de erro específicas
+      let errorMessage = error instanceof Error ? error.message : "Ocorreu um erro ao processar seu pedido";
+      
+      // Verificar se a mensagem de erro indica que o item não é mais um rascunho
+      if (error instanceof Error && (
+        error.message.includes("não é um rascunho") || 
+        error.message.includes("já foi submetido")
+      )) {
+        errorMessage = "Este item não é um rascunho ou já foi enviado anteriormente.";
+        // Forçar a atualização da lista
+        onRefresh();
+      }
+      
       toast({
         title: "Erro ao enviar",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao processar seu pedido",
+        description: errorMessage,
         variant: "destructive",
       });
     }
