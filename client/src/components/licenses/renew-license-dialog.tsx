@@ -39,9 +39,13 @@ export function RenewLicenseDialog({
 
   const renewMutation = useMutation({
     mutationFn: async (newDate: string) => {
+      // Loga o pedido de renovação e marca explicitamente como renovação
+      console.log(`[RENOVAÇÃO DIRETA] Enviando pedido para licença #${licenseId}, estado ${state}`);
+      
       const res = await apiRequest("POST", `/api/licenses/${licenseId}/renew`, {
         state,
-        validityDate: newDate
+        validityDate: newDate,
+        isRenewal: true // Marcando explicitamente como renovação para garantir o processamento correto
       });
       return await res.json();
     },

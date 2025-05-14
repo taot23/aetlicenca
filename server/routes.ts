@@ -3237,6 +3237,43 @@ app.patch('/api/admin/licenses/:id/status', requireOperational, upload.single('l
       res.status(500).json({ message: 'Erro durante migração de números AET' });
     }
   });
+  
+  // Rota de teste para conversão de unidades (para debug)
+  app.post("/api/test-conversion", (req, res) => {
+    const { length, width, height, isRenewal } = req.body;
+    
+    console.log("[TESTE CONVERSÃO] Dados recebidos:", { length, width, height, isRenewal });
+    
+    let convertedLength = length;
+    let convertedWidth = width;
+    let convertedHeight = height;
+    
+    // Se for renovação, aplicar conversão de unidades
+    if (isRenewal) {
+      if (length && length < 100) {
+        convertedLength = Math.round(length * 100);
+      }
+      
+      if (width && width < 100) {
+        convertedWidth = Math.round(width * 100);
+      }
+      
+      if (height && height < 100) {
+        convertedHeight = Math.round(height * 100);
+      }
+    }
+    
+    console.log("[TESTE CONVERSÃO] Dados convertidos:", { 
+      length: convertedLength, 
+      width: convertedWidth, 
+      height: convertedHeight 
+    });
+    
+    res.json({
+      original: { length, width, height },
+      converted: { length: convertedLength, width: convertedWidth, height: convertedHeight }
+    });
+  });
 
   return httpServer;
 }
