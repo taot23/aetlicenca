@@ -584,13 +584,31 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         const url = '/api/licenses';
         const method = "POST";
         
+        // IMPORTANTE: Converter dimensões de metros para centímetros
+        // Este é o ponto crítico que estava causando o problema
+        if (requestData.length < 100) {
+          console.log(`[RENOVAÇÃO] Convertendo comprimento: ${requestData.length}m → ${Math.round(requestData.length * 100)}cm`);
+          requestData.length = Math.round(requestData.length * 100);
+        }
+        
+        if (requestData.width < 100) {
+          console.log(`[RENOVAÇÃO] Convertendo largura: ${requestData.width}m → ${Math.round(requestData.width * 100)}cm`);
+          requestData.width = Math.round(requestData.width * 100);
+        }
+        
+        if (requestData.height < 100) {
+          console.log(`[RENOVAÇÃO] Convertendo altura: ${requestData.height}m → ${Math.round(requestData.height * 100)}cm`);
+          requestData.height = Math.round(requestData.height * 100);
+        }
+        
         // Incluir o ID do rascunho a ser excluído após sucesso
         const payload = {
           ...requestData,
+          isRenewal: true, // Forçar flag de renovação
           draftToDeleteId: draft.id // Campo adicional para que o backend remova o rascunho após criar a licença
         };
         
-        console.log("Enviando renovação com payload modificado:", payload);
+        console.log("[RENOVAÇÃO] Enviando payload com dimensões convertidas:", payload);
         
         // Enviar usando o apiRequest em vez de fetch direto (evita uso de await no escopo do componente)
         apiRequest(method, url, payload)
