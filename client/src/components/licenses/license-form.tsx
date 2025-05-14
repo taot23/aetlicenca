@@ -50,7 +50,8 @@ import {
   Link as LinkIcon,
   FileUp,
   Check,
-  Send
+  Send,
+  RefreshCw
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "wouter";
@@ -2846,6 +2847,40 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             >
               <Send className="mr-2 h-4 w-4" />
               Enviar Rascunho
+            </Button>
+          )}
+          {/* Botão para enviar como renovação diretamente */}
+          {(draft?.comments && draft.comments.toLowerCase().includes('renovação')) && (
+            <Button 
+              type="button"
+              onClick={() => {
+                const isRenewal = true;
+                console.log("Enviando como renovação diretamente");
+                
+                // Preparar dados para renovação
+                const formValues = form.getValues();
+                const isPrancha = formValues.type === 'flatbed';
+                
+                // Definir os valores padrão para dimensões e campos obrigatórios
+                const requestData = {
+                  ...formValues,
+                  length: formValues.length || (isPrancha ? 25 : 30),
+                  width: isPrancha ? (formValues.width || 3.2) : 2.6,
+                  height: isPrancha ? (formValues.height || 4.95) : 4.4,
+                  cargoType: formValues.cargoType || (isPrancha ? 'indivisible_cargo' : 'dry_cargo'),
+                  isDraft: false,
+                  skipDimensionValidation: true,
+                  isRenewal: true
+                };
+                
+                // Enviar a requisição
+                submitRenewalRequest(draft?.id || 0, requestData);
+              }}
+              disabled={isProcessing}
+              className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto order-2 sm:order-3"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Enviar Renovação
             </Button>
           )}
           <Button
