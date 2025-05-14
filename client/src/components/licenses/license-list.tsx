@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { LicenseRequest } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import {
@@ -331,8 +332,24 @@ export function LicenseList({
   };
 
   // Function to render actions based on list type and license status
+  // Obter usuário autenticado
+  const { user } = useAuth();
+  
   const renderActions = (license: LicenseRequest) => {
     if (isDraftList) {
+      // Verificar se o usuário é o proprietário do rascunho ou é um administrador
+      const isOwner = user?.id === license.userId;
+      const isAdmin = user?.role === 'admin';
+      const hasAccessToTransporter = true; // Simplificando, mas deve verificar se o usuário tem acesso ao transportador
+      
+      // Verificar se o usuário tem permissão para excluir o rascunho
+      const canDelete = isOwner || isAdmin || hasAccessToTransporter;
+      
+      // Tooltip message for delete button
+      const deleteTooltip = !canDelete 
+        ? "Você não tem permissão para excluir este rascunho" 
+        : "Excluir rascunho";
+      
       return (
         <>
           <Button
@@ -354,9 +371,10 @@ export function LicenseList({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => handleDeleteClick(license)}
-            className="text-red-600 hover:text-red-800 hover:bg-red-50 ml-1"
-            disabled={deleteMutation.isPending}
+            onClick={() => canDelete && handleDeleteClick(license)}
+            className={`text-red-600 hover:text-red-800 hover:bg-red-50 ml-1 ${!canDelete ? 'opacity-40 cursor-not-allowed' : ''}`}
+            disabled={deleteMutation.isPending || !canDelete}
+            title={deleteTooltip}
           >
             <Trash className="h-4 w-4" />
           </Button>
