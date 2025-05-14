@@ -88,6 +88,9 @@ const processVehicleData = (req: any, res: any, next: any) => {
     // Garantir que números são convertidos corretamente
     if (req.body.tare) req.body.tare = Number(req.body.tare);
     if (req.body.crlvYear) req.body.crlvYear = Number(req.body.crlvYear);
+    if (req.body.year) req.body.year = Number(req.body.year);
+    if (req.body.axleCount) req.body.axleCount = Number(req.body.axleCount);
+    if (req.body.cmt) req.body.cmt = Number(req.body.cmt);
   }
   // Caso 3: JSON direto (nossa nova abordagem para requests sem arquivo)
   else if (contentType.includes('application/json')) {
