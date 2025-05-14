@@ -770,30 +770,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         form.setValue('cargoType', values.cargoType as any);
       }
       
-      // Forçar conversão de metros para centímetros apenas para o envio
-      // Manter os valores originais no formulário (em metros)
-      const valuesOriginal = { ...values };
+      // Não fazer conversão para renovações, apenas adicionar flags para o servidor
+      values.skipDimensionValidation = true;
+      values.isRenewal = true;
       
-      // Converter para centímetros diretamente nos valores, mantendo o tipo float
-      if (typeof values.length === 'number' && values.length < 100) {
-        values.length = values.length * 100;
-      }
-      
-      if (typeof values.width === 'number' && values.width < 100) {
-        values.width = values.width * 100;
-      }
-      
-      if (typeof values.height === 'number' && values.height < 100) {
-        values.height = values.height * 100;
-      }
-      
-      console.log('[RENOVAÇÃO] Valores originais (metros):', {
-        length: valuesOriginal.length,
-        width: valuesOriginal.width,
-        height: valuesOriginal.height,
-      });
-      
-      console.log('[RENOVAÇÃO] Valores convertidos (centímetros):', {
+      console.log('[RENOVAÇÃO] Detectada - pulando validações e conversões conforme solicitado');
+      console.log('[RENOVAÇÃO] Valores mantidos sem conversão:', {
         length: values.length,
         width: values.width,
         height: values.height,
