@@ -1727,25 +1727,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "O comprimento deve ser positivo" });
         }
         
-        // Ajustar o comprimento com base no tipo de licença
-        if (licenseData.type === 'flatbed') {
-          console.log("Este é um tipo prancha, aplicando regras específicas");
-          if (licenseData.cargoType === 'oversized') {
-            console.log("Carga superdimensionada: sem limite de dimensões");
-            // Não precisa fazer nenhuma validação
-          } else {
-            console.log("Prancha normal: máximo 25m, sem mínimo");
-            if (licenseData.length > 2500) { // centímetros
-              return res.status(400).json({ message: "O comprimento máximo para prancha é de 25,00 metros" });
+        // Se for uma renovação com skipDimensionValidation, pular todas as validações de dimensões
+        if (isRenewal && skipDimensionValidation) {
+          console.log("[RENOVAÇÃO] Pulando validações de limites de dimensões por ser uma renovação com flag skipDimensionValidation");
+        }
+        // Caso contrário, aplicar as validações normais
+        else {
+          // Ajustar o comprimento com base no tipo de licença
+          if (licenseData.type === 'flatbed') {
+            console.log("Este é um tipo prancha, aplicando regras específicas");
+            if (licenseData.cargoType === 'oversized') {
+              console.log("Carga superdimensionada: sem limite de dimensões");
+              // Não precisa fazer nenhuma validação
+            } else {
+              console.log("Prancha normal: máximo 25m, sem mínimo");
+              if (licenseData.length > 2500) { // centímetros
+                return res.status(400).json({ message: "O comprimento máximo para prancha é de 25,00 metros" });
+              }
             }
-          }
-        } else {
-          console.log("Não é prancha: min 19.8m, max 30m");
-          if (licenseData.length < 1980) { // centímetros
-            return res.status(400).json({ message: "O comprimento mínimo é de 19,80 metros para este tipo de conjunto" });
-          }
-          if (licenseData.length > 3000) { // centímetros
-            return res.status(400).json({ message: "O comprimento máximo é de 30,00 metros para este tipo de conjunto" });
+          } else {
+            console.log("Não é prancha: min 19.8m, max 30m");
+            if (licenseData.length < 1980) { // centímetros
+              return res.status(400).json({ message: "O comprimento mínimo é de 19,80 metros para este tipo de conjunto" });
+            }
+            if (licenseData.length > 3000) { // centímetros
+              return res.status(400).json({ message: "O comprimento máximo é de 30,00 metros para este tipo de conjunto" });
+            }
           }
         }
       } catch (error: any) {
