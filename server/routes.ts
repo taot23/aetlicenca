@@ -1451,11 +1451,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         // Cria a licença
-        const licenseRequest = await storage.createLicenseRequest(user.id, {
+        // Arredondar valores decimais para inteiros
+        const processedLicenseData = {
           ...licenseData,
+          // Garantir que os valores numéricos sejam inteiros
+          width: licenseData.width ? Math.round(Number(licenseData.width)) : 260,
+          height: licenseData.height ? Math.round(Number(licenseData.height)) : 440,
+          length: licenseData.length ? Math.round(Number(licenseData.length)) : 2500,
           requestNumber,
           isDraft: false,
-        });
+        };
+
+        console.log("Dados de licença processados para criação:", processedLicenseData);
+        const licenseRequest = await storage.createLicenseRequest(user.id, processedLicenseData);
         
         console.log("Nova licença criada com sucesso:", licenseRequest.id);
         return res.json(licenseRequest);
