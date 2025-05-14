@@ -1308,9 +1308,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           secondTrailerId: licenseData.secondTrailerId ? Number(licenseData.secondTrailerId) : null,
           dollyId: licenseData.dollyId ? Number(licenseData.dollyId) : null,
           flatbedId: licenseData.flatbedId ? Number(licenseData.flatbedId) : null,
-          length: Number(licenseData.length || 2500), // 25m default
-          width: Number(licenseData.width || 260),    // 2.60m default
-          height: Number(licenseData.height || 440),  // 4.40m default
+          length: Math.round(Number(licenseData.length || 25) * 100), // Converter metros para centímetros, 25m = 2500cm
+          width: Math.round(Number(licenseData.width || 2.6) * 100),  // Converter metros para centímetros, 2.6m = 260cm
+          height: Math.round(Number(licenseData.height || 4.4) * 100), // Converter metros para centímetros, 4.4m = 440cm
           cargoType: licenseData.cargoType || 'dry_cargo',
           additionalPlates: licenseData.additionalPlates || [],
           additionalPlatesDocuments: licenseData.additionalPlatesDocuments || [],
