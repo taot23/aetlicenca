@@ -111,12 +111,15 @@ interface LicenseFormProps {
 }
 
 // Função para submeter uma renovação
-export async function submitRenewalRequest(draftId: number, formData: any) {
-  try {
+export function submitRenewalRequest(draftId: number, formData: any) {
+  return new Promise((resolve, reject) => {
     console.log("Processando envio de renovação com ID:", draftId);
     
     // Garantir valores para campos essenciais
     const requestData = { ...formData };
+    
+    // Garantir explicitamente que não é um rascunho
+    requestData.isDraft = false;
     
     if (!requestData.cargoType) {
       requestData.cargoType = requestData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
@@ -206,7 +209,7 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
     
     // Criar nova licença (contornando o endpoint de submit)
     const url = '/api/licenses';
-    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
+    fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -216,25 +219,30 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
         ...requestData,
         draftToDeleteId: draftId // Para que o backend possa excluir o rascunho após criar
       })
+    })
+    .then(response => {
+      // Verificar se há resposta de erro do servidor
+      if (!response.ok) {
+        return response.json()
+          .catch(() => ({ message: `Erro ao processar renovação: ${response.status} ${response.statusText}` }))
+          .then(errorData => {
+            throw new Error(errorData.message || `Erro ao processar renovação: ${response.status} ${response.statusText}`);
+          });
+      }
+      return response.json();
+    })
+    .then(data => {
+      // Invalidar cache
+      queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
+      
+      resolve(data);
+    })
+    .catch(error => {
+      console.error("Erro ao submeter renovação:", error);
+      reject(error);
     });
-    
-    // Verificar se há resposta de erro do servidor
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: `Erro ao processar renovação: ${response.status} ${response.statusText}` }));
-      throw new Error(errorData.message || `Erro ao processar renovação: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    
-    // Invalidar cache
-    queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
-    
-    return data;
-  } catch (error) {
-    console.error("Erro ao submeter renovação:", error);
-    throw error;
-  }
+  });
 }
 
 // Função para submeter um rascunho diretamente (pode ser chamada de fora do componente)
