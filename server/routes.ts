@@ -952,10 +952,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Garantir que os campos obrigatórios sejam enviados corretamente para o banco de dados
+      // Arredondamos os valores para inteiros, para garantir compatibilidade com o banco de dados
       const sanitizedData = {
         ...draftData,
-        width: draftData.width !== undefined ? Number(draftData.width) : existingDraft.width,
-        height: draftData.height !== undefined ? Number(draftData.height) : existingDraft.height,
+        width: draftData.width !== undefined ? Math.round(Number(draftData.width)) : existingDraft.width,
+        height: draftData.height !== undefined ? Math.round(Number(draftData.height)) : existingDraft.height,
         cargoType: draftData.cargoType || existingDraft.cargoType,
       };
       
