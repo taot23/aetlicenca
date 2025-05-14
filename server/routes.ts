@@ -1308,9 +1308,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           secondTrailerId: licenseData.secondTrailerId ? Number(licenseData.secondTrailerId) : null,
           dollyId: licenseData.dollyId ? Number(licenseData.dollyId) : null,
           flatbedId: licenseData.flatbedId ? Number(licenseData.flatbedId) : null,
-          length: Math.round(Number(licenseData.length || 25) * 100), // Converter metros para centímetros, 25m = 2500cm
-          width: Math.round(Number(licenseData.width || 2.6) * 100),  // Converter metros para centímetros, 2.6m = 260cm
-          height: Math.round(Number(licenseData.height || 4.4) * 100), // Converter metros para centímetros, 4.4m = 440cm
+          length: Number(licenseData.length || 2500), // 25m default
+          width: Number(licenseData.width || 260),    // 2.60m default
+          height: Number(licenseData.height || 440),  // 4.40m default
           cargoType: licenseData.cargoType || 'dry_cargo',
           additionalPlates: licenseData.additionalPlates || [],
           additionalPlatesDocuments: licenseData.additionalPlatesDocuments || [],
@@ -1557,58 +1557,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                        licenseData.comments.toLowerCase().includes('renovação');
                        
       if (isRenewal) {
-        console.log("É pedido de renovação? SIM");
-        
-        // Manter os valores em metros sem conversão
-        const values = {
-          length: licenseData.length,
-          width: licenseData.width,
-          height: licenseData.height,
-          cargoType: licenseData.cargoType
-        };
-        
-        console.log("[RENOVAÇÃO] Valores mantidos em metros:", values);
-        
-        // Aplicar valores de cargoType padrão se estiver faltando
-        if (!licenseData.cargoType) {
-          // Aplicar tipo de carga padrão baseado no tipo de licença
-          if (licenseData.type === "flatbed") {
-            licenseData.cargoType = "indivisible_cargo";
-          } else {
-            licenseData.cargoType = "liquid_cargo";
-          }
-        }
-        
-        // Manter dimensões em metros sem converter para centímetros
-        if (typeof licenseData.length === 'number' && licenseData.length > 0) {
-          console.log("Validando comprimento:", licenseData.length, "tipo:", typeof licenseData.length);
-          console.log("Valor em metros:", licenseData.length, "Mantendo em metros");
-        }
-        
-        if (typeof licenseData.width === 'number' && licenseData.width > 0) {
-          console.log("Validando largura:", licenseData.width, "tipo:", typeof licenseData.width);
-          console.log("Largura em metros:", licenseData.width, "Mantendo em metros");
-        }
-        
-        if (typeof licenseData.height === 'number' && licenseData.height > 0) {
-          console.log("Validando altura:", licenseData.height, "tipo:", typeof licenseData.height);
-          console.log("Altura em metros:", licenseData.height, "Mantendo em metros");
-        }
-        
-        console.log("[RENOVAÇÃO] Valores mantidos em metros:", {
-          length: licenseData.length,
-          width: licenseData.width,
-          height: licenseData.height
-        });
-        
-        console.log("Valores ajustados para renovação:", {
-          length: licenseData.length,
-          width: licenseData.width,
-          height: licenseData.height,
-          cargoType: licenseData.cargoType
-        });
-      } else {
-        console.log("É pedido de renovação? NÃO");
+        console.log("Detectada renovação de licença com base nos comentários.");
       }
       
       console.log("Tipo de licença:", licenseData.type);
@@ -1687,16 +1636,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Não precisa fazer nenhuma validação
           } else {
             console.log("Prancha normal: máximo 25m, sem mínimo");
-            if (licenseData.length > 25) { // em metros
+            if (licenseData.length > 2500) { // centímetros
               return res.status(400).json({ message: "O comprimento máximo para prancha é de 25,00 metros" });
             }
           }
         } else {
           console.log("Não é prancha: min 19.8m, max 30m");
-          if (licenseData.length < 19.8) { // metros
+          if (licenseData.length < 1980) { // centímetros
             return res.status(400).json({ message: "O comprimento mínimo é de 19,80 metros para este tipo de conjunto" });
           }
-          if (licenseData.length > 30) { // metros
+          if (licenseData.length > 3000) { // centímetros
             return res.status(400).json({ message: "O comprimento máximo é de 30,00 metros para este tipo de conjunto" });
           }
         }

@@ -448,16 +448,14 @@ export class TransactionalStorage implements IStorage {
     
     // Somente converter se os campos estiverem presentes na atualização
     if (draftData.width !== undefined) {
-      // Converter para número e garantir que seja um inteiro
-      updateData.width = Math.round(Number(draftData.width));
+      updateData.width = Number(draftData.width);
     } else if (currentDraft.width === null || currentDraft.width === undefined) {
       // Se o valor atual é null mas não estamos atualizando, definir valor padrão
       updateData.width = licenseType === "flatbed" ? 320 : 260;
     }
     
     if (draftData.height !== undefined) {
-      // Converter para número e garantir que seja um inteiro
-      updateData.height = Math.round(Number(draftData.height));
+      updateData.height = Number(draftData.height);
     } else if (currentDraft.height === null || currentDraft.height === undefined) {
       // Se o valor atual é null mas não estamos atualizando, definir valor padrão
       updateData.height = licenseType === "flatbed" ? 495 : 440;
