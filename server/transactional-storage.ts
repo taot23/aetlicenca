@@ -404,10 +404,10 @@ export class TransactionalStorage implements IStorage {
         dollyId: licenseData.dollyId,
         secondTrailerId: licenseData.secondTrailerId,
         flatbedId: licenseData.flatbedId,
-        length: licenseData.length,
-        // Usar os valores sanitizados
-        width: Number(width),
-        height: Number(height),
+        length: licenseData.length ? Math.round(Number(licenseData.length)) : null,
+        // Usar os valores sanitizados e arredondados para inteiros
+        width: width ? Math.round(Number(width)) : null,
+        height: height ? Math.round(Number(height)) : null,
         cargoType,
         additionalPlates: licenseData.additionalPlates || [],
         additionalPlatesDocuments: licenseData.additionalPlatesDocuments || [],
