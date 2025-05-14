@@ -1436,7 +1436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Para pedidos de renovação, os valores de dimensão podem vir em metros
-        // Precisamos converter para centímetros
+        // Precisamos converter para centímetros ou aceitar como estão
         if (isRenewal) {
           console.log("Processando dimensões para renovação:", {
             length: licenseData.length,
@@ -1444,20 +1444,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             height: licenseData.height,
           });
           
-          // Se os valores estiverem em metros (< 100), converte para centímetros
-          if (licenseData.length < 100 && licenseData.length > 0) {
-            licenseData.length = Math.round(licenseData.length * 100);
+          // Forçar valores manualmente para teste
+          if (typeof licenseData.length === 'number') {
+            // Para renovações, aceitamos diretamente os valores sem conversão
+            // Se estiverem em metros (valores pequenos como 25, 2.6, 4.4), os usamos diretamente
+            console.log("Usando valores diretos para renovação sem conversão");
           }
           
-          if (licenseData.width < 100 && licenseData.width > 0) {
-            licenseData.width = Math.round(licenseData.width * 100);
-          }
-          
-          if (licenseData.height < 100 && licenseData.height > 0) {
-            licenseData.height = Math.round(licenseData.height * 100);
-          }
-          
-          console.log("Dimensões convertidas para centímetros:", {
+          console.log("Dimensões após processamento:", {
             length: licenseData.length,
             width: licenseData.width,
             height: licenseData.height,
@@ -1486,14 +1480,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isDraft: false
         });
         
-        // Cria a licença
-        // Arredondar valores decimais para inteiros
+        // Cria a licença com valores dependendo do tipo (renovação ou não)
         const processedLicenseData = {
           ...licenseData,
-          // Garantir que os valores numéricos sejam inteiros
-          width: licenseData.width ? Math.round(Number(licenseData.width)) : 260,
-          height: licenseData.height ? Math.round(Number(licenseData.height)) : 440,
-          length: licenseData.length ? Math.round(Number(licenseData.length)) : 2500,
+          
+          // Renovações agora usam diretamente os valores sem conversão
+          width: licenseData.width ? Number(licenseData.width) : 260,
+          height: licenseData.height ? Number(licenseData.height) : 440,
+          length: licenseData.length ? Number(licenseData.length) : 2500,
           requestNumber,
           isDraft: false,
         };
