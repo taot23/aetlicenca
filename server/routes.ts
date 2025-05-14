@@ -1557,7 +1557,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
                        licenseData.comments.toLowerCase().includes('renovação');
                        
       if (isRenewal) {
-        console.log("Detectada renovação de licença com base nos comentários.");
+        console.log("É pedido de renovação? SIM");
+        
+        // Verificar se os valores estão em metros (valores típicos menores que 100)
+        // e convertê-los para centímetros
+        const valuesInMeters = {
+          length: licenseData.length,
+          width: licenseData.width,
+          height: licenseData.height,
+          cargoType: licenseData.cargoType
+        };
+        
+        console.log("[RENOVAÇÃO] Valores originais (metros):", valuesInMeters);
+        
+        // Aplicar valores de cargoType padrão se estiver faltando
+        if (!licenseData.cargoType) {
+          // Aplicar tipo de carga padrão baseado no tipo de licença
+          if (licenseData.type === "flatbed") {
+            licenseData.cargoType = "indivisible_cargo";
+          } else {
+            licenseData.cargoType = "liquid_cargo";
+          }
+        }
+        
+        // Converter dimensões de metros para centímetros se estiverem em metros
+        if (typeof licenseData.length === 'number' && licenseData.length <= 100) {
+          licenseData.length = Math.round(licenseData.length * 100);
+        }
+        
+        if (typeof licenseData.width === 'number' && licenseData.width <= 10) {
+          licenseData.width = Math.round(licenseData.width * 100);
+        }
+        
+        if (typeof licenseData.height === 'number' && licenseData.height <= 10) {
+          licenseData.height = Math.round(licenseData.height * 100);
+        }
+        
+        console.log("[RENOVAÇÃO] Valores convertidos (centímetros):", {
+          length: licenseData.length,
+          width: licenseData.width,
+          height: licenseData.height
+        });
+        
+        console.log("Valores ajustados para renovação:", {
+          length: licenseData.length,
+          width: licenseData.width,
+          height: licenseData.height,
+          cargoType: licenseData.cargoType
+        });
+      } else {
+        console.log("É pedido de renovação? NÃO");
       }
       
       console.log("Tipo de licença:", licenseData.type);
