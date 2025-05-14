@@ -1584,6 +1584,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Pedido de renovação detectado. Rascunho ${draftToDeleteId} será excluído após sucesso.`);
         // Remover este campo para não interferir na validação
         delete licenseData.draftToDeleteId;
+        
+        // Garantir que pedidos de renovação NUNCA sejam salvos como rascunho
+        licenseData.isDraft = false;
+        console.log("[RENOVAÇÃO] Forçando isDraft=false para garantir que não seja salvo como rascunho");
       }
       
       // Verificar se é uma renovação através dos comentários
@@ -1598,6 +1602,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isRenewal) {
         console.log('[RENOVAÇÃO SERVER] Renovação detectada. Skip validação dimensões:', skipDimensionValidation);
         console.log("Detectada renovação de licença com base nos comentários.");
+        
+        // Garantir que renovações NUNCA sejam salvas como rascunho
+        licenseData.isDraft = false;
+        console.log("[RENOVAÇÃO SERVER] Forçando isDraft=false para renovação detectada nos comentários");
       }
       
       console.log("Tipo de licença:", licenseData.type);
