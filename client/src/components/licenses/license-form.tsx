@@ -2906,15 +2906,18 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
               Enviar Renovação
             </Button>
           )}
-          <Button
-            type="button"
-            onClick={handleSubmitRequest}
-            disabled={isProcessing}
-            className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto order-1 sm:order-4"
-          >
-            {submitRequestMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-            Enviar Novo Pedido
-          </Button>
+          {/* Não mostrar botão "Enviar Novo Pedido" quando for renovação */}
+          {!(draft?.comments && draft.comments.toLowerCase().includes('renovação')) && (
+            <Button
+              type="button"
+              onClick={handleSubmitRequest}
+              disabled={isProcessing}
+              className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto order-1 sm:order-4"
+            >
+              {submitRequestMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
+              Enviar Novo Pedido
+            </Button>
+          )}
         </div>
       </form>
     </Form>
