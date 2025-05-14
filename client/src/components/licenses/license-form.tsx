@@ -632,6 +632,35 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
 
   const handleSaveDraft = () => {
     form.setValue("isDraft", true);
+    
+    // Verificar se é uma renovação para converter unidades antes de salvar
+    const values = form.getValues();
+    const isRenewal = values.comments && typeof values.comments === 'string' && 
+                      values.comments.toLowerCase().includes('renovação');
+    
+    if (isRenewal) {
+      console.log("[RENOVAÇÃO] Detectada em salvamento de rascunho");
+      
+      // Converter medidas de metros para centímetros, se necessário
+      if (values.length && values.length < 100) {
+        const lengthInCm = values.length * 100;
+        console.log(`[RENOVAÇÃO] Convertendo comprimento de ${values.length}m para ${lengthInCm}cm`);
+        form.setValue('length', lengthInCm);
+      }
+      
+      if (values.width && values.width < 100) {
+        const widthInCm = values.width * 100;
+        console.log(`[RENOVAÇÃO] Convertendo largura de ${values.width}m para ${widthInCm}cm`);
+        form.setValue('width', widthInCm);
+      }
+      
+      if (values.height && values.height < 100) {
+        const heightInCm = values.height * 100;
+        console.log(`[RENOVAÇÃO] Convertendo altura de ${values.height}m para ${heightInCm}cm`);
+        form.setValue('height', heightInCm);
+      }
+    }
+    
     form.handleSubmit(onSubmit)();
   };
 
@@ -648,17 +677,32 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     
     // Se for renovação, adicionar campos adicionais para garantir validade
     if (isRenewal) {
+      // Para renovações, já indicar explicitamente que é renovação
+      values.isRenewal = true;
+      
       // Garantir que dimensões e tipo de carga estão preenchidos
       if (!values.length) values.length = 25; // 25m
       if (!values.width) values.width = 2.6;  // 2.6m
       if (!values.height) values.height = 4.4; // 4.4m
       if (!values.cargoType) values.cargoType = values.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
       
-      console.log('Valores ajustados para renovação:', {
+      // Valores originais antes da conversão (para logs)
+      console.log('[RENOVAÇÃO] Valores originais (metros):', {
         length: values.length,
         width: values.width,
-        height: values.height,
-        cargoType: values.cargoType
+        height: values.height
+      });
+      
+      // IMPORTANTE: Converter para centímetros aqui no cliente
+      // antes mesmo de enviar ao servidor
+      if (values.length < 100) values.length = values.length * 100;
+      if (values.width < 100) values.width = values.width * 100;
+      if (values.height < 100) values.height = values.height * 100;
+      
+      console.log('[RENOVAÇÃO] Valores convertidos (centímetros):', {
+        length: values.length,
+        width: values.width,
+        height: values.height
       });
       
       // Atualizar o formulário com os valores ajustados
