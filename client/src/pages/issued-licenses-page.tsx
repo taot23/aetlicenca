@@ -307,7 +307,12 @@ export default function IssuedLicensesPage() {
         // Usar o endpoint que aceita o corpo da requisição
         // O apiRequest já retorna o JSON se a resposta for bem-sucedida, não precisamos verificar response.ok
         console.log(`[RENOVAÇÃO] Enviando pedido para renovar licença ${licenseId}, estado ${state}`);
-        return await apiRequest("POST", "/api/licenses/renew", { licenseId, state });
+        // Adicionar explicitamente o parâmetro isRenewal para indicar que é uma renovação
+        return await apiRequest("POST", "/api/licenses/renew", { 
+          licenseId, 
+          state, 
+          isRenewal: true  // Importante: parâmetro explícito que será processado no servidor
+        });
       } catch (error) {
         console.error("Erro na renovação:", error);
         throw error;
