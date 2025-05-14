@@ -141,13 +141,8 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
     
     // Tratar comprimento para garantir formato float com casa decimal
     if (typeof requestData.length === 'number') {
+      // Remover conversão de metros para centímetros, manter os valores como estão
       let lengthValue = requestData.length;
-      
-      // Se o valor está em metros (abaixo de 100), converter para centímetros
-      if (lengthValue < 100) {
-        lengthValue = lengthValue * 100;
-        console.log(`[RENOVAÇÃO] Comprimento convertido de metros para centímetros: ${lengthValue}`);
-      }
       
       // Garantir que o comprimento seja salvo como float no formato correto (25.00)
       const lengthStr = lengthValue.toString();
@@ -200,7 +195,7 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
       height: requestData.height
     });
     
-    console.log("[RENOVAÇÃO] Valores convertidos (centímetros):", {
+    console.log("[RENOVAÇÃO] Valores formatados (mantendo unidades originais):", {
       length: requestData.length,
       width: requestData.width,
       height: requestData.height
