@@ -127,15 +127,10 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
     if (!requestData.width) requestData.width = 2.6;  // 2.6 metros
     if (!requestData.height) requestData.height = 4.4; // 4.4 metros
     
-    console.log("[RENOVAÇÃO_INICIO] Dimensões originais:", {
+    console.log("[RENOVAÇÃO] Valores originais (metros):", {
       length: requestData.length,
       width: requestData.width,
-      height: requestData.height,
-      "tipos": {
-        length: typeof requestData.length,
-        width: typeof requestData.width,
-        height: typeof requestData.height,
-      }
+      height: requestData.height
     });
     
     // Segundo: verificar se as dimensões estão em metros (valor < 100) e converter para centímetros
@@ -155,6 +150,10 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
       // Para não-prancha, forçar os valores padrão
       requestData.width = 2.60;  // Valor padrão com duas casas decimais para não-prancha
       requestData.height = 4.40; // Valor padrão com duas casas decimais para não-prancha
+      
+      // Adicionar parâmetros para indicar que são valores em metros (não centímetros)
+      requestData.isRenewal = true;
+      requestData.skipDimensionValidation = true;
     } else {
       // Para prancha, converter normalmente
       // Largura
@@ -1037,19 +1036,19 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     }
     
     // Ajustar os valores no formulário se necessário (conversão de cm para m)
-    if (length > 100) {
+    if (lengthInCentimeters) {
       const convertedLength = length / 100;
       form.setValue('length', convertedLength);
       console.log(`Convertendo comprimento de ${length}cm para ${convertedLength}m`);
     }
     
-    if (width > 100) {
+    if (widthInCentimeters) {
       const convertedWidth = width / 100;
       form.setValue('width', convertedWidth);
       console.log(`Convertendo largura de ${width}cm para ${convertedWidth}m`);
     }
     
-    if (height > 100) {
+    if (heightInCentimeters) {
       const convertedHeight = height / 100;
       form.setValue('height', convertedHeight);
       console.log(`Convertendo altura de ${height}cm para ${convertedHeight}m`);
