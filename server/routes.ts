@@ -1415,6 +1415,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Prepara dados para criar a licença
         const requestNumber = `AET-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
         
+        // Verifica se é uma renovação para tratamento especial
+        const isRenewal = licenseData.comments && 
+                         typeof licenseData.comments === 'string' && 
+                         licenseData.comments.toLowerCase().includes('renovação');
+                         
+        console.log("Verificação de renovação:", isRenewal ? "É renovação" : "Não é renovação");
+        
         // Converte estados solicitados para o formato esperado no backend
         licenseData.states = licenseData.requestedStates || licenseData.states || [];
         console.log("Estados processados para envio:", licenseData.states);
@@ -1426,6 +1433,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!licenseData.length) {
           licenseData.length = 2000; // 20 metros em centímetros
+        }
+        
+        // Para pedidos de renovação, os valores de dimensão podem vir em metros
+        // Precisamos converter para centímetros
+        if (isRenewal) {
+          console.log("Processando dimensões para renovação:", {
+            length: licenseData.length,
+            width: licenseData.width,
+            height: licenseData.height,
+          });
+          
+          // Se os valores estiverem em metros (< 100), converte para centímetros
+          if (licenseData.length < 100 && licenseData.length > 0) {
+            licenseData.length = Math.round(licenseData.length * 100);
+          }
+          
+          if (licenseData.width < 100 && licenseData.width > 0) {
+            licenseData.width = Math.round(licenseData.width * 100);
+          }
+          
+          if (licenseData.height < 100 && licenseData.height > 0) {
+            licenseData.height = Math.round(licenseData.height * 100);
+          }
+          
+          console.log("Dimensões convertidas para centímetros:", {
+            length: licenseData.length,
+            width: licenseData.width,
+            height: licenseData.height,
+          });
         }
         
         // Sanitizar campos de dimensões e tipo de carga

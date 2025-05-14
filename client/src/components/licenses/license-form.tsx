@@ -981,6 +981,17 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
 
   // Função para validar dimensões com base no tipo de licença e carga
   const validateDimensions = (values: any) => {
+    // Verificar se é um pedido de renovação
+    const isRenewal = values.comments && 
+                      typeof values.comments === 'string' && 
+                      values.comments.toLowerCase().includes('renovação');
+    
+    // Para renovações, não aplicamos validação dimensional
+    if (isRenewal) {
+      console.log("Pedido de renovação detectado - pulando validação dimensional");
+      return { isValid: true, errors: [] };
+    }
+    
     // Obter o tipo de conjunto e de carga
     const licenseType = values.type || 'default';
     const cargoType = values.cargoType;
