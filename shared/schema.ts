@@ -517,7 +517,6 @@ export const brazilianStates = [
   { code: "PA", name: "Pará" },
   { code: "SC", name: "Santa Catarina" },
   { code: "DF", name: "Distrito Federal" },
-  { code: "MA", name: "Maranhão" },
   { code: "GO", name: "Goiás" },
   { code: "RJ", name: "Rio de Janeiro" },
   { code: "CE", name: "Ceará" },
