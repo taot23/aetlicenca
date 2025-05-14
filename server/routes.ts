@@ -1489,6 +1489,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log("Nova licença criada com sucesso:", licenseRequest.id);
+        
+        // Verificar se há um rascunho para excluir (usado em renovações)
+        if (licenseData.draftToDeleteId) {
+          const draftId = Number(licenseData.draftToDeleteId);
+          console.log(`Excluindo rascunho original após criação bem-sucedida: ${draftId}`);
+          try {
+            await storage.deleteLicenseRequest(draftId);
+            console.log(`Rascunho ${draftId} excluído com sucesso após renovação`);
+          } catch (deleteError) {
+            console.error(`Erro ao excluir rascunho ${draftId} após renovação:`, deleteError);
+            // Não interromper o fluxo por erro na exclusão, apenas logar
+          }
+        }
+        
         return res.json(licenseRequest);
       }
     } catch (error) {
