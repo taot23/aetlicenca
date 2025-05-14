@@ -307,11 +307,12 @@ export default function IssuedLicensesPage() {
         // Usar o endpoint que aceita o corpo da requisição
         // O apiRequest já retorna o JSON se a resposta for bem-sucedida, não precisamos verificar response.ok
         console.log(`[RENOVAÇÃO] Enviando pedido para renovar licença ${licenseId}, estado ${state}`);
-        // Adicionar explicitamente o parâmetro isRenewal para indicar que é uma renovação
+        // Adicionar explicitamente os parâmetros para indicar que é uma renovação
         return await apiRequest("POST", "/api/licenses/renew", { 
           licenseId, 
           state, 
-          isRenewal: true  // Importante: parâmetro explícito que será processado no servidor
+          isRenewal: true,            // Importante: parâmetro explícito que será processado no servidor
+          skipDimensionValidation: true  // Flag para pular validação de dimensões
         });
       } catch (error) {
         console.error("Erro na renovação:", error);
@@ -994,7 +995,9 @@ export default function IssuedLicensesPage() {
                       licenseId: licenseToRenew.licenseId,
                       state: licenseToRenew.state,
                       // Indicar explicitamente que é uma renovação para o servidor
-                      isRenewal: true
+                      isRenewal: true,
+                      // Flag para pular validação de dimensões
+                      skipDimensionValidation: true
                     };
                     
                     console.log("Enviando informação de renovação:", renovationInfo);
