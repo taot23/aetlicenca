@@ -1003,14 +1003,22 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     const width = Number(values.width);
     const height = Number(values.height);
     
+    // Verificar se é renovação para tratar valores corretamente
+    const isRenewal = values.comments && 
+                     typeof values.comments === 'string' && 
+                     values.comments.toLowerCase().includes('renovação');
+    
     console.log(`Validando comprimento:`, length, `tipo:`, typeof length);
-    console.log(`Valor em metros:`, length, `Está em centímetros:`, length > 100);
+    const lengthInCentimeters = isRenewal ? true : length > 100;
+    console.log(`Valor em metros:`, length, `Está em centímetros:`, lengthInCentimeters);
     
     console.log(`Validando largura:`, width, `tipo:`, typeof width);
-    console.log(`Largura em metros:`, width, `Está em centímetros:`, width > 100);
+    const widthInCentimeters = isRenewal ? true : width > 100;
+    console.log(`Largura em metros:`, width, `Está em centímetros:`, widthInCentimeters);
     
     console.log(`Validando altura:`, height, `tipo:`, typeof height);
-    console.log(`Altura em metros:`, height, `Está em centímetros:`, height > 100);
+    const heightInCentimeters = isRenewal ? true : height > 100;
+    console.log(`Altura em metros:`, height, `Está em centímetros:`, heightInCentimeters);
     
     // Determinar quais limites usar com base no tipo
     let limits;
