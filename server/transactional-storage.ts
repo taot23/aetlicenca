@@ -385,23 +385,10 @@ export class TransactionalStorage implements IStorage {
       cargoType: licenseData.cargoType
     });
     
-    // Verificar se é uma renovação através dos comentários
-    const isRenewal = (licenseData.comments && 
-                      typeof licenseData.comments === 'string' && 
-                      licenseData.comments.toLowerCase().includes('renovação')) ||
-                      licenseData.isRenewal === true;
-    
-    // Garantir que renovações nunca fiquem como rascunho
-    if (isRenewal) {
-      licenseData.isDraft = false;
-      console.log("[RENOVAÇÃO] - Garantindo que a renovação não seja salva como rascunho");
-    }
-    
     console.log("CreateLicenseRequest - dados sanitizados:", {
       width,
       height,
-      cargoType,
-      isDraft: licenseData.isDraft
+      cargoType
     });
     
     const [licenseRequest] = await db
