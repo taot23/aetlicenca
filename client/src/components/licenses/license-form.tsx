@@ -735,8 +735,20 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     const isValid = await validateFields();
     if (!isValid) return;
     
-    // Validar dimensões
-    validateDimensions(values);
+    // Verificar se é um pedido de renovação
+    const isRenewal = values.comments && 
+                     typeof values.comments === 'string' && 
+                     values.comments.toLowerCase().includes('renovação');
+    
+    // Validar dimensões, mas pular se for renovação
+    if (!isRenewal) {
+      validateDimensions(values);
+    } else {
+      console.log("[RENOVAÇÃO] Pulando validação de dimensões no envio da licença");
+      // Adicionar flags para renovação
+      values.isRenewal = true;
+      values.skipDimensionValidation = true;
+    }
     
     // Atualizar o valor isDraft para false e submeter
     form.setValue("isDraft", false);
