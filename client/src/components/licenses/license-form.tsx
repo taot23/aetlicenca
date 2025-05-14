@@ -2778,18 +2778,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             {saveAsDraftMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
             Salvar Rascunho
           </Button>
-          {/* Botão para envio direto de rascunho, mostrado apenas quando estamos editando um rascunho existente */}
-          {draft && draft.id && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleSubmitDraftDirectly}
-              className="w-full sm:w-auto order-2 sm:order-3 bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
-            >
-              <Send className="mr-2 h-4 w-4" />
-              Enviar Rascunho
-            </Button>
-          )}
+          {/* Botão para envio direto de rascunho foi removido conforme solicitado */}
           <Button
             type="button"
             onClick={handleSubmitRequest}

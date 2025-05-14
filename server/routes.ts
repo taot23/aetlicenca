@@ -1923,12 +1923,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Renovar licença para um estado específico
   app.post('/api/licenses/renew', requireAuth, async (req, res) => {
     try {
-      const { licenseId, state, isRenewal } = req.body;
+      const { licenseId, state, isRenewal, skipDimensionValidation } = req.body;
       
       console.log("[RENOVAÇÃO] Iniciando renovação com dados:", {
         licenseId, 
         state, 
-        isRenewal: isRenewal ? "SIM" : "NÃO"
+        isRenewal: isRenewal ? "SIM" : "NÃO",
+        skipDimensionValidation: skipDimensionValidation ? "SIM" : "NÃO"
       });
       
       if (!licenseId || !state) {
@@ -1968,8 +1969,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let width = originalLicense.width || (originalLicense.type === "flatbed" ? 320 : 260);
       let height = originalLicense.height || (originalLicense.type === "flatbed" ? 495 : 440);
       
-      // Se é uma renovação explícita, pode ser necessário converter medidas de metros para centímetros
-      if (isRenewal) {
+      // Se devemos pular validação de dimensões, manter os valores originais
+      if (skipDimensionValidation === true) {
+        console.log("[RENOVAÇÃO] skipDimensionValidation = true, mantendo valores originais sem conversão:");
+        console.log(`  Comprimento: ${length}`);
+        console.log(`  Largura: ${width}`);
+        console.log(`  Altura: ${height}`);
+      }
+      // Caso contrário, se é uma renovação explícita, pode ser necessário converter medidas
+      else if (isRenewal) {
+        console.log("[RENOVAÇÃO] Verificando necessidade de conversão de unidades");
+        
         // Conversão de comprimento, se necessário (se < 100, assume-se que está em metros)
         if (length > 0 && length < 100) {
           console.log("[RENOVAÇÃO] Conversão do comprimento de metros para centímetros:", length, "m →", length * 100, "cm");
