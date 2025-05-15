@@ -867,7 +867,8 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         description: isRenewal 
           ? "O pedido de renovação foi enviado para análise" 
           : "O pedido de licença foi enviado para análise",
-        variant: "success",
+        // Não usar "success" pois não é um valor válido para variant
+        //variant: "success",
       });
       
       // Chamar onComplete para fechar o modal e atualizar a lista
@@ -1126,7 +1127,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         toast({
           title: "Aviso sobre dimensões",
           description: `O comprimento (${updatedLength}m) excede o limite máximo de ${limits.maxLength}m para este tipo de conjunto. A licença pode ser recusada.`,
-          variant: "warning",
+          // Removido variant: "warning" pois não é um valor válido
         });
       }
       
@@ -1134,7 +1135,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         toast({
           title: "Aviso sobre dimensões",
           description: `A largura (${updatedWidth}m) excede o limite máximo de ${limits.maxWidth}m para este tipo de conjunto. A licença pode ser recusada.`,
-          variant: "warning",
+          // Removido variant: "warning" pois não é um valor válido
         });
       }
       
@@ -1142,7 +1143,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         toast({
           title: "Aviso sobre dimensões",
           description: `A altura (${updatedHeight}m) excede o limite máximo de ${limits.maxHeight}m para este tipo de conjunto. A licença pode ser recusada.`,
-          variant: "warning",
+          // Removido variant: "warning" pois não é um valor válido
         });
       }
     }
