@@ -136,6 +136,7 @@ export default function AdminLicensesPage() {
   const [selectedLicense, setSelectedLicense] = useState<LicenseRequest | null>(null);
   const [licenseDetailsOpen, setLicenseDetailsOpen] = useState(false);
   const [stateStatusDialogOpen, setStateStatusDialogOpen] = useState(false);
+  const [generalStatusDialogOpen, setGeneralStatusDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedState, setSelectedState] = useState("");
   const [location] = useLocation();
@@ -206,7 +207,15 @@ export default function AdminLicensesPage() {
     }
   }, [lastMessage, selectedLicense]);
 
-  // Form removido para atualização de status geral
+  // Form para atualização de status geral
+  const generalStatusForm = useForm<z.infer<typeof updateStatusSchema>>({
+    resolver: zodResolver(updateStatusSchema),
+    defaultValues: {
+      status: "",
+      comments: "",
+      licenseFile: undefined,
+    },
+  });
   
   // Form para atualização de status por estado
   const stateStatusForm = useForm<z.infer<typeof updateStateStatusSchema>>({
@@ -263,7 +272,60 @@ export default function AdminLicensesPage() {
     }));
   }, [licenses]);
 
-  // Mutação para atualização de status geral foi removida - agora só usamos atualização por estado
+  // Mutação para atualização de status geral
+  const updateGeneralStatusMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number, data: z.infer<typeof updateStatusSchema> }) => {
+      const formData = new FormData();
+      formData.append("status", data.status);
+      
+      if (data.comments) {
+        formData.append("comments", data.comments);
+      }
+      
+      if (data.licenseFile) {
+        formData.append("licenseFile", data.licenseFile);
+      }
+      
+      const response = await apiRequest("PATCH", `/api/admin/licenses/${id}/status`, formData);
+      return await response.json();
+    },
+    onSuccess: (updatedLicense) => {
+      toast({
+        title: "Status atualizado",
+        description: "Status geral da licença atualizado com sucesso!",
+      });
+      
+      setTimeout(() => {
+        // Limpar o formulário
+        generalStatusForm.reset({
+          status: "",
+          comments: "",
+          licenseFile: undefined,
+        });
+        
+        // Fechar o diálogo
+        setGeneralStatusDialogOpen(false);
+      }, 100);
+      
+      // Invalidar queries
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: [apiEndpoint] });
+        queryClient.invalidateQueries({ queryKey: [`${apiEndpoint}/${updatedLicense.id}`] });
+        queryClient.invalidateQueries({ queryKey: ['/api/licenses/issued'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
+        
+        // Forçar uma nova busca dos dados
+        refetch();
+      }, 300);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao atualizar status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
   
   // Atualizar status por estado da licença
   const updateStateStatusMutation = useMutation({
