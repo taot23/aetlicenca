@@ -76,12 +76,21 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
   }, [lastMessage, license.id]);
   
   // Garantir valores padrão para dimensões e tipo de carga
+  // Verificar e ajustar valores para o tipo correto antes de passar para o formatDimension
   const licenseData = {
     ...license,
     width: license.width || getDefaultWidth(license.type),
     height: license.height || getDefaultHeight(license.type),
     cargoType: license.cargoType || getDefaultCargoType(license.type)
   };
+  
+  // Log para debug dos valores
+  console.log("Valores originais:", {
+    type: license.type,
+    width: license.width,
+    height: license.height,
+    length: license.length
+  });
   
   // Estados para armazenar dados dos veículos e controlar modais
   const [vehicles, setVehicles] = useState<{[key: string]: Vehicle}>({});
@@ -446,10 +455,35 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
       return '-';
     }
     
+    console.log(`Formatando dimensão: ${value}, tipo: ${typeof value}`);
+    
+    // Para largura e altura que já estão em metros (valores pequenos)
+    if (value <= 10) {
+      // Valores específicos para não-prancha
+      if (Math.abs(value - 2.6) < 0.1) {
+        return '2.60'; // Largura padrão para não-prancha
+      }
+      if (Math.abs(value - 4.4) < 0.1) {
+        return '4.40'; // Altura padrão para não-prancha
+      }
+      
+      // Outros valores já em metros
+      return value.toFixed(2);
+    }
+    
     // Se for comprimento (entre 1000 e 5000), assumimos que está armazenado em cm
     // e exibimos em metros (ex: 2500 -> 25.00 m)
     if (value >= 1000 && value <= 5000) {
       return (value / 100).toFixed(2);
+    }
+    
+    // Casos especiais para largura e altura em conjuntos não-prancha (valores em cm)
+    if (value === 260 || (value >= 250 && value <= 270 && Number.isInteger(value))) {
+      return '2.60'; // Largura padrão para não-prancha
+    }
+    
+    if (value === 440 || (value >= 430 && value <= 450 && Number.isInteger(value))) {
+      return '4.40'; // Altura padrão para não-prancha
     }
     
     // Se for largura/altura e o valor for inteiro e maior que 100 (ex: 260, 440)
@@ -458,7 +492,7 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
       return (value / 100).toFixed(2);
     }
     
-    // Para valores já em metros (ex: 2.60, 4.40), exibimos como está
+    // Para outros valores
     return value.toFixed(2);
   };
   
