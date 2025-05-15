@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   Loader2, Search, FileText, CheckCircle, XCircle, File, Clock, 
-  MapPin, X, UploadCloud, Pencil, AlertCircle, Eye, EyeOff, Trash2 
+  MapPin, X, UploadCloud, Pencil, AlertCircle, Eye, EyeOff, Trash2, Edit 
 } from "lucide-react";
 import {
   AlertDialog,
@@ -505,7 +505,28 @@ export default function AdminLicensesPage() {
       }
     });
 
-  // Função removida pois o status agora só será editado por estado individual
+  // Função para lidar com a edição do status geral
+  const handleEditGeneralStatus = () => {
+    if (!selectedLicense) return;
+    
+    generalStatusForm.reset({
+      status: selectedLicense.status || "pending_registration",
+      comments: "",
+      licenseFile: undefined,
+    });
+    
+    setGeneralStatusDialogOpen(true);
+  };
+  
+  // Função para lidar com o envio do formulário de status geral
+  const onSubmitGeneralStatus = (data: z.infer<typeof updateStatusSchema>) => {
+    if (!selectedLicense) return;
+    
+    updateGeneralStatusMutation.mutate({
+      id: selectedLicense.id,
+      data,
+    });
+  };
 
   const handleViewDetails = (license: LicenseRequest) => {
     console.log("Detalhes da licença:", license);
@@ -1074,7 +1095,121 @@ export default function AdminLicensesPage() {
         </div>
       </div>
 
-      {/* O diálogo para atualizar status foi removido pois o status agora só é editado por estado individual */}
+      {/* Diálogo para atualizar status geral */}
+      <Dialog open={generalStatusDialogOpen} onOpenChange={setGeneralStatusDialogOpen}>
+        <DialogContent className="w-full max-w-md mx-auto overflow-y-auto max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Editar Status Geral da Licença</DialogTitle>
+            <DialogDescription>
+              Atualize o status geral da licença
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
+            <h4 className="font-medium text-sm mb-2">Guia de Fluxo de Status:</h4>
+            <ul className="text-sm space-y-1">
+              <li><span className="font-semibold">Pedido em Cadastramento:</span> Status inicial do pedido</li>
+              <li><span className="font-semibold">Cadastro em Andamento:</span> Em fase de edição pelo usuário</li>
+              <li><span className="font-semibold">Reprovado:</span> Com justificativa de pendências</li>
+              <li><span className="font-semibold">Análise do Órgão:</span> Em avaliação oficial</li>
+              <li><span className="font-semibold">Pendente Liberação:</span> Aguardando aprovação final</li>
+              <li><span className="font-semibold">Liberada:</span> Licença aprovada com documento disponível</li>
+              <li><span className="font-semibold">Cancelado:</span> Licença cancelada pelo cliente ou pelo sistema</li>
+            </ul>
+          </div>
+          <Form {...generalStatusForm}>
+            <form onSubmit={generalStatusForm.handleSubmit(onSubmitGeneralStatus)} className="space-y-6">
+              <FormField
+                control={generalStatusForm.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="pending_registration">Pedido em Cadastramento</SelectItem>
+                        <SelectItem value="registration_in_progress">Cadastro em Andamento</SelectItem>
+                        <SelectItem value="rejected">Reprovado</SelectItem>
+                        <SelectItem value="under_review">Análise do Órgão</SelectItem>
+                        <SelectItem value="pending_approval">Pendente Liberação</SelectItem>
+                        <SelectItem value="approved">Liberada</SelectItem>
+                        <SelectItem value="canceled">Cancelado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={generalStatusForm.control}
+                name="comments"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Comentários</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Adicione comentários sobre a mudança de status"
+                        className="min-h-[80px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={generalStatusForm.control}
+                name="licenseFile"
+                render={({ field: { value, onChange, ...field } }) => (
+                  <FormItem>
+                    <FormLabel>Arquivo da Licença (PDF)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) onChange(file);
+                        }}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Envie um arquivo PDF com a licença.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="flex justify-end space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setGeneralStatusDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updateGeneralStatusMutation.isPending}
+                >
+                  {updateGeneralStatusMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Salvar
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       {/* Diálogo para atualizar status por estado */}
       <Dialog open={stateStatusDialogOpen} onOpenChange={setStateStatusDialogOpen}>
@@ -1418,7 +1553,18 @@ export default function AdminLicensesPage() {
                 <h4 className="font-medium text-sm mb-2">Fluxo de Progresso da Licença:</h4>
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-sm font-medium text-gray-500">Status atual:</div>
-                  <StatusBadge status={selectedLicense.status} licenseId={selectedLicense.id} />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={selectedLicense.status} licenseId={selectedLicense.id} />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-7 px-2 text-xs"
+                      onClick={handleEditGeneralStatus}
+                    >
+                      <Edit className="h-3 w-3 mr-1" />
+                      Alterar Status Geral
+                    </Button>
+                  </div>
                 </div>
                 <ProgressFlow 
                   currentStatus={selectedLicense.status} 
