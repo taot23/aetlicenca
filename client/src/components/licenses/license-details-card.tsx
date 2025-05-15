@@ -480,18 +480,29 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
     
     // Para largura e altura que já estão em metros (valores pequenos)
     if (value <= 10) {
+      // Verificar se é tipo prancha
+      if (licenseData && licenseData.type === 'flatbed') {
+        // Largura padrão para prancha (3.20m)
+        if (Math.abs(value - 3.2) < 0.3) {
+          return '3.20'; 
+        }
+        // Altura padrão para prancha (4.95m)
+        if (Math.abs(value - 4.95) < 0.3) {
+          return '4.95'; 
+        }
+      }
       // Valores específicos para bitrem, rodotrem ou romeu e julieta
-      if (licenseData && isBitremRodotrainRomeuType(licenseData.type)) {
-        // Largura padrão fixa para combinações especiais
+      else if (licenseData && isBitremRodotrainRomeuType(licenseData.type)) {
+        // Largura padrão fixa para combinações especiais (2.60m)
         if (Math.abs(value - 2.6) < 0.2) {
           return '2.60'; 
         }
-        // Altura padrão fixa para combinações especiais
+        // Altura padrão fixa para combinações especiais (4.40m)
         if (Math.abs(value - 4.4) < 0.2) {
           return '4.40'; 
         }
       }
-      // Valores específicos para não-prancha
+      // Valores específicos para outros tipos não-prancha
       else if (Math.abs(value - 2.6) < 0.2) {
         return '2.60'; // Largura padrão para não-prancha
       }
@@ -509,22 +520,47 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
       return (value / 100).toFixed(2);
     }
     
-    // Casos especiais para largura e altura em conjuntos não-prancha (valores em cm)
+    // Casos especiais para largura e altura em valores em centímetros
+    
+    // Para pranchas: valores específicos
+    if (licenseData && licenseData.type === 'flatbed') {
+      // Largura padrão para prancha (320cm)
+      if (value === 320 || (value >= 310 && value <= 330)) {
+        return '3.20';
+      }
+      // Altura padrão para prancha (495cm)
+      if (value === 495 || (value >= 490 && value <= 500)) {
+        return '4.95';
+      }
+    }
+    
+    // Para outros tipos: valores padrão de conjuntos não-prancha
+    // Largura padrão para não-prancha (260cm)
     if (value === 260 || (value >= 250 && value <= 270)) {
-      return '2.60'; // Largura padrão para não-prancha
+      return '2.60';
     }
-    
+    // Altura padrão para não-prancha (440cm)
     if (value === 440 || (value >= 430 && value <= 450)) {
-      return '4.40'; // Altura padrão para não-prancha
+      return '4.40';
     }
     
-    // Verificação especial para valores 3 e 4 (inteiros) que devem ser 2.60 e 4.40
+    // Verificação para valores inteiros arredondados
     if (value === 3) {
-      return '2.60'; // Corrigir valores arredondados
+      // Se for prancha, considerar como 3.20
+      if (licenseData && licenseData.type === 'flatbed') {
+        return '3.20';
+      }
+      // Outros casos, é 2.60 arredondado
+      return '2.60';
     }
     
-    if (value === 4) {
-      return '4.40'; // Corrigir valores arredondados
+    if (value === 4 || value === 5) {
+      // Se for prancha, considerar como 4.95
+      if (licenseData && licenseData.type === 'flatbed') {
+        return '4.95';
+      }
+      // Outros casos, é 4.40 arredondado
+      return '4.40';
     }
     
     // Se for largura/altura e o valor for inteiro e maior que 100 (ex: 260, 440)

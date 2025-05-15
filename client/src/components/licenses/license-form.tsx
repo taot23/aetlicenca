@@ -159,7 +159,7 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
       }
     }
     
-    // Para não-prancha, manter valores originais em float para largura e altura
+    // Verificar se é prancha ou não para definir valores padrão diferentes
     if (!isPrancha) {
       console.log("[RENOVAÇÃO] Mantendo valores originais conforme solicitado, sem conversão:");
       // Para não-prancha, forçar os valores padrão como float com duas casas decimais
@@ -175,16 +175,18 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
       requestData.isRenewal = true;
       requestData.skipDimensionValidation = true;
     } else {
-      // Para prancha, converter normalmente
-      // Largura
-      if (typeof requestData.width === 'number' && requestData.width < 100) {
-        requestData.width = requestData.width * 100;
-      }
+      console.log("[RENOVAÇÃO] Definindo valores para prancha:");
+      // Para prancha, utilizar os valores padrão específicos para prancha
+      requestData.width = parseFloat("3.20");  // Valor padrão para prancha (3,20m)
+      requestData.height = parseFloat("4.95"); // Valor padrão para prancha (4,95m)
       
-      // Altura
-      if (typeof requestData.height === 'number' && requestData.height < 100) {
-        requestData.height = requestData.height * 100;
-      }
+      console.log(`[RENOVAÇÃO] Definindo largura e altura para valores padrão de prancha:`);
+      console.log(`  - Largura: ${requestData.width.toFixed(2)}`);
+      console.log(`  - Altura: ${requestData.height.toFixed(2)}`);
+      
+      // Adicionar parâmetros para indicar que são valores em metros (não centímetros)
+      requestData.isRenewal = true;
+      requestData.skipDimensionValidation = true;
     }
     
     // Transformar em request normal (não draft)
