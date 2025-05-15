@@ -1625,6 +1625,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Valores padrão baseados no tipo de licença - prancha tem limites diferentes
       const isPrancha = licenseData.type === "flatbed";
       
+      // Verificar se é um tipo especial (bitrem, rodotrem, romeu e julieta)
+      const isBitremType = isBitremRodotrainRomeuType(licenseData.type);
+      
       // Verificar se é um pedido de renovação com rascunho que deve ser excluído
       // Declarar a variável aqui para que ela tenha escopo em toda a função
       let draftToDeleteId: number | null = null;

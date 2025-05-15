@@ -1137,7 +1137,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     // Pular as conversões para renovações
     if (!isRenewal) {
       // Verificar se é tipo específico para forçar as dimensões padrão
-      const isSpecialType = isBitremRodotrainRomeuType(licenseType);
+      const isBitremType = isBitremRodotrainRomeuType(licenseType);
       
       if (length > 100) {
         const convertedLength = length / 100;
@@ -1146,7 +1146,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       }
       
       // Para tipos especiais, forçar largura padrão
-      if (isSpecialType) {
+      if (isBitremType) {
         form.setValue('width', 2.60);
         console.log(`Aplicando largura padrão de 2.60m para ${licenseType}`);
       }
@@ -1157,7 +1157,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       }
       
       // Para tipos especiais, forçar altura padrão
-      if (isSpecialType) {
+      if (isBitremType) {
         form.setValue('height', 4.40);
         console.log(`Aplicando altura padrão de 4.40m para ${licenseType}`);
       }
