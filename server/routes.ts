@@ -1792,9 +1792,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log("Carga superdimensionada: sem limite de dimensões");
               // Não precisa fazer nenhuma validação
             } else {
-              console.log("Prancha normal: máximo 25m, sem mínimo");
+              console.log("Prancha normal: máximo 25m, largura máxima 3.20m, altura máxima 4.95m");
               if (licenseData.length > 2500) { // centímetros
                 return res.status(400).json({ message: "O comprimento máximo para prancha é de 25,00 metros" });
+              }
+              if (licenseData.width > 320) { // centímetros
+                return res.status(400).json({ message: "A largura máxima para prancha é de 3,20 metros" });
+              }
+              if (licenseData.height > 495) { // centímetros
+                return res.status(400).json({ message: "A altura máxima para prancha é de 4,95 metros" });
               }
             }
           } else {
@@ -1821,17 +1827,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let widthValue = licenseData.width;
       let heightValue = licenseData.height;
       
+      // Verificar se é prancha ou outro tipo de veículo para aplicar os valores padrão corretos
+      if (licenseData.type === 'flatbed') {
+        // Para pranchas, os padrões são 3.20m de largura e 4.95m de altura
+        // Se está em formato decimal (3.20), converter para inteiro em centímetros (320)
+        if (typeof widthValue === 'number' && widthValue < 10) {
+          widthValue = 320; // 3.20 metros em centímetros
+          console.log(`Convertendo largura para prancha: ${widthValue}cm (3.20m)`);
+        }
+        
+        if (typeof heightValue === 'number' && heightValue < 10) {
+          heightValue = 495; // 4.95 metros em centímetros
+          console.log(`Convertendo altura para prancha: ${heightValue}cm (4.95m)`);
+        }
+      }
       // Se for um tipo de veículo especial (rodotrem, bitrem, romeu e julieta), garantir valores fixos
-      if (isBitremRodotrainRomeuType(licenseData.type)) {
+      else if (isBitremRodotrainRomeuType(licenseData.type)) {
         // Se está em formato decimal (2.60), converter para inteiro em centímetros (260)
         if (typeof widthValue === 'number' && widthValue < 10) {
           widthValue = 260; // 2.60 metros em centímetros
-          console.log(`Convertendo largura para formato de centímetros: ${widthValue}`);
+          console.log(`Convertendo largura para combinação especial: ${widthValue}cm (2.60m)`);
         }
         
         if (typeof heightValue === 'number' && heightValue < 10) {
           heightValue = 440; // 4.40 metros em centímetros
-          console.log(`Convertendo altura para formato de centímetros: ${heightValue}`);
+          console.log(`Convertendo altura para combinação especial: ${heightValue}cm (4.40m)`);
         }
       }
       
