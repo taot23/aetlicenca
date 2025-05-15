@@ -1304,14 +1304,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`Convertendo altura de cm para metros: ${licenseData.height}`);
             }
             
-            // Forçar valor padrão para não-pranchas
-            if (!isPranchaType) {
+            // Forçar valor padrão para rodotrem, bitrem e romeu e julieta
+            if (isBitremRodotrainRomeuType(licenseData.type)) {
+              licenseData.height = 4.40;
+              console.log(`Forçando valor 4.40m para altura de ${licenseData.type}: ${licenseData.height}`);
+            } 
+            // Forçar valor padrão para outros tipos não-prancha
+            else if (!isPranchaType) {
               licenseData.height = 4.40;
               console.log(`Forçando valor padrão para altura não-prancha: ${licenseData.height}`);
             }
             
-            // Forçar valor padrão para não-pranchas
-            if (!isPranchaType) {
+            // Forçar valor padrão para rodotrem, bitrem e romeu e julieta
+            if (isBitremRodotrainRomeuType(licenseData.type)) {
+              licenseData.width = 2.60;
+              console.log(`Forçando valor 2.60m para largura de ${licenseData.type}: ${licenseData.width}`);
+            } 
+            // Forçar valor padrão para outros tipos não-prancha
+            else if (!isPranchaType) {
               licenseData.width = 2.60;
               console.log(`Forçando valor padrão para largura não-prancha: ${licenseData.width}`);
             }
@@ -1471,12 +1481,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Sanitizar campos de dimensões e tipo de carga
         if (licenseData.width === undefined || licenseData.width === null) {
           // Valores padrão com base no tipo de licença
-          licenseData.width = licenseData.type === "flatbed" ? 320 : 260; // 3.20m ou 2.60m
+          if (licenseData.type === "flatbed") {
+            licenseData.width = 320; // 3.20m para prancha
+          } else if (isBitremRodotrainRomeuType(licenseData.type)) {
+            licenseData.width = 2.60; // 2.60m para bitrem/rodotrem/romeu e julieta
+            console.log(`Forçando valor 2.60m para largura de ${licenseData.type}: ${licenseData.width}`);
+          } else {
+            licenseData.width = 2.60; // 2.60m para outros
+          }
         }
         
         if (licenseData.height === undefined || licenseData.height === null) {
           // Valores padrão com base no tipo de licença
-          licenseData.height = licenseData.type === "flatbed" ? 495 : 440; // 4.95m ou 4.40m
+          if (licenseData.type === "flatbed") {
+            licenseData.height = 495; // 4.95m para prancha
+          } else if (isBitremRodotrainRomeuType(licenseData.type)) {
+            licenseData.height = 4.40; // 4.40m para bitrem/rodotrem/romeu e julieta
+            console.log(`Forçando valor 4.40m para altura de ${licenseData.type}: ${licenseData.height}`);
+          } else {
+            licenseData.height = 4.40; // 4.40m para outros
+          }
         }
         
         if (licenseData.cargoType === undefined || licenseData.cargoType === null || licenseData.cargoType === "") {
@@ -1659,17 +1683,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           // Garantir que é um número
           licenseData.width = Number(licenseData.width);
+          
           // Para não-pranchas, se o valor estiver no formato antigo (260), converter para decimal (2.60)
           if (!isPrancha && licenseData.width > 10) {
             licenseData.width = Number((licenseData.width / 100).toFixed(2));
             console.log(`Convertendo largura de cm para metros: ${licenseData.width}`);
           }
           
-          // Forçar valor padrão para não-pranchas
-          if (!isPrancha) {
+          // Forçar valor padrão para rodotrem, bitrem e romeu e julieta
+          if (isBitremRodotrainRomeuType(licenseData.type)) {
+            licenseData.width = 2.60;
+            console.log(`Forçando valor 2.60m para largura de ${licenseData.type}: ${licenseData.width}`);
+          }
+          // Forçar valor padrão para outros tipos não-prancha
+          else if (!isPrancha) {
             licenseData.width = 2.60;
             console.log(`Forçando valor padrão para largura não-prancha: ${licenseData.width}`);
           }
+          
           console.log(`Convertendo largura para número: ${licenseData.width}`);
         }
         
@@ -1680,17 +1711,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           // Garantir que é um número
           licenseData.height = Number(licenseData.height);
+          
           // Para não-pranchas, se o valor estiver no formato antigo (440), converter para decimal (4.40)
           if (!isPrancha && licenseData.height > 10) {
             licenseData.height = Number((licenseData.height / 100).toFixed(2));
             console.log(`Convertendo altura de cm para metros: ${licenseData.height}`);
           }
           
-          // Forçar valor padrão para não-pranchas
-          if (!isPrancha) {
+          // Forçar valor padrão para rodotrem, bitrem e romeu e julieta
+          if (isBitremRodotrainRomeuType(licenseData.type)) {
+            licenseData.height = 4.40;
+            console.log(`Forçando valor 4.40m para altura de ${licenseData.type}: ${licenseData.height}`);
+          } 
+          // Forçar valor padrão para outros tipos não-prancha
+          else if (!isPrancha) {
             licenseData.height = 4.40;
             console.log(`Forçando valor padrão para altura não-prancha: ${licenseData.height}`);
           }
+          
           console.log(`Convertendo altura para número: ${licenseData.height}`);
         }
       }
@@ -1896,8 +1934,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`Convertendo largura de cm para metros: ${licenseData.width}`);
           }
           
-          // Forçar valor padrão para não-pranchas
-          if (!isPrancha) {
+          // Forçar valor padrão para rodotrem, bitrem e romeu e julieta
+          if (isBitremRodotrainRomeuType(licenseData.type)) {
+            licenseData.width = 2.60;
+            console.log(`Forçando valor 2.60m para largura de ${licenseData.type}: ${licenseData.width}`);
+          } 
+          // Forçar valor padrão para outros tipos não-prancha
+          else if (!isPrancha) {
             licenseData.width = 2.60;
             console.log(`Forçando valor padrão para largura não-prancha: ${licenseData.width}`);
           }
@@ -1935,8 +1978,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`Convertendo altura de cm para metros: ${licenseData.height}`);
           }
           
-          // Forçar valor padrão para não-pranchas
-          if (!isPrancha) {
+          // Forçar valor padrão para rodotrem, bitrem e romeu e julieta
+          if (isBitremRodotrainRomeuType(licenseData.type)) {
+            licenseData.height = 4.40;
+            console.log(`Forçando valor 4.40m para altura de ${licenseData.type}: ${licenseData.height}`);
+          } 
+          // Forçar valor padrão para outros tipos não-prancha
+          else if (!isPrancha) {
             licenseData.height = 4.40;
             console.log(`Forçando valor padrão para altura não-prancha: ${licenseData.height}`);
           }
