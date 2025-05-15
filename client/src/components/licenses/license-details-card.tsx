@@ -434,14 +434,35 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
     }
   }, [isEditVehicleModalOpen]);
   
+  // Função para verificar se é um tipo bitrem, rodotrem ou romeu e julieta
+  function isBitremRodotrainRomeuType(type: string): boolean {
+    return type === 'bitrain_9_axles' || 
+           type === 'bitrain_7_axles' || 
+           type === 'bitrain_6_axles' || 
+           type === 'road_train' || 
+           type === 'romeu_e_julieta';
+  }
+  
   // Função para obter largura padrão baseada no tipo de licença
   function getDefaultWidth(type: string): number {
-    return type === "flatbed" ? 320 : 260; // 3.20m para prancha, 2.60m para demais
+    if (type === "flatbed") {
+      return 320; // 3.20m para prancha
+    } else if (isBitremRodotrainRomeuType(type)) {
+      return 2.60; // 2.60m para bitrem/rodotrem/romeu e julieta
+    } else {
+      return 2.60; // 2.60m para demais
+    }
   }
   
   // Função para obter altura padrão baseada no tipo de licença
   function getDefaultHeight(type: string): number {
-    return type === "flatbed" ? 495 : 440; // 4.95m para prancha, 4.40m para demais
+    if (type === "flatbed") {
+      return 495; // 4.95m para prancha
+    } else if (isBitremRodotrainRomeuType(type)) {
+      return 4.40; // 4.40m para bitrem/rodotrem/romeu e julieta
+    } else {
+      return 4.40; // 4.40m para demais
+    }
   }
   
   // Função para obter tipo de carga padrão baseado no tipo de licença
@@ -459,11 +480,20 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
     
     // Para largura e altura que já estão em metros (valores pequenos)
     if (value <= 10) {
+      // Valores específicos para bitrem, rodotrem ou romeu e julieta
+      if (licenseData && isBitremRodotrainRomeuType(licenseData.type)) {
+        if (Math.abs(value - 2.6) < 0.1) {
+          return '2.60'; // Largura padrão para combinações especiais
+        }
+        if (Math.abs(value - 4.4) < 0.1) {
+          return '4.40'; // Altura padrão para combinações especiais
+        }
+      }
       // Valores específicos para não-prancha
-      if (Math.abs(value - 2.6) < 0.1) {
+      else if (Math.abs(value - 2.6) < 0.1) {
         return '2.60'; // Largura padrão para não-prancha
       }
-      if (Math.abs(value - 4.4) < 0.1) {
+      else if (Math.abs(value - 4.4) < 0.1) {
         return '4.40'; // Altura padrão para não-prancha
       }
       
