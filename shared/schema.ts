@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, index, uniqueIndex, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -266,8 +266,8 @@ export const licenseRequests = pgTable("license_requests", {
   secondTrailerId: integer("second_trailer_id").references(() => vehicles.id),
   flatbedId: integer("flatbed_id").references(() => vehicles.id),
   length: integer("length").notNull(), // total length in cm
-  width: integer("width"), // width in cm
-  height: integer("height"), // height in cm
+  width: doublePrecision("width"), // width in meters with decimal points
+  height: doublePrecision("height"), // height in meters with decimal points
   cargoType: text("cargo_type"), // tipo de carga (union de nonFlatbedCargoType e flatbedCargoType)
   additionalPlates: text("additional_plates").array(), // Lista de placas adicionais 
   additionalPlatesDocuments: text("additional_plates_documents").array(), // URLs dos documentos das placas adicionais
