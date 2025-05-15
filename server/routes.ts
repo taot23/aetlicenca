@@ -202,6 +202,15 @@ const broadcastMessage = (message: WSMessage) => {
   });
 };
 
+// Função para verificar se é um tipo bitrem, rodotrem ou romeu e julieta
+function isBitremRodotrainRomeuType(type: string): boolean {
+  return type === 'bitrain_9_axles' || 
+         type === 'bitrain_7_axles' || 
+         type === 'bitrain_6_axles' || 
+         type === 'road_train' || 
+         type === 'romeu_e_julieta';
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
