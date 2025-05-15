@@ -2,18 +2,18 @@ export const BrazilMapIcon = ({ className }: { className?: string }) => {
   return (
     <svg 
       xmlns="http://www.w3.org/2000/svg" 
-      viewBox="0 0 24 24"
+      viewBox="0 0 400 400"
       width="20" 
       height="20" 
       fill="none" 
       stroke="currentColor" 
-      strokeWidth="1.5" 
+      strokeWidth="8" 
       strokeLinecap="round" 
       strokeLinejoin="round"
       className={className}
     >
-      {/* Simplified outline of Brazil */}
-      <path d="M7,5.5 C7,5.5 9,4 10.5,4 C12,4 13,4.5 14,5 C15,5.5 16.5,5.5 17,6.5 C17.5,7.5 18,9 18,9 L19,10 L20,12 L19,14 L18.5,16 L17,17.5 L14,19 L12,19.5 L10,19 L8,18.5 L6,17 L5,15 L4.5,13 L5,11 L5.5,9 L6,7 L7,5.5 Z" />
+      {/* Brazil map outline based on provided image */}
+      <path d="M109,77 L88,84 L75,103 L61,93 L54,102 L61,115 L56,133 L72,143 L75,163 L93,177 L91,193 L103,209 L119,210 L125,225 L144,231 L135,248 L147,253 L156,247 L168,253 L190,256 L208,250 L226,257 L242,275 L280,300 L308,270 L335,255 L340,234 L326,219 L312,216 L299,199 L304,180 L293,166 L325,136 L326,98 L307,74 L269,56 L236,61 L219,54 L211,61 L185,53 L144,60 L129,72 L109,77 Z" />
     </svg>
   );
 };
