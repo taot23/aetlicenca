@@ -175,16 +175,25 @@ export async function submitRenewalRequest(draftId: number, formData: any) {
       requestData.isRenewal = true;
       requestData.skipDimensionValidation = true;
     } else {
-      console.log("[RENOVAÇÃO] Definindo valores para prancha:");
-      // Para prancha, utilizar os valores padrão específicos para prancha
-      requestData.width = parseFloat("3.20");  // Valor padrão para prancha (3,20m)
-      requestData.height = parseFloat("4.95"); // Valor padrão para prancha (4,95m)
+      console.log("[RENOVAÇÃO] Para prancha, manteremos os valores originais (sem valores padronizados):");
       
-      console.log(`[RENOVAÇÃO] Definindo largura e altura para valores padrão de prancha:`);
-      console.log(`  - Largura: ${requestData.width.toFixed(2)}`);
-      console.log(`  - Altura: ${requestData.height.toFixed(2)}`);
+      // Para pranchas, manter os valores originais se disponíveis, ou usar valores do draft
+      // Se não houver valores definidos, deixar como estão para serem preenchidos pelo usuário
+      if (draft) {
+        if (draft.width) {
+          // Se o valor estiver em centímetros, converter para metros
+          requestData.width = draft.width > 100 ? draft.width / 100 : draft.width;
+          console.log(`  - Utilizando largura do rascunho: ${requestData.width.toFixed(2)}m`);
+        }
+        
+        if (draft.height) {
+          // Se o valor estiver em centímetros, converter para metros
+          requestData.height = draft.height > 100 ? draft.height / 100 : draft.height;
+          console.log(`  - Utilizando altura do rascunho: ${requestData.height.toFixed(2)}m`);
+        }
+      }
       
-      // Adicionar parâmetros para indicar que são valores em metros (não centímetros)
+      // Sempre marcar como renovação para tratamento especial
       requestData.isRenewal = true;
       requestData.skipDimensionValidation = true;
     }

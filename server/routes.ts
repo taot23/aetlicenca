@@ -1827,18 +1827,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let widthValue = licenseData.width;
       let heightValue = licenseData.height;
       
-      // Verificar se é prancha ou outro tipo de veículo para aplicar os valores padrão corretos
+      // Para pranchas, manter os valores originais conforme informados pelo usuário
+      // Apenas converter para centímetros se necessário
       if (licenseData.type === 'flatbed') {
-        // Para pranchas, os padrões são 3.20m de largura e 4.95m de altura
-        // Se está em formato decimal (3.20), converter para inteiro em centímetros (320)
+        // Para pranchas, apenas converter de metros para centímetros quando necessário
         if (typeof widthValue === 'number' && widthValue < 10) {
-          widthValue = 320; // 3.20 metros em centímetros
-          console.log(`Convertendo largura para prancha: ${widthValue}cm (3.20m)`);
+          // Se está em formato decimal (ex: 2.60), converter para inteiro em centímetros (260)
+          widthValue = widthValue * 100;
+          console.log(`Convertendo largura de metros para centímetros: ${widthValue}cm`);
         }
         
         if (typeof heightValue === 'number' && heightValue < 10) {
-          heightValue = 495; // 4.95 metros em centímetros
-          console.log(`Convertendo altura para prancha: ${heightValue}cm (4.95m)`);
+          // Se está em formato decimal (ex: 4.40), converter para inteiro em centímetros (440)
+          heightValue = heightValue * 100;
+          console.log(`Convertendo altura de metros para centímetros: ${heightValue}cm`);
         }
       }
       // Se for um tipo de veículo especial (rodotrem, bitrem, romeu e julieta), garantir valores fixos
