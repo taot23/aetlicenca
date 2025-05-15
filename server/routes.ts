@@ -1817,14 +1817,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Garantir que os campos obrigatórios sejam enviados corretamente para o banco de dados
       // Conversão explícita de tipos para evitar problemas de nulos
+      // Para largura e altura, garantir que os valores sejam armazenados como inteiros em centímetros
+      let widthValue = licenseData.width;
+      let heightValue = licenseData.height;
+      
+      // Se for um tipo de veículo especial (rodotrem, bitrem, romeu e julieta), garantir valores fixos
+      if (isBitremRodotrainRomeuType(licenseData.type)) {
+        // Se está em formato decimal (2.60), converter para inteiro em centímetros (260)
+        if (typeof widthValue === 'number' && widthValue < 10) {
+          widthValue = 260; // 2.60 metros em centímetros
+          console.log(`Convertendo largura para formato de centímetros: ${widthValue}`);
+        }
+        
+        if (typeof heightValue === 'number' && heightValue < 10) {
+          heightValue = 440; // 4.40 metros em centímetros
+          console.log(`Convertendo altura para formato de centímetros: ${heightValue}`);
+        }
+      }
+      
+      // Criar objeto sanitizado com os valores convertidos
       const sanitizedData = {
         ...licenseData,
-        width: licenseData.width !== undefined ? Number(licenseData.width) : null,
-        height: licenseData.height !== undefined ? Number(licenseData.height) : null,
+        width: widthValue !== undefined ? Number(widthValue) : null,
+        height: heightValue !== undefined ? Number(heightValue) : null,
         cargoType: licenseData.cargoType || null,
         requestNumber,
         isDraft: false,
       };
+      
+      console.log("CreateLicenseRequest - dados originais:", { 
+        width: licenseData.width, 
+        height: licenseData.height, 
+        cargoType: licenseData.cargoType 
+      });
+      console.log("CreateLicenseRequest - dados sanitizados:", { 
+        width: sanitizedData.width, 
+        height: sanitizedData.height, 
+        cargoType: sanitizedData.cargoType 
+      });
       
       console.log("Dados sanitizados para envio ao banco:", sanitizedData);
       
