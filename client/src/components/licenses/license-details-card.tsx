@@ -446,12 +446,20 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
       return '-';
     }
     
-    // Verificar se o valor está em centímetros (>100) ou metros (<100)
-    const isInCentimeters = value > 100;
-    const valueInMeters = isInCentimeters ? value / 100 : value;
+    // Se for comprimento (entre 1000 e 5000), assumimos que está armazenado em cm
+    // e exibimos em metros (ex: 2500 -> 25.00 m)
+    if (value >= 1000 && value <= 5000) {
+      return (value / 100).toFixed(2);
+    }
     
-    // Formatar com 2 casas decimais
-    return valueInMeters.toFixed(2);
+    // Se for largura/altura e o valor for inteiro e maior que 100 (ex: 260, 440)
+    // assumimos que está em centímetros e convertemos para metros
+    if (value > 100) {
+      return (value / 100).toFixed(2);
+    }
+    
+    // Para valores já em metros (ex: 2.60, 4.40), exibimos como está
+    return value.toFixed(2);
   };
   
   // Função para obter o label do status
