@@ -556,12 +556,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     // Verificar se é tipo específico para forçar as dimensões padrão
-    const isSpecialType = isBitremRodotrainRomeuType(values.type);
+    const isBitremType = isBitremRodotrainRomeuType(values.type);
     
     // Para tipos especiais (bitrem, rodotrem, romeu e julieta), 
     // forçar valores padrão para largura e altura
-    const finalWidth = isSpecialType ? 2.6 : values.width;
-    const finalHeight = isSpecialType ? 4.4 : values.height;
+    const finalWidth = isBitremType ? 2.6 : values.width;
+    const finalHeight = isBitremType ? 4.4 : values.height;
     
     // Adjust dimensions from meters to centimeters for storage
     // Mantendo os valores como float (sem arredondar)
@@ -606,6 +606,8 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         
         // Garantir que temos valores válidos para campos obrigatórios
         const isPrancha = requestData.type === 'flatbed';
+        // Verificar se é tipo especial para validações
+        const isBitremType = isBitremRodotrainRomeuType(requestData.type);
         if (!requestData.cargoType) {
           requestData.cargoType = isPrancha ? 'indivisible_cargo' : 'dry_cargo';
         }
@@ -623,11 +625,11 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           requestData.width = 320; // 3.2m em centímetros para prancha
         }
         // Para tipos especiais (bitrem, rodotrem, romeu e julieta)
-        else if (isSpecialType) {
+        else if (isBitremType) {
           requestData.width = 2.60; // Forçar 2.60m como float para tipos especiais
         }
         // Para outros conjuntos que não são prancha
-        else if (!requestData.type !== 'flatbed') {
+        else if (requestData.type !== 'flatbed') {
           requestData.width = 2.60; // Forçar 2.60m como float para outros tipos
         }
         
@@ -636,7 +638,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           requestData.height = 495; // 4.95m em centímetros para prancha
         }
         // Altura para tipos especiais
-        else if (isSpecialType) {
+        else if (isBitremType) {
           requestData.height = 4.40; // Forçar 4.40m como float para tipos especiais
         }
         // Altura para outros conjuntos
@@ -1059,11 +1061,16 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
 
   // Função para verificar se é um tipo bitrem, rodotrem ou romeu e julieta
   function isBitremRodotrainRomeuType(type: string): boolean {
-    return type === 'bitrain_9_axles' || 
-           type === 'bitrain_7_axles' || 
-           type === 'bitrain_6_axles' || 
-           type === 'road_train' || 
-           type === 'romeu_e_julieta';
+    const isSpecial = type === 'bitrain_9_axles' || 
+                      type === 'bitrain_7_axles' || 
+                      type === 'bitrain_6_axles' || 
+                      type === 'road_train' || 
+                      type === 'romeu_e_julieta';
+    
+    // Para depuração
+    console.log(`Verificando tipo especial: ${type} => ${isSpecial ? 'É tipo especial' : 'Não é tipo especial'}`);
+    
+    return isSpecial;
   }
 
   // Função para validar dimensões com base no tipo de licença e carga
@@ -1071,6 +1078,9 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     // Obter o tipo de conjunto e de carga
     const licenseType = values.type || 'default';
     const cargoType = values.cargoType;
+    
+    // Verificar se é um tipo especial para forçar as dimensões padrão
+    const isBitremType = isBitremRodotrainRomeuType(licenseType);
     
     // Verificar e converter valores de dimensão se necessário
     // Se os valores estiverem em centímetros (acima de 100), converter para metros
