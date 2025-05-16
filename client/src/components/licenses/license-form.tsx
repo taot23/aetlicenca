@@ -982,16 +982,17 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     let limits;
     
     if (licenseType === 'flatbed') {
-      // Para pranchas, usar limite específico
-      limits = DIMENSION_LIMITS.flatbed;
+      // Para pranchas, verificar o tipo de carga
+      if (cargoType === 'oversized') {
+        // Para carga SUPERDIMENSIONADA em prancha, não há limites
+        limits = DIMENSION_LIMITS.oversized;
+      } else {
+        // Para outros tipos de carga em prancha, usar limite específico de prancha
+        limits = DIMENSION_LIMITS.flatbed;
+      }
     } else {
-      // Para outros tipos, usar limite padrão
+      // Para outros tipos de conjunto (não-prancha), usar limite padrão
       limits = DIMENSION_LIMITS.default;
-    }
-    
-    // Para carga SUPERDIMENSIONADA, não há limites
-    if (cargoType === 'oversized') {
-      limits = DIMENSION_LIMITS.oversized;
     }
     
     // Ajustar os valores no formulário se necessário (conversão de cm para m)
