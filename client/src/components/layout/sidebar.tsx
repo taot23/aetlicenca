@@ -79,8 +79,8 @@ export function Sidebar({ className }: SidebarProps) {
           </Button>
         )}
         
-        {/* Minhas Empresas é visível apenas para usuários não-administrativos */}
-        {!isOperational && (
+        {/* Minhas Empresas é visível apenas para usuários com cargos administrativos (supervisor, operational, admin) */}
+        {(isSupervisor || isOperational) && (
           <Button
             variant="ghost"
             className={cn(
