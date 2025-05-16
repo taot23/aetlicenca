@@ -495,20 +495,26 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         }
         
         // Atualizar textos descritivos para as dimensões
-        const lengthDesc = currentType === 'flatbed' && currentCargoType === 'oversized'
-          ? 'Digite o comprimento em metros (sem limite para carga superdimensionada)'
+        // Função para verificar se é um tipo de carga que não mostra limites
+        const isNoLimitDisplay = (type: string | undefined, cargo: string | undefined) => {
+          return type === 'flatbed' && 
+                 (cargo === 'oversized' || cargo === 'indivisible_cargo' || cargo === 'agricultural_machinery');
+        };
+        
+        const lengthDesc = isNoLimitDisplay(currentType, currentCargoType)
+          ? 'Digite o comprimento em metros'
           : currentType === 'flatbed'
             ? `Digite o comprimento em metros (max: ${limits.maxLength.toFixed(2).replace('.', ',')})`
             : `Digite o comprimento em metros (min: ${limits.minLength.toFixed(2).replace('.', ',')} - max: ${limits.maxLength.toFixed(2).replace('.', ',')})`;
             
-        const widthDesc = currentType === 'flatbed' && currentCargoType === 'oversized'
-          ? 'Informe a largura total do conjunto em metros (sem limite para carga superdimensionada)'
+        const widthDesc = isNoLimitDisplay(currentType, currentCargoType)
+          ? 'Informe a largura total do conjunto em metros'
           : currentType === 'flatbed'
             ? `Informe a largura total do conjunto em metros (max: ${limits.maxWidth.toFixed(2).replace('.', ',')})`
             : `Informe a largura total do conjunto em metros (max: ${limits.maxWidth.toFixed(2).replace('.', ',')})`;
             
-        const heightDesc = currentType === 'flatbed' && currentCargoType === 'oversized'
-          ? 'Informe a altura total do conjunto em metros (sem limite para carga superdimensionada)'
+        const heightDesc = isNoLimitDisplay(currentType, currentCargoType)
+          ? 'Informe a altura total do conjunto em metros'
           : currentType === 'flatbed'
             ? `Informe a altura total do conjunto em metros (max: ${limits.maxHeight.toFixed(2).replace('.', ',')})`
             : `Informe a altura total do conjunto em metros (max: ${limits.maxHeight.toFixed(2).replace('.', ',')})`;
