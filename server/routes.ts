@@ -787,26 +787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Se houver transportadores associados, buscar rascunhos por transporterId também
         if (transporterIds.length > 0) {
-          // Vamos realizar uma consulta alternativa para entender o que está acontecendo
-          // Não vamos usar os resultados desta consulta, apenas para log
-          const directQuery = await db.execute(sql`
-            SELECT id, user_id, transporter_id, is_draft, status
-            FROM license_requests
-            WHERE is_draft = true AND (user_id = ${user.id} OR transporter_id = ANY(${transporterIds}))
-          `);
-          
-          console.log(`[DEBUG SQL] Consulta direta SQL retornou:`, directQuery.rows);
-          
-          // Vamos verificar também todas as licenças para debug
-          const allLicensesQuery = await db.execute(sql`
-            SELECT id, user_id, transporter_id, is_draft, status
-            FROM license_requests
-            WHERE (user_id = ${user.id} OR transporter_id = ANY(${transporterIds}))
-            ORDER BY id DESC
-            LIMIT 10
-          `);
-          
-          console.log(`[DEBUG SQL] Consulta para todas licenças (limitada a 10):`, allLicensesQuery.rows);
+          // Realizamos consultas direto pelo Drizzle ORM para evitar problemas com os parâmetros
           
           // Ainda mantém a consulta original pelo Drizzle ORM
           rascunhosNoBanco = await db.select()
