@@ -353,26 +353,9 @@ export default function IssuedLicensesPage() {
 
   return (
     <MainLayout>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Licenças Emitidas</h1>
-          <p className="text-gray-600 mt-1">Histórico de todas as licenças liberadas</p>
-        </div>
-        <Button 
-          variant="outline" 
-          size="sm"
-          className="flex items-center gap-1"
-          onClick={() => {
-            refetch();
-            toast({
-              title: "Atualizado",
-              description: "Os dados foram atualizados com sucesso.",
-            });
-          }}
-        >
-          <FileDown className="h-4 w-4" />
-          Atualizar
-        </Button>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Licenças Emitidas</h1>
+        <p className="text-gray-600 mt-1">Histórico de todas as licenças liberadas</p>
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow mb-6">

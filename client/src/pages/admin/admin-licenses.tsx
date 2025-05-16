@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useWebSocketContext } from "@/hooks/use-websocket-context";
 import { AdminLayout } from "@/components/layout/admin-layout";
@@ -15,8 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   Loader2, Search, FileText, CheckCircle, XCircle, File, Clock, 
-  MapPin, X, UploadCloud, Pencil, AlertCircle, Eye, EyeOff, Trash2,
-  FileDown
+  MapPin, X, UploadCloud, Pencil, AlertCircle, Eye, EyeOff, Trash2 
 } from "lucide-react";
 import {
   AlertDialog,
@@ -131,8 +130,9 @@ export default function AdminLicensesPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [transporterFilter, setTransporterFilter] = useState("");
+  const [transporterFilter, setTransporterFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
+  const [stateFilter, setStateFilter] = useState("all");
   const [selectedLicense, setSelectedLicense] = useState<LicenseRequest | null>(null);
   const [licenseDetailsOpen, setLicenseDetailsOpen] = useState(false);
   const [stateStatusDialogOpen, setStateStatusDialogOpen] = useState(false);
@@ -244,6 +244,24 @@ export default function AdminLicensesPage() {
       });
     },
   });
+  
+  // Buscar lista única de transportadores a partir das licenças carregadas
+  const uniqueTransporters = useMemo(() => {
+    const transporters = new Map<number, string>();
+    
+    // Primeiro identificar os IDs únicos de transportadores
+    licenses.forEach(license => {
+      if (license.transporterId) {
+        transporters.set(license.transporterId, `Transportador ID: ${license.transporterId}`);
+      }
+    });
+    
+    // Converter para array para uso no select
+    return Array.from(transporters.entries()).map(([id, name]) => ({
+      id,
+      name
+    }));
+  }, [licenses]);
 
   // Mutação para atualização de status geral foi removida - agora só usamos atualização por estado
   
@@ -361,8 +379,13 @@ export default function AdminLicensesPage() {
       const matchesStatus = !statusFilter || statusFilter === "all" || license.status === statusFilter;
       
       // Filtro de transportador
-      const matchesTransporter = !transporterFilter || transporterFilter === "all" || (
+      const matchesTransporter = transporterFilter === "all" || (
         license.transporterId != null && license.transporterId.toString() === transporterFilter
+      );
+      
+      // Filtro de estado
+      const matchesState = stateFilter === "all" || (
+        license.states && license.states.includes(stateFilter)
       );
       
       // Filtro de data
@@ -382,7 +405,7 @@ export default function AdminLicensesPage() {
         }
       }
       
-      return matchesSearch && matchesStatus && matchesTransporter && matchesDate;
+      return matchesSearch && matchesStatus && matchesTransporter && matchesState && matchesDate;
     })
     // Aplicar ordenação
     .sort((a, b) => {
@@ -586,26 +609,7 @@ export default function AdminLicensesPage() {
           <Card>
             <CardContent className="pt-4 px-3 md:pt-6 md:px-6">
               {/* Novo layout de pesquisa conforme mockup, similar ao da página "Acompanhar Licença" */}
-              <div className="flex justify-between items-center mb-5">
-                <div className="text-lg font-semibold">Lista de Licenças</div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="flex items-center gap-1"
-                  onClick={() => {
-                    refetch();
-                    toast({
-                      title: "Atualizado",
-                      description: "Os dados foram atualizados com sucesso.",
-                    });
-                  }}
-                >
-                  <FileDown className="h-4 w-4" />
-                  Atualizar
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-5">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4 mb-5">
                 <div>
                   <div className="flex flex-col space-y-1">
                     <Label htmlFor="license-search" className="text-sm">Pesquisar</Label>
@@ -643,6 +647,25 @@ export default function AdminLicensesPage() {
                 
                 <div>
                   <div className="flex flex-col space-y-1">
+                    <Label htmlFor="state-filter" className="text-sm">Estado</Label>
+                    <Select value={stateFilter} onValueChange={setStateFilter}>
+                      <SelectTrigger id="state-filter" className="h-9 text-sm">
+                        <SelectValue placeholder="Todos os estados" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os estados</SelectItem>
+                        {brazilianStates.map((state) => (
+                          <SelectItem key={state} value={state}>
+                            {state}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex flex-col space-y-1">
                     <Label htmlFor="date-filter" className="text-sm">Data</Label>
                     <Input
                       id="date-filter"
@@ -654,7 +677,7 @@ export default function AdminLicensesPage() {
                   </div>
                 </div>
                 
-                <div className="md:col-span-3">
+                <div className="md:col-span-4">
                   <div className="flex flex-col space-y-1">
                     <Label htmlFor="transporter-filter" className="text-sm">Transportador</Label>
                     <Select value={transporterFilter} onValueChange={setTransporterFilter}>
@@ -663,11 +686,16 @@ export default function AdminLicensesPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos os transportadores</SelectItem>
-                        {/* Aqui seria ideal ter uma lista de transportadores para selecionar */}
-                        {/* Como é um exemplo, adicionamos alguns valores genéricos */}
-                        <SelectItem value="1">Transportadora ABC Ltda</SelectItem>
-                        <SelectItem value="2">Transportes XYZ S.A.</SelectItem>
-                        <SelectItem value="3">Logística Express Ltda</SelectItem>
+                        {uniqueTransporters.map((transporter) => (
+                          <SelectItem key={transporter.id} value={transporter.id.toString()}>
+                            <div className="flex items-center">
+                              <TransporterInfo 
+                                transporterId={transporter.id} 
+                                compact={true}
+                              />
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

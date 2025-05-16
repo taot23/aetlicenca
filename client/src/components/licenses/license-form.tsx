@@ -286,15 +286,10 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           
           // Validar altura se estiver definida
           if (currentHeight !== undefined) {
-            // Verificar se os limites estão atualizados com o tipo correto
-            const heightLimit = currentType === 'flatbed' ? 
-              (currentCargoType === 'oversized' ? 999.99 : 4.95) : 
-              4.40;
-              
-            if (currentHeight > heightLimit) {
+            if (currentHeight > limits.maxHeight) {
               form.setError('height', { 
                 type: 'manual', 
-                message: `A altura máxima para este tipo de conjunto é ${heightLimit.toFixed(2).replace('.', ',')} metros` 
+                message: `A altura máxima para este tipo de conjunto é ${limits.maxHeight.toFixed(2).replace('.', ',')} metros` 
               });
             } else {
               form.clearErrors('height');
