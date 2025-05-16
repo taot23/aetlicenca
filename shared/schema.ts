@@ -317,12 +317,11 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
     length: z.coerce.number()
       .positive("O comprimento deve ser positivo")
       .superRefine((val, ctx) => {
-        console.log("Validando comprimento:", val, "tipo:", typeof val);
+        // Removendo todos os console.log de validação
         
         // Verificamos se estamos recebendo o valor em centímetros (>100) ou metros (<100)
         const isInCentimeters = val > 100;
         const valueInMeters = isInCentimeters ? val / 100 : val;
-        console.log("Valor em metros:", valueInMeters, "Está em centímetros:", isInCentimeters);
         
         // REMOVENDO TODAS AS VALIDAÇÕES PARA PRANCHAS (tipo "flatbed")
         if (ctx.data && (ctx.data as any).type === "flatbed") {
@@ -351,12 +350,11 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         path: ["width"]
       })
       .superRefine((val, ctx) => {
-        console.log("Validando largura:", val, "tipo:", typeof val);
+        // Removendo todos os console.logs de validação
         
         // Verificamos se estamos recebendo o valor em centímetros (>100) ou metros (<100)
         const isInCentimeters = val > 100;
         const valueInMeters = isInCentimeters ? val / 100 : val;
-        console.log("Largura em metros:", valueInMeters, "Está em centímetros:", isInCentimeters);
         
         // REMOVENDO TODAS AS VALIDAÇÕES PARA PRANCHAS (tipo "flatbed")
         if (ctx.data && (ctx.data as any).type === "flatbed") {
@@ -380,12 +378,11 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         path: ["height"]
       })
       .superRefine((val, ctx) => {
-        console.log("Validando altura:", val, "tipo:", typeof val);
+        // Removendo todos os console.logs de validação
         
         // Verificamos se estamos recebendo o valor em centímetros (>100) ou metros (<100)
         const isInCentimeters = val > 100;
         const valueInMeters = isInCentimeters ? val / 100 : val;
-        console.log("Altura em metros:", valueInMeters, "Está em centímetros:", isInCentimeters);
         
         // REMOVENDO TODAS AS VALIDAÇÕES PARA PRANCHAS (tipo "flatbed")
         if (ctx.data && (ctx.data as any).type === "flatbed") {

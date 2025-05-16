@@ -111,17 +111,8 @@ export function DimensionField({
     // Converter para float (para a validação em metros)
     const numericValue = sanitized === '' ? undefined : parseFloat(sanitized);
     
-    // Verificar se é um número válido e fazer log para debug
-    // Para veículos tipo "Prancha", não exibimos mensagens adicionais de validação
-    if (numericValue !== undefined) {
-      if (licenseType === 'flatbed') {
-        // Para Pranchas, apenas registrar o valor sem validação adicional
-        console.log(`Valor ${fieldType} para Prancha:`, numericValue);
-      } else {
-        // Para outros tipos de veículos, manter validação normal
-        console.log(`Validando ${fieldType}:`, numericValue, "tipo:", typeof numericValue);
-      }
-    }
+    // Remover todos os logs de validação para evitar mensagens de console
+    // Não fazer nenhuma validação adicional aqui
     
     // Atualizar o campo interno com o valor numérico (em metros)
     // O backend irá converter para centímetros durante o processamento
