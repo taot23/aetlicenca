@@ -210,8 +210,8 @@ export function Sidebar({ className }: SidebarProps) {
 
             {/* Botão de atualizar página */}
             <Button
-              variant="ghost"
-              className="w-full justify-start text-white hover:bg-gray-700 mt-4"
+              variant="outline"
+              className="w-full justify-start bg-white text-gray-800 hover:bg-gray-100 mt-4"
               onClick={() => {
                 window.location.reload();
               }}
