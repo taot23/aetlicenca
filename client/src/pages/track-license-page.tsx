@@ -184,9 +184,16 @@ export default function TrackLicensePage() {
       let matchesStatus = !statusFilter || statusFilter === "all_status";
       
       if (statusFilter && statusFilter !== "all_status") {
-        // Verificar status específico do estado primeiro, depois o status geral
-        matchesStatus = (license.specificStateStatus === statusFilter) || 
-                        (license.status === statusFilter);
+        // Para o status "Pedido em Cadastramento", verificar licenças sem status específico de estado
+        if (statusFilter === "pending_registration") {
+          // Licença sem status específico ou com status geral pending_registration
+          matchesStatus = (!license.specificStateStatus || license.specificStateStatus === "pending_registration") &&
+                        (!license.stateStatuses || license.stateStatuses.length === 0 || license.status === "pending_registration");
+        } else {
+          // Para outros status, verificar status específico do estado primeiro, depois o status geral
+          matchesStatus = (license.specificStateStatus === statusFilter) || 
+                         (license.status === statusFilter);
+        }
       }
       
       const matchesDate = !dateFilter || (
