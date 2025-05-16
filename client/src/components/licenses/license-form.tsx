@@ -902,12 +902,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   field={field}
                   fieldType="largura"
                   label="Largura do Conjunto (metros)"
-                  placeholder="Ex.: 2,60"
+                  placeholder={licenseType === 'flatbed' ? "Ex.: Qualquer valor" : "Ex.: 2,60"}
                   licenseType={licenseType}
                   cargoType={form.watch('cargoType')}
                   description={
                     licenseType === 'flatbed'
-                      ? 'Informe a largura total do conjunto em metros'
+                      ? 'Informe a largura total do conjunto em metros - sem limitações para Pranchas'
                       : 'Informe a largura total do conjunto em metros (max: 2,60)'
                   }
                 />
@@ -922,12 +922,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   field={field}
                   fieldType="altura"
                   label="Altura do Conjunto (metros)"
-                  placeholder="Ex.: 4,40"
+                  placeholder={licenseType === 'flatbed' ? "Ex.: Qualquer valor" : "Ex.: 4,40"}
                   licenseType={licenseType}
                   cargoType={form.watch('cargoType')}
                   description={
                     licenseType === 'flatbed'
-                      ? 'Informe a altura total do conjunto em metros'
+                      ? 'Informe a altura total do conjunto em metros - sem limitações para Pranchas'
                       : 'Informe a altura total do conjunto em metros (max: 4,40)'
                   }
                 />
