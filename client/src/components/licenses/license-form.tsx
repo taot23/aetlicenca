@@ -399,15 +399,28 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    // Solução final para prancha: se for prancha, preencher valores padrão
+    let adjustedValues = { ...values };
+    
+    if (values.type === 'flatbed') {
+      console.log("[DEBUG] Ajustando valores para pedido de prancha");
+      // Definir valores padrão para campos obrigatórios
+      if (!adjustedValues.flatbedId) adjustedValues.flatbedId = 999;
+      if (!adjustedValues.cargoType) adjustedValues.cargoType = "DIMENSIONADA";
+      if (!adjustedValues.length) adjustedValues.length = 20;
+      if (!adjustedValues.width) adjustedValues.width = 3;
+      if (!adjustedValues.height) adjustedValues.height = 4;
+    }
+    
     // Adjust dimensions from meters to centimeters for storage
     const dataToSubmit = {
-      ...values,
-      length: Math.round((values.length || 0) * 100), // Convert to centimeters
-      width: values.width ? Math.round(values.width * 100) : undefined, // Convert to centimeters if exists
-      height: values.height ? Math.round(values.height * 100) : undefined, // Convert to centimeters if exists
+      ...adjustedValues,
+      length: Math.round((adjustedValues.length || 0) * 100), // Convert to centimeters
+      width: adjustedValues.width ? Math.round(adjustedValues.width * 100) : undefined, // Convert to centimeters if exists
+      height: adjustedValues.height ? Math.round(adjustedValues.height * 100) : undefined, // Convert to centimeters if exists
     };
     
-    if (values.isDraft) {
+    if (adjustedValues.isDraft) {
       // Cast to appropriate types to satisfy TypeScript
       saveAsDraftMutation.mutate(dataToSubmit as any);
     } else {
@@ -417,7 +430,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       console.log('Enviando requisição:', requestData);
       
       // Garantir que o campo cargoType é válido antes de enviar
-      if (!requestData.cargoType) {
+      if (!requestData.cargoType && requestData.type !== 'flatbed') {
         console.error('Erro: cargoType não definido no envio final');
         toast({
           title: "Erro de validação",
