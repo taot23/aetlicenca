@@ -120,7 +120,6 @@ export function DimensionField({
       } else {
         // Para outros tipos de veículos, manter validação normal
         console.log(`Validando ${fieldType}:`, numericValue, "tipo:", typeof numericValue);
-        console.log(`Valor em metros:`, numericValue, "Está em centímetros:", false);
       }
     }
     
@@ -136,12 +135,16 @@ export function DimensionField({
     let cursorPos = e.target.selectionStart || 0;
     let valueChanged = false;
     
+    // Para veículos tipo "Prancha", aceitar valores maiores (até 8 caracteres)
+    // Para outros tipos, limitar a 5 caracteres
+    const maxLength = licenseType === 'flatbed' ? 8 : 5;
+    
     // Limitar a digitação apenas a números, vírgula e ponto
     value = value.replace(/[^\d.,]/g, '');
     
-    // Limitar a 5 caracteres no total (incluindo vírgula)
-    if (value.length > 5) {
-      value = value.substring(0, 5);
+    // Limitar ao número de caracteres definido (incluindo vírgula)
+    if (value.length > maxLength) {
+      value = value.substring(0, maxLength);
     }
     
     // Assegurar que só exista um separador decimal
