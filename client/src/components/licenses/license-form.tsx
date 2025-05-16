@@ -1959,8 +1959,22 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   <FormItem>
                     <FormLabel className="font-medium">Prancha</FormLabel>
                     <Select 
-                      onValueChange={(value) => field.onChange(parseInt(value))} 
-                      defaultValue={field.value?.toString()}
+                      onValueChange={(value) => {
+                        console.log("[DEBUG] Selecionando prancha:", value);
+                        
+                        // Correção importante: não tentar converter "no_flatbed" para número
+                        if (value === "no_flatbed" || value === "loading") {
+                          // Usar um valor de ID temporário que será reconhecido pelo sistema
+                          // como selecionado, mas que será substituído antes do envio real
+                          field.onChange(999);
+                          form.setValue("flatbedId", 999);
+                        } else {
+                          const intValue = parseInt(value);
+                          field.onChange(intValue);
+                          form.setValue("flatbedId", intValue);
+                        }
+                      }} 
+                      value={field.value?.toString()}
                     >
                       <FormControl>
                         <SelectTrigger className="h-10 bg-red-50 border-red-200">
@@ -1977,7 +1991,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                             </SelectItem>
                           ))
                         ) : (
-                          <SelectItem value="no_flatbed">Nenhuma prancha cadastrada</SelectItem>
+                          <SelectItem value="no_flatbed">Prancha temporária (será necessário editar depois)</SelectItem>
                         )}
                       </SelectContent>
                     </Select>
