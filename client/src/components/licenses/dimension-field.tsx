@@ -95,10 +95,17 @@ export function DimensionField({
     // Sanitizar para o modelo interno (sempre com ponto)
     const sanitized = value.replace(/,/g, '.').replace(/(\..*)\./g, '$1');
     
-    // Converter para float (para o backend)
+    // Converter para float (para a validação em metros)
     const numericValue = sanitized === '' ? undefined : parseFloat(sanitized);
     
-    // Atualizar o campo interno com o valor numérico
+    // Verificar se é um número válido e fazer log para debug
+    if (numericValue !== undefined) {
+      console.log(`Validando ${fieldType}:`, numericValue, "tipo:", typeof numericValue);
+      console.log(`Valor em metros:`, numericValue, "Está em centímetros:", false);
+    }
+    
+    // Atualizar o campo interno com o valor numérico (em metros)
+    // O backend irá converter para centímetros durante o processamento
     field.onChange(numericValue);
   }
 
