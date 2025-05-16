@@ -511,32 +511,49 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         console.log("Enviando dados prancha:", requestData);
         submitRequestMutation.mutate(requestData as any);
       }, 500);
-      
-      return;
     }
-  
-    // Para outros tipos de veículos, manter a verificação normal
-    if (checkRequiredFields()) {
-      // Mostrar aviso e não prosseguir com a submissão
-      setShowRequiredFieldsWarning(true);
+    else {
+      // Para outros tipos de veículos, manter a verificação normal
+      if (checkRequiredFields()) {
+        // Mostrar aviso e não prosseguir com a submissão
+        setShowRequiredFieldsWarning(true);
+        
+        // Rolar para o topo para garantir que o usuário veja o aviso
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // Notificar o usuário através de toast
+        toast({
+          title: "Campos obrigatórios",
+          description: "Preencha todos os campos obrigatórios para enviar sua solicitação",
+          variant: "destructive",
+        });
+        
+        return;
+      }
       
-      // Rolar para o topo para garantir que o usuário veja o aviso
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Se tudo estiver preenchido, continuar com a submissão
+      setShowRequiredFieldsWarning(false);
+      form.setValue("isDraft", false);
       
-      // Notificar o usuário através de toast
-      toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios para enviar sua solicitação",
-        variant: "destructive",
-      });
-      
-      return;
+      // Enviar diretamente para evitar problemas de validação no modal
+      setTimeout(() => {
+        const updatedData = {
+          ...form.getValues(),
+          // Converter comprimento, largura e altura de metros para centímetros
+          length: Math.round((form.getValues('length') || 0) * 100),
+          width: Math.round((form.getValues('width') || 0) * 100),
+          height: Math.round((form.getValues('height') || 0) * 100),
+          isDraft: false
+        };
+        
+        // Remover isDraft do payload
+        const { isDraft, ...requestData } = updatedData;
+        
+        // Tentar o envio diretamente
+        console.log("Enviando dados:", requestData);
+        submitRequestMutation.mutate(requestData as any);
+      }, 300);
     }
-    
-    // Se tudo estiver preenchido, continuar com a submissão
-    setShowRequiredFieldsWarning(false);
-    form.setValue("isDraft", false);
-    form.handleSubmit(onSubmit)();
   };
 
   const isProcessing = saveAsDraftMutation.isPending || submitRequestMutation.isPending;

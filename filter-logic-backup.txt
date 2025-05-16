@@ -1,0 +1,48 @@
+// Filtragem específica por status (geral ou estado específico)
+// Código melhorado para a página de Acompanhar Licença
+// ------------------------------------------------------
+
+// Filtragem específica por status (geral ou estado específico)
+let matchesStatus = !statusFilter || statusFilter === "all_status";
+
+if (statusFilter && statusFilter !== "all_status") {
+  // Para o status "Pedido em Cadastramento", verificar licenças sem status específico de estado
+  if (statusFilter === "pending_registration") {
+    // Licença sem status específico ou com status geral pending_registration
+    matchesStatus = (!license.specificStateStatus || license.specificStateStatus === "pending_registration") &&
+                  (!license.stateStatuses || license.stateStatuses.length === 0 || license.status === "pending_registration");
+  } else {
+    // Para outros status, verificar status específico do estado primeiro, depois o status geral
+    matchesStatus = (license.specificStateStatus === statusFilter) || 
+                   (license.status === statusFilter);
+  }
+}
+
+// Cores dos badges de status
+// --------------------------
+// Para garantir consistência visual nas cores dos badges de status em toda aplicação
+
+let badgeClass = "bg-gray-100 border-gray-200 text-gray-800";
+if (stateStatus === "approved") {
+  badgeClass = "bg-green-50 border-green-200 text-green-800";
+} else if (stateStatus === "rejected") {
+  badgeClass = "bg-red-50 border-red-200 text-red-800";
+} else if (stateStatus === "pending_approval") {
+  badgeClass = "bg-yellow-50 border-yellow-200 text-yellow-800";
+} else if (stateStatus === "registration_in_progress") {
+  badgeClass = "bg-orange-50 border-orange-200 text-orange-800";
+} else if (stateStatus === "under_review") {
+  badgeClass = "bg-blue-50 border-blue-200 text-blue-800";
+}
+
+// Botão de atualizar com estilo padronizado
+// -----------------------------------------
+<Button 
+  onClick={handleRefresh} 
+  variant="outline" 
+  className="flex items-center gap-1 bg-white"
+  title="Atualizar lista de licenças"
+>
+  <RefreshCw className="h-4 w-4 mr-1" />
+  Atualizar
+</Button>
