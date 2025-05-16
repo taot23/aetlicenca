@@ -1330,11 +1330,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Verifica se os valores estão em metros (valores decimais pequenos) ou centímetros (valores inteiros grandes)
         // e faz a conversão necessária
         
+        // Verifica dimensões com base no tipo de licença
+        const isValidDimension = (dimensionType: string, value: number, licenseType?: string, cargoType?: string): boolean => {
+          // Se já estiver em centímetros, é considerado válido
+          if (value > 100) return true;
+          
+          // Validação em metros
+          if (dimensionType === 'length') {
+            if (licenseType === 'flatbed') {
+              if (cargoType === 'oversized') return value <= 100; // Sem limite rígido para superdimensionada
+              return value <= 25; // Limite para pranchas normais
+            }
+            return value >= 19.8 && value <= 30; // Limite para outros tipos
+          } else if (dimensionType === 'width') {
+            if (licenseType === 'flatbed') {
+              if (cargoType === 'oversized') return true; // Sem limite rígido para superdimensionada
+              return value <= 3.2; // Limite para pranchas normais
+            }
+            return value <= 2.6; // Limite para outros tipos
+          } else if (dimensionType === 'height') {
+            if (licenseType === 'flatbed') {
+              if (cargoType === 'oversized') return true; // Sem limite rígido para superdimensionada
+              return value <= 4.95; // Limite para pranchas normais
+            }
+            return value <= 4.4; // Limite para outros tipos
+          }
+          return true;
+        };
+        
         const inCentimeters = (value: number) => value > 100; // Heurística para detectar centímetros vs metros
         
         // Verifica e converte comprimento se necessário
         if (licenseData.length !== undefined) {
           console.log("Comprimento recebido:", licenseData.length, "tipo:", typeof licenseData.length);
+          
+          // Validar dimensão antes de converter
+          const isLengthValid = isValidDimension('length', licenseData.length, licenseData.type, licenseData.cargoType);
+          console.log("Comprimento válido para o tipo de conjunto:", isLengthValid);
+          
+          if (!isLengthValid) {
+            return res.status(400).json({ 
+              message: `Comprimento inválido para o tipo de conjunto ${licenseData.type} e carga ${licenseData.cargoType || 'não especificada'}`
+            });
+          }
           
           // Já está em centímetros?
           const isLengthInCm = inCentimeters(licenseData.length);
@@ -1351,6 +1389,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (licenseData.width !== undefined) {
           console.log("Largura recebida:", licenseData.width, "tipo:", typeof licenseData.width);
           
+          // Validar dimensão antes de converter
+          const isWidthValid = isValidDimension('width', licenseData.width, licenseData.type, licenseData.cargoType);
+          console.log("Largura válida para o tipo de conjunto:", isWidthValid);
+          
+          if (!isWidthValid) {
+            return res.status(400).json({ 
+              message: `Largura inválida para o tipo de conjunto ${licenseData.type} e carga ${licenseData.cargoType || 'não especificada'}`
+            });
+          }
+          
           // Já está em centímetros?
           const isWidthInCm = inCentimeters(licenseData.width);
           console.log("Largura está em centímetros:", isWidthInCm);
@@ -1365,6 +1413,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Verifica e converte altura se necessário
         if (licenseData.height !== undefined) {
           console.log("Altura recebida:", licenseData.height, "tipo:", typeof licenseData.height);
+          
+          // Validar dimensão antes de converter
+          const isHeightValid = isValidDimension('height', licenseData.height, licenseData.type, licenseData.cargoType);
+          console.log("Altura válida para o tipo de conjunto:", isHeightValid);
+          
+          if (!isHeightValid) {
+            return res.status(400).json({ 
+              message: `Altura inválida para o tipo de conjunto ${licenseData.type} e carga ${licenseData.cargoType || 'não especificada'}`
+            });
+          }
           
           // Já está em centímetros?
           const isHeightInCm = inCentimeters(licenseData.height);
