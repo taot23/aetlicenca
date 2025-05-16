@@ -463,37 +463,45 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
   };
 
   const handleSubmitRequest = () => {
+    // Prevenir múltiplos envios
+    if (isProcessing) {
+      toast({
+        title: "Processando",
+        description: "Aguarde, sua solicitação já está sendo processada...",
+      });
+      return;
+    }
+    
     // Acessar todos os valores do formulário
     const values = form.getValues();
     
-    // Tratamento especial para veículos tipo Prancha
-    if (values.type === 'flatbed') {
-      // Garantir que o formulário será enviado para tipo prancha, preenchendo valores padrão se necessário
-      if (!values.width) form.setValue('width', values.cargoType === 'oversized' ? 4 : 3.2);
-      if (!values.height) form.setValue('height', values.cargoType === 'oversized' ? 5 : 4.95);
-      if (!values.length) form.setValue('length', values.cargoType === 'oversized' ? 30 : 25);
-      if (!values.cargoType) form.setValue('cargoType', 'indivisible_cargo');
-      if (!values.states || values.states.length === 0) form.setValue('states', ['SP']);
-      
-      // Garantir que há um veículo principal selecionado
-      if (!values.mainVehiclePlate && flatbeds.length > 0) {
-        const firstVehicle = flatbeds[0];
-        form.setValue('flatbedId', firstVehicle.id);
-        form.setValue('mainVehiclePlate', firstVehicle.plate);
-      }
-      
-      // Mostrar toast informativo
-      toast({
-        title: "Preparando envio",
-        description: "Processando pedido para veículo tipo Prancha...",
-      });
-      
-      // Agora que garantimos que tem os valores necessários, podemos continuar
-      setShowRequiredFieldsWarning(false);
-      form.setValue("isDraft", false);
-      
-      // Contornar qualquer validação e enviar de forma direta
-      setTimeout(() => {
+    try {
+      // Tratamento especial para veículos tipo Prancha
+      if (values.type === 'flatbed') {
+        // Garantir que o formulário será enviado para tipo prancha, preenchendo valores padrão se necessário
+        if (!values.width) form.setValue('width', values.cargoType === 'oversized' ? 4 : 3.2);
+        if (!values.height) form.setValue('height', values.cargoType === 'oversized' ? 5 : 4.95);
+        if (!values.length) form.setValue('length', values.cargoType === 'oversized' ? 30 : 25);
+        if (!values.cargoType) form.setValue('cargoType', 'indivisible_cargo');
+        if (!values.states || values.states.length === 0) form.setValue('states', ['SP']);
+        
+        // Garantir que há um veículo principal selecionado
+        if (!values.mainVehiclePlate && flatbeds.length > 0) {
+          const firstVehicle = flatbeds[0];
+          form.setValue('flatbedId', firstVehicle.id);
+          form.setValue('mainVehiclePlate', firstVehicle.plate);
+        }
+        
+        // Mostrar toast informativo
+        toast({
+          title: "Preparando envio",
+          description: "Processando pedido para veículo tipo Prancha...",
+        });
+        
+        // Agora que garantimos que tem os valores necessários, podemos continuar
+        setShowRequiredFieldsWarning(false);
+        form.setValue("isDraft", false);
+        
         // Obter valores atualizados após as modificações
         const updatedData = {
           ...form.getValues(),
@@ -510,33 +518,31 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         // Tentar o envio diretamente
         console.log("Enviando dados prancha:", requestData);
         submitRequestMutation.mutate(requestData as any);
-      }, 500);
-    }
-    else {
-      // Para outros tipos de veículos, manter a verificação normal
-      if (checkRequiredFields()) {
-        // Mostrar aviso e não prosseguir com a submissão
-        setShowRequiredFieldsWarning(true);
-        
-        // Rolar para o topo para garantir que o usuário veja o aviso
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        // Notificar o usuário através de toast
-        toast({
-          title: "Campos obrigatórios",
-          description: "Preencha todos os campos obrigatórios para enviar sua solicitação",
-          variant: "destructive",
-        });
-        
-        return;
       }
-      
-      // Se tudo estiver preenchido, continuar com a submissão
-      setShowRequiredFieldsWarning(false);
-      form.setValue("isDraft", false);
-      
-      // Enviar diretamente para evitar problemas de validação no modal
-      setTimeout(() => {
+      else {
+        // Para outros tipos de veículos, manter a verificação normal
+        if (checkRequiredFields()) {
+          // Mostrar aviso e não prosseguir com a submissão
+          setShowRequiredFieldsWarning(true);
+          
+          // Rolar para o topo para garantir que o usuário veja o aviso
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          
+          // Notificar o usuário através de toast
+          toast({
+            title: "Campos obrigatórios",
+            description: "Preencha todos os campos obrigatórios para enviar sua solicitação",
+            variant: "destructive",
+          });
+          
+          return;
+        }
+        
+        // Se tudo estiver preenchido, continuar com a submissão
+        setShowRequiredFieldsWarning(false);
+        form.setValue("isDraft", false);
+        
+        // Obter valores atualizados para submissão direta
         const updatedData = {
           ...form.getValues(),
           // Converter comprimento, largura e altura de metros para centímetros
@@ -549,12 +555,25 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         // Remover isDraft do payload
         const { isDraft, ...requestData } = updatedData;
         
+        // Exibir toast de envio
+        toast({
+          title: "Enviando pedido",
+          description: "Processando sua solicitação...",
+        });
+        
         // Tentar o envio diretamente
         console.log("Enviando dados:", requestData);
         submitRequestMutation.mutate(requestData as any);
-      }, 300);
+      }
+    } catch (error) {
+      console.error("Erro ao enviar pedido:", error);
+      toast({
+        title: "Erro ao enviar",
+        description: "Ocorreu um erro ao processar sua solicitação. Tente novamente.",
+        variant: "destructive",
+      });
     }
-  };
+  }
 
   const isProcessing = saveAsDraftMutation.isPending || submitRequestMutation.isPending;
 
