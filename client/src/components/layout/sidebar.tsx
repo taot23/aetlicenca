@@ -17,7 +17,8 @@ import {
   ClipboardEdit,
   LayoutDashboard,
   Users,
-  Settings
+  Settings,
+  RefreshCw
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -206,6 +207,18 @@ export function Sidebar({ className }: SidebarProps) {
             )}
             
             {/* Botão de todos veículos para usuários operacionais removido */}
+
+            {/* Botão de atualizar página */}
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-white hover:bg-gray-700 mt-4"
+              onClick={() => {
+                window.location.reload();
+              }}
+            >
+              <RefreshCw className="mr-3 h-5 w-5" />
+              Atualizar Dados
+            </Button>
           </>
         )}
       </div>
