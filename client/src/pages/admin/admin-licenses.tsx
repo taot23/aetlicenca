@@ -574,8 +574,26 @@ export default function AdminLicensesPage() {
     <AdminLayout>
       <div className="container mx-auto py-4 px-3 md:px-6 md:py-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight leading-tight">Licenças</h1>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight leading-tight">Licenças</h1>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 bg-white"
+                onClick={() => {
+                  refetch();
+                }}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Atualizar
+              </Button>
+            </div>
             <p className="text-sm md:text-base text-muted-foreground mt-1">
               Gerencie todas as licenças no sistema.
             </p>
