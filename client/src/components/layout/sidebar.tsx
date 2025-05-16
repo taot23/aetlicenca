@@ -78,8 +78,8 @@ export function Sidebar({ className }: SidebarProps) {
           </Button>
         )}
         
-        {/* Minhas Empresas está temporariamente oculto para todos os usuários */}
-        {false && !isOperational && (
+        {/* Minhas Empresas é visível apenas para usuários não-administrativos */}
+        {!isOperational && (
           <Button
             variant="ghost"
             className={cn(

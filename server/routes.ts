@@ -568,8 +568,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Buscando veículo com a placa: ${plate}`);
       
-      // Usar a função getVehicleByPlate que foi implementada
-      const vehicle = await storage.getVehicleByPlate(plate);
+      // Buscar todos os veículos
+      const allVehicles = await storage.getAllVehicles();
+      console.log(`Total de veículos encontrados: ${allVehicles.length}`);
+      
+      // Buscar todas as placas disponíveis para debug
+      const availablePlates = allVehicles.map(v => v.plate);
+      console.log('Placas disponíveis:', availablePlates.join(', '));
+      
+      // Encontrar o veículo com a placa correspondente
+      const vehicle = allVehicles.find(v => v.plate.toUpperCase() === plate);
       
       if (!vehicle) {
         console.log(`Veículo não encontrado com a placa ${plate}`);
@@ -762,10 +770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Se for usuário administrativo, buscar todos os rascunhos
       if (isAdminUser(user)) {
         console.log(`Usuário ${user.email} (${user.role}) tem acesso administrativo. Buscando todos os rascunhos.`);
-        // Garantindo explicitamente que apenas rascunhos reais são retornados
-        const rascunhos = await storage.getLicenseDraftsByUserId(0);
-        allDrafts = rascunhos.filter(draft => draft.isDraft === true);
-        console.log(`Total de rascunhos encontrados: ${rascunhos.length}, filtrados (apenas isDraft=true): ${allDrafts.length}`);
+        allDrafts = await storage.getLicenseDraftsByUserId(0); // 0 = todos os rascunhos
       } else {
         console.log(`Usuário ${user.email} (${user.role}) tem acesso comum. Buscando apenas seus rascunhos.`);
         
@@ -784,7 +789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (transporterIds.length > 0) {
           rascunhosNoBanco = await db.select()
             .from(licenseRequests)
-            .where(eq(licenseRequests.isDraft, true)) // Garantir que o campo isDraft é true
+            .where(eq(licenseRequests.isDraft, true))
             .where(
               or(
                 eq(licenseRequests.userId, user.id),
@@ -797,15 +802,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Se não houver transportadores, buscar apenas por userId
           rascunhosNoBanco = await db.select()
             .from(licenseRequests)
-            .where(eq(licenseRequests.isDraft, true)) // Garantir que o campo isDraft é true
+            .where(eq(licenseRequests.isDraft, true))
             .where(eq(licenseRequests.userId, user.id));
             
           console.log(`[DEBUG RASCUNHOS] Encontrados ${rascunhosNoBanco.length} rascunhos para usuário ${user.id} sem transportadores associados`);
         }
         
-        // Garantia adicional de que apenas rascunhos reais sejam retornados
-        allDrafts = rascunhosNoBanco.filter(draft => draft.isDraft === true);
-        console.log(`Garantia adicional: ${rascunhosNoBanco.length} encontrados, ${allDrafts.length} após filtro de isDraft`);
+        allDrafts = rascunhosNoBanco;
       }
       
       // Verificar se deve incluir rascunhos de renovação
@@ -1029,69 +1032,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Usuário ${user.id} (${user.role}) autorizado a submeter rascunho ${draftId}`);
       
-      // Verificar se todos os veículos necessários estão cadastrados
-      const requiredVehicleIds = [];
-      
-      // Veículo principal (tractorUnitId) - sempre obrigatório
-      if (existingDraft.tractorUnitId) {
-        requiredVehicleIds.push(existingDraft.tractorUnitId);
-      } else {
-        return res.status(400).json({ message: 'O veículo principal (cavalo/trator) não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-      }
-      
-      // Primeiro reboque/semirreboque - obrigatório para todos os tipos, exceto flatbed
-      if (existingDraft.type !== 'flatbed' && !existingDraft.firstTrailerId) {
-        return res.status(400).json({ message: 'O primeiro semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-      } else if (existingDraft.firstTrailerId) {
-        requiredVehicleIds.push(existingDraft.firstTrailerId);
-      }
-      
-      // Segundo reboque - obrigatório para bitrens e rodotrens
-      if ((existingDraft.type.startsWith('bitrain') || existingDraft.type === 'road_train') && !existingDraft.secondTrailerId) {
-        return res.status(400).json({ message: 'O segundo semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-      } else if (existingDraft.secondTrailerId) {
-        requiredVehicleIds.push(existingDraft.secondTrailerId);
-      }
-      
-      // Dolly - obrigatório para rodotrem
-      if (existingDraft.type === 'road_train' && !existingDraft.dollyId) {
-        return res.status(400).json({ message: 'O dolly não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-      } else if (existingDraft.dollyId) {
-        requiredVehicleIds.push(existingDraft.dollyId);
-      }
-      
-      // Prancha - obrigatório para tipo flatbed
-      if (existingDraft.type === 'flatbed' && !existingDraft.flatbedId) {
-        return res.status(400).json({ message: 'A prancha não está cadastrada. Cadastre o veículo antes de submeter a licença.' });
-      } else if (existingDraft.flatbedId) {
-        requiredVehicleIds.push(existingDraft.flatbedId);
-      }
-      
-      // Verificar se todos os veículos existem no banco de dados
-      for (const vehicleId of requiredVehicleIds) {
-        const vehicle = await storage.getVehicleById(vehicleId);
-        if (!vehicle) {
-          return res.status(400).json({ 
-            message: `Um dos veículos necessários (ID: ${vehicleId}) não está registrado. Cadastre todos os veículos antes de submeter a licença.` 
-          });
-        }
-      }
-      
-      // Verificar se todas as placas adicionais estão cadastradas
-      if (existingDraft.additionalPlates && existingDraft.additionalPlates.length > 0) {
-        for (const plate of existingDraft.additionalPlates) {
-          // Ignorar placas vazias
-          if (!plate || plate.trim() === '') continue;
-          
-          // Verificar se a placa está cadastrada
-          const vehicle = await storage.getVehicleByPlate(plate);
-          if (!vehicle) {
-            return res.status(400).json({
-              message: `A placa adicional ${plate} não está cadastrada. Cadastre todos os veículos adicionais antes de submeter a licença.`
-            });
-          }
-        }
-      }
       
       // Garantir que todos os campos obrigatórios não sejam nulos antes de submeter
       const draftData = { ...existingDraft };
@@ -1165,145 +1105,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`Usuário ${user.id} (${user.role}) autorizado a submeter rascunho ${draftId}`);
         
-        // Verificar se todos os veículos necessários estão cadastrados
-        const requiredVehicleIds = [];
-        
-        // Veículo principal (tractorUnitId) - sempre obrigatório
-        if (existingDraft.tractorUnitId) {
-          requiredVehicleIds.push(existingDraft.tractorUnitId);
-        } else {
-          return res.status(400).json({ message: 'O veículo principal (cavalo/trator) não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        }
-        
-        // Primeiro reboque/semirreboque - obrigatório para todos os tipos, exceto flatbed
-        if (existingDraft.type !== 'flatbed' && !existingDraft.firstTrailerId) {
-          return res.status(400).json({ message: 'O primeiro semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        } else if (existingDraft.firstTrailerId) {
-          requiredVehicleIds.push(existingDraft.firstTrailerId);
-        }
-        
-        // Segundo reboque - obrigatório para bitrens e rodotrens
-        if ((existingDraft.type.startsWith('bitrain') || existingDraft.type === 'road_train') && !existingDraft.secondTrailerId) {
-          return res.status(400).json({ message: 'O segundo semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        } else if (existingDraft.secondTrailerId) {
-          requiredVehicleIds.push(existingDraft.secondTrailerId);
-        }
-        
-        // Dolly - obrigatório para rodotrem
-        if (existingDraft.type === 'road_train' && !existingDraft.dollyId) {
-          return res.status(400).json({ message: 'O dolly não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        } else if (existingDraft.dollyId) {
-          requiredVehicleIds.push(existingDraft.dollyId);
-        }
-        
-        // Prancha - obrigatório para tipo flatbed
-        if (existingDraft.type === 'flatbed' && !existingDraft.flatbedId) {
-          return res.status(400).json({ message: 'A prancha não está cadastrada. Cadastre o veículo antes de submeter a licença.' });
-        } else if (existingDraft.flatbedId) {
-          requiredVehicleIds.push(existingDraft.flatbedId);
-        }
-        
-        // Verificar se todos os veículos existem no banco de dados
-        for (const vehicleId of requiredVehicleIds) {
-          const vehicle = await storage.getVehicleById(vehicleId);
-          if (!vehicle) {
-            return res.status(400).json({ 
-              message: `Um dos veículos necessários (ID: ${vehicleId}) não está registrado. Cadastre todos os veículos antes de submeter a licença.` 
-            });
-          }
-        }
-        
-        // Verificar se todas as placas adicionais estão cadastradas
-        if (existingDraft.additionalPlates && existingDraft.additionalPlates.length > 0) {
-          for (const plate of existingDraft.additionalPlates) {
-            // Ignorar placas vazias
-            if (!plate || plate.trim() === '') continue;
-            
-            // Verificar se a placa está cadastrada
-            const vehicle = await storage.getVehicleByPlate(plate);
-            if (!vehicle) {
-              return res.status(400).json({
-                message: `A placa adicional ${plate} não está cadastrada. Cadastre todos os veículos adicionais antes de submeter a licença.`
-              });
-            }
-          }
-        }
-
         // Generate a real request number
         const requestNumber = `AET-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
         
-        // Identificar se é um pedido de renovação
-        const isRenewal = licenseData.comments && 
-                          typeof licenseData.comments === 'string' && 
-                          licenseData.comments.toLowerCase().includes('renovação');
-
-        console.log(`É pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
-        
-        // Sanitizar dados para renovação
-        if (isRenewal) {
-          console.log("Sanitizando dados para renovação");
-          // Garantir que as dimensões são números
-          if (licenseData.length !== undefined) {
-            licenseData.length = Number(licenseData.length);
-            console.log("Comprimento normalizado:", licenseData.length);
-          }
-          
-          if (licenseData.width !== undefined) {
-            licenseData.width = Number(licenseData.width);
-            console.log("Largura normalizada:", licenseData.width);
-          }
-          
-          if (licenseData.height !== undefined) {
-            licenseData.height = Number(licenseData.height);
-            console.log("Altura normalizada:", licenseData.height);
-          }
-          
-          // Garantir que o cargoType seja válido
-          if (!licenseData.cargoType || typeof licenseData.cargoType !== 'string') {
-            licenseData.cargoType = licenseData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
-            console.log("Tipo de carga normalizado:", licenseData.cargoType);
-          }
-        }
-        
-        // Em vez de atualizar o rascunho e depois submetê-lo, vamos usar um método direto e mais confiável
-        console.log("=== RENOVAÇÃO DE LICENÇA - MÉTODO MANUAL ===");
-        
-        // Obter o rascunho mais atualizado
-        const draftRequest = await storage.getLicenseRequestById(draftId);
-        if (!draftRequest) {
-          return res.status(404).json({ message: 'Rascunho não encontrado após atualização' });
-        }
-        
-        // Preparar dados para criar uma nova licença a partir do rascunho
-        const newLicenseData = {
-          transporterId: Number(licenseData.transporterId),
-          type: licenseData.type,
-          mainVehiclePlate: licenseData.mainVehiclePlate,
-          tractorUnitId: licenseData.tractorUnitId ? Number(licenseData.tractorUnitId) : null,
-          firstTrailerId: licenseData.firstTrailerId ? Number(licenseData.firstTrailerId) : null,
-          secondTrailerId: licenseData.secondTrailerId ? Number(licenseData.secondTrailerId) : null,
-          dollyId: licenseData.dollyId ? Number(licenseData.dollyId) : null,
-          flatbedId: licenseData.flatbedId ? Number(licenseData.flatbedId) : null,
-          length: Number(licenseData.length || 2500), // 25m default
-          width: Number(licenseData.width || 260),    // 2.60m default
-          height: Number(licenseData.height || 440),  // 4.40m default
-          cargoType: licenseData.cargoType || 'dry_cargo',
-          additionalPlates: licenseData.additionalPlates || [],
-          additionalPlatesDocuments: licenseData.additionalPlatesDocuments || [],
-          states: licenseData.states || [],
-          requestNumber,
-          status: "pending_registration",
+        // Update the draft with the new data
+        await storage.updateLicenseDraft(draftId, {
+          ...licenseData,
           isDraft: false,
-          comments: licenseData.comments || "",
-        };
+        });
         
-        console.log("Dados finais da licença renovada:", newLicenseData);
-        
-        // Criar a nova licença
-        const licenseRequest = await storage.createLicenseRequest(user.id, newLicenseData);
-        
-        // Remover o rascunho original
-        await storage.deleteLicenseRequest(draftId);
+        // Submit the updated draft as a real license request
+        const licenseRequest = await storage.submitLicenseDraft(draftId, requestNumber);
         
         console.log("Licença submetida com sucesso:", licenseRequest.id);
         return res.json(licenseRequest);
@@ -1321,70 +1133,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!licenseData.requestedStates || licenseData.requestedStates.length === 0) {
           return res.status(400).json({ message: 'Selecione pelo menos um estado' });
-        }
-        
-        // Verificar veículos necessários
-        const requiredVehicleIds = [];
-        
-        // Veículo principal (tractorUnitId) - sempre obrigatório
-        if (licenseData.tractorUnitId) {
-          requiredVehicleIds.push(licenseData.tractorUnitId);
-        } else {
-          return res.status(400).json({ message: 'O veículo principal (cavalo/trator) não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        }
-        
-        // Primeiro reboque/semirreboque - obrigatório para todos os tipos, exceto flatbed
-        if (licenseData.type !== 'flatbed' && !licenseData.firstTrailerId) {
-          return res.status(400).json({ message: 'O primeiro semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        } else if (licenseData.firstTrailerId) {
-          requiredVehicleIds.push(licenseData.firstTrailerId);
-        }
-        
-        // Segundo reboque - obrigatório para bitrens e rodotrens
-        if ((licenseData.type.startsWith('bitrain') || licenseData.type === 'road_train') && !licenseData.secondTrailerId) {
-          return res.status(400).json({ message: 'O segundo semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        } else if (licenseData.secondTrailerId) {
-          requiredVehicleIds.push(licenseData.secondTrailerId);
-        }
-        
-        // Dolly - obrigatório para rodotrem
-        if (licenseData.type === 'road_train' && !licenseData.dollyId) {
-          return res.status(400).json({ message: 'O dolly não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        } else if (licenseData.dollyId) {
-          requiredVehicleIds.push(licenseData.dollyId);
-        }
-        
-        // Prancha - obrigatório para tipo flatbed
-        if (licenseData.type === 'flatbed' && !licenseData.flatbedId) {
-          return res.status(400).json({ message: 'A prancha não está cadastrada. Cadastre o veículo antes de submeter a licença.' });
-        } else if (licenseData.flatbedId) {
-          requiredVehicleIds.push(licenseData.flatbedId);
-        }
-        
-        // Verificar se todos os veículos existem no banco de dados
-        for (const vehicleId of requiredVehicleIds) {
-          const vehicle = await storage.getVehicleById(vehicleId);
-          if (!vehicle) {
-            return res.status(400).json({ 
-              message: `Um dos veículos necessários (ID: ${vehicleId}) não está registrado. Cadastre todos os veículos antes de submeter a licença.` 
-            });
-          }
-        }
-        
-        // Verificar se todas as placas adicionais estão cadastradas
-        if (licenseData.additionalPlates && licenseData.additionalPlates.length > 0) {
-          for (const plate of licenseData.additionalPlates) {
-            // Ignorar placas vazias
-            if (!plate || plate.trim() === '') continue;
-            
-            // Verificar se a placa está cadastrada
-            const vehicle = await storage.getVehicleByPlate(plate);
-            if (!vehicle) {
-              return res.status(400).json({
-                message: `A placa adicional ${plate} não está cadastrada. Cadastre todos os veículos adicionais antes de submeter a licença.`
-              });
-            }
-          }
         }
         
         // Prepara dados para criar a licença
@@ -1518,29 +1266,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const licenseData = { ...req.body };
       
       console.log("Dados de licença recebidos:", JSON.stringify(licenseData, null, 2));
-      
-      // Verificar se é um pedido de renovação com rascunho que deve ser excluído
-      const draftToDeleteId = licenseData.draftToDeleteId;
-      if (draftToDeleteId) {
-        console.log(`Pedido de renovação detectado. Rascunho ${draftToDeleteId} será excluído após sucesso.`);
-        // Remover este campo para não interferir na validação
-        delete licenseData.draftToDeleteId;
-      }
-      
-      // Verificar se é uma renovação através dos comentários
-      const isRenewal = licenseData.comments && 
-                       typeof licenseData.comments === 'string' && 
-                       licenseData.comments.toLowerCase().includes('renovação');
-                       
-      if (isRenewal) {
-        console.log("Detectada renovação de licença com base nos comentários.");
-      }
-      
       console.log("Tipo de licença:", licenseData.type);
       console.log("Tipo de carga:", licenseData.cargoType);
       console.log("Comprimento:", licenseData.length);
       console.log("Largura:", licenseData.width);
       console.log("Altura:", licenseData.height);
+      console.log("Comprimento da licença:", licenseData.length);
       console.log("Tipo do valor do comprimento:", typeof licenseData.length);
       
       // Sanitização mais rigorosa dos campos de dimensões com valores padrão
