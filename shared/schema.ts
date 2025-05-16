@@ -324,20 +324,11 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         const valueInMeters = isInCentimeters ? val / 100 : val;
         console.log("Valor em metros:", valueInMeters, "Está em centímetros:", isInCentimeters);
         
-        // Se for tipo prancha, diferentes regras se aplicam
+        // REMOVENDO TODAS AS VALIDAÇÕES PARA PRANCHAS (tipo "flatbed")
         if (ctx.data && (ctx.data as any).type === "flatbed") {
-          // Se for carga superdimensionada, não tem limite
-          if ((ctx.data as any).cargoType === "oversized") {
-            return; // Válido
-          }
-          // Para prancha normal, máximo de 25m sem mínimo
-          if (valueInMeters > 25.0) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: "O comprimento máximo para prancha é de 25,00 metros",
-            });
-          }
-          // PRANCHAS NÃO TÊM COMPRIMENTO MÍNIMO
+          // Para todos os tipos de pranchas (incluindo carga normal ou superdimensionada)
+          // Não aplicar nenhuma validação de dimensão
+          return; // Válido sem restrições de comprimento
         } else {
           // Para outros tipos, entre 19.8m e 30m
           if (valueInMeters < 19.8) {
@@ -367,19 +358,11 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         const valueInMeters = isInCentimeters ? val / 100 : val;
         console.log("Largura em metros:", valueInMeters, "Está em centímetros:", isInCentimeters);
         
-        // Se for tipo prancha, diferentes regras se aplicam
+        // REMOVENDO TODAS AS VALIDAÇÕES PARA PRANCHAS (tipo "flatbed")
         if (ctx.data && (ctx.data as any).type === "flatbed") {
-          // Se for carga superdimensionada, não tem limite
-          if ((ctx.data as any).cargoType === "oversized") {
-            return; // Válido
-          }
-          // Para prancha normal, máximo de 3.20m
-          if (valueInMeters > 3.20) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: "A largura máxima para prancha é de 3,20 metros",
-            });
-          }
+          // Para todos os tipos de pranchas (incluindo carga normal ou superdimensionada)
+          // Não aplicar nenhuma validação de dimensão
+          return; // Válido sem restrições de largura
         } else {
           // Para outros tipos, máximo de 2.60m
           if (valueInMeters > 2.60) {
@@ -404,19 +387,11 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         const valueInMeters = isInCentimeters ? val / 100 : val;
         console.log("Altura em metros:", valueInMeters, "Está em centímetros:", isInCentimeters);
         
-        // Se for tipo prancha, diferentes regras se aplicam
+        // REMOVENDO TODAS AS VALIDAÇÕES PARA PRANCHAS (tipo "flatbed")
         if (ctx.data && (ctx.data as any).type === "flatbed") {
-          // Se for carga superdimensionada, não tem limite
-          if ((ctx.data as any).cargoType === "oversized") {
-            return; // Válido
-          }
-          // Para prancha normal, máximo de 4.95m
-          if (valueInMeters > 4.95) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: "A altura máxima para prancha é de 4,95 metros",
-            });
-          }
+          // Para todos os tipos de pranchas (incluindo carga normal ou superdimensionada)
+          // Não aplicar nenhuma validação de dimensão
+          return; // Válido sem restrições de altura
         } else {
           // Para outros tipos, máximo de 4.40m
           if (valueInMeters > 4.40) {
