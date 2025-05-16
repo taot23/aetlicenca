@@ -10,7 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Building2, Users, FileText, PackageCheck, Info, AlertCircle, ArrowLeft, Home } from "lucide-react";
+import { Building2, Users, FileText, PackageCheck, Info, AlertCircle, ArrowLeft, Home, RefreshCw } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function MyCompaniesPage() {
@@ -79,11 +79,32 @@ export default function MyCompaniesPage() {
         </Button>
       </div>
       
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Minhas Empresas</h1>
-        <p className="text-muted-foreground mt-2">
-          Gerencie as empresas vinculadas ao seu perfil.
-        </p>
+      <div className="mb-6 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Minhas Empresas</h1>
+          <p className="text-muted-foreground mt-2">
+            Gerencie as empresas vinculadas ao seu perfil.
+          </p>
+        </div>
+        <Button 
+          onClick={() => {
+            // Atualizar os dados dos transportadores
+            isLoading ? null : window.location.reload();
+            
+            toast({
+              title: "Atualizando dados",
+              description: "Atualizando a lista de empresas...",
+              duration: 3000,
+            });
+          }} 
+          variant="outline" 
+          className="flex items-center gap-1 bg-white"
+          disabled={isLoading}
+          title="Atualizar lista de empresas"
+        >
+          <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+          {isLoading ? 'Atualizando...' : 'Atualizar'}
+        </Button>
       </div>
       
       <Separator className="mb-6" />

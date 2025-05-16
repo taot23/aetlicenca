@@ -4,7 +4,7 @@ import { VehicleList } from "@/components/vehicles/vehicle-list";
 import { VehicleForm } from "@/components/vehicles/vehicle-form-responsive";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Vehicle } from "@shared/schema";
 import { Input } from "@/components/ui/input";
