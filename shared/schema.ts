@@ -319,24 +319,15 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
       .superRefine((val, ctx) => {
         console.log("Validando comprimento:", val, "tipo:", typeof val);
         
-        // Verificamos se o valor é válido e numérico
-        if (val === undefined || val === null || isNaN(Number(val))) {
-          return; // Deixamos os outros validadores lidarem com isso
-        }
-        
         // Verificamos se estamos recebendo o valor em centímetros (>100) ou metros (<100)
         const isInCentimeters = val > 100;
         const valueInMeters = isInCentimeters ? val / 100 : val;
         console.log("Valor em metros:", valueInMeters, "Está em centímetros:", isInCentimeters);
         
-        // Obter cargo type de forma segura
-        const cargoType = (ctx.data as any)?.cargoType;
-        const licenseType = (ctx.data as any)?.type;
-        
         // Se for tipo prancha, diferentes regras se aplicam
-        if (licenseType === "flatbed") {
+        if (ctx.data && (ctx.data as any).type === "flatbed") {
           // Se for carga superdimensionada, não tem limite
-          if (cargoType === "oversized") {
+          if ((ctx.data as any).cargoType === "oversized") {
             return; // Válido
           }
           // Para prancha normal, máximo de 25m sem mínimo
@@ -370,24 +361,15 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
       .superRefine((val, ctx) => {
         console.log("Validando largura:", val, "tipo:", typeof val);
         
-        // Verificamos se o valor é válido e numérico
-        if (val === undefined || val === null || isNaN(Number(val))) {
-          return; // Deixamos os outros validadores lidarem com isso
-        }
-        
         // Verificamos se estamos recebendo o valor em centímetros (>100) ou metros (<100)
         const isInCentimeters = val > 100;
         const valueInMeters = isInCentimeters ? val / 100 : val;
         console.log("Largura em metros:", valueInMeters, "Está em centímetros:", isInCentimeters);
         
-        // Obter cargo type de forma segura
-        const cargoType = (ctx.data as any)?.cargoType;
-        const licenseType = (ctx.data as any)?.type;
-        
         // Se for tipo prancha, diferentes regras se aplicam
-        if (licenseType === "flatbed") {
+        if (ctx.data && (ctx.data as any).type === "flatbed") {
           // Se for carga superdimensionada, não tem limite
-          if (cargoType === "oversized") {
+          if ((ctx.data as any).cargoType === "oversized") {
             return; // Válido
           }
           // Para prancha normal, máximo de 3.20m
@@ -416,24 +398,15 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
       .superRefine((val, ctx) => {
         console.log("Validando altura:", val, "tipo:", typeof val);
         
-        // Verificamos se o valor é válido e numérico
-        if (val === undefined || val === null || isNaN(Number(val))) {
-          return; // Deixamos os outros validadores lidarem com isso
-        }
-        
         // Verificamos se estamos recebendo o valor em centímetros (>100) ou metros (<100)
         const isInCentimeters = val > 100;
         const valueInMeters = isInCentimeters ? val / 100 : val;
         console.log("Altura em metros:", valueInMeters, "Está em centímetros:", isInCentimeters);
         
-        // Obter cargo type e license type de forma segura
-        const cargoType = (ctx.data as any)?.cargoType;
-        const licenseType = (ctx.data as any)?.type;
-        
         // Se for tipo prancha, diferentes regras se aplicam
-        if (licenseType === "flatbed") {
+        if (ctx.data && (ctx.data as any).type === "flatbed") {
           // Se for carga superdimensionada, não tem limite
-          if (cargoType === "oversized") {
+          if ((ctx.data as any).cargoType === "oversized") {
             return; // Válido
           }
           // Para prancha normal, máximo de 4.95m

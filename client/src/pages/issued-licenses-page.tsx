@@ -305,9 +305,13 @@ export default function IssuedLicensesPage() {
     mutationFn: async ({ licenseId, state }: { licenseId: number, state: string }) => {
       try {
         // Usar o endpoint que aceita o corpo da requisição
-        // O apiRequest já retorna o JSON se a resposta for bem-sucedida, não precisamos verificar response.ok
-        console.log(`[RENOVAÇÃO] Enviando pedido para renovar licença ${licenseId}, estado ${state}`);
-        return await apiRequest("POST", "/api/licenses/renew", { licenseId, state });
+        const response = await apiRequest("POST", "/api/licenses/renew", { licenseId, state });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro ao renovar licença: ${errorText}`);
+        }
+        return await response.json();
       } catch (error) {
         console.error("Erro na renovação:", error);
         throw error;
@@ -323,37 +327,16 @@ export default function IssuedLicensesPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/licenses/drafts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/licenses/issued"] });
       
-      // Verificar a estrutura da resposta
-      console.log("[RENOVAÇÃO] Resposta completa:", data);
-      
-      // Adaptar para diferentes formatos de resposta
-      const draftData = data.draft || data;
-      
-      if (!draftData || (!draftData.id && !draftData.states)) {
-        console.error("[RENOVAÇÃO] Estrutura da resposta inválida:", data);
-        toast({
-          title: "Licença renovada",
-          description: "A renovação foi concluída, mas não foi possível abrir o rascunho automaticamente.",
-          duration: 5000,
-        });
-        return;
-      }
-      
-      // Determinar o estado da renovação
-      const renewedState = draftData.states && draftData.states.length > 0 
-        ? draftData.states[0] 
-        : "desconhecido";
-      
       // Notificar o usuário e redirecionar para a página de edição do rascunho
       toast({
         title: "Licença renovada com sucesso",
-        description: `Licença renovada para o estado ${renewedState}. Você será redirecionado para editar o rascunho.`,
+        description: `Licença renovada para o estado ${data.draft.states[0]}. Você será redirecionado para editar o rascunho.`,
         duration: 5000,
       });
       
       // Navegar para a página de edição do rascunho após um pequeno atraso
       setTimeout(() => {
-        setLocation(`/request-license?draft=${draftData.id}`);
+        setLocation(`/request-license?draft=${data.draft.id}`);
       }, 1000);
     },
     onError: (error: Error) => {
@@ -979,24 +962,12 @@ export default function IssuedLicensesPage() {
               disabled={renewLicenseMutation.isPending || !licenseToRenew}
               onClick={() => {
                 if (licenseToRenew) {
-                  // Log detalhado para debug
-                  console.log("[RENOVAÇÃO_MODAL] Iniciando renovação da licença:", licenseToRenew);
-                  
-                  // Adicionar tratamento detalhado de erro
-                  try {
-                    renewLicenseMutation.mutate({
-                      licenseId: licenseToRenew.licenseId,
-                      state: licenseToRenew.state
-                    });
-                    // Não fechar automaticamente, aguardar resultado da mutação
-                  } catch (error) {
-                    console.error("[RENOVAÇÃO_MODAL] Erro ao iniciar renovação:", error);
-                    toast({
-                      title: "Erro na renovação",
-                      description: "Falha ao iniciar o processo de renovação. Tente novamente.",
-                      variant: "destructive"
-                    });
-                  }
+                  console.log("Renovando licença:", licenseToRenew);
+                  renewLicenseMutation.mutate({
+                    licenseId: licenseToRenew.licenseId,
+                    state: licenseToRenew.state
+                  });
+                  // Não fechar automaticamente, aguardar resultado da mutação
                 }
               }}
             >

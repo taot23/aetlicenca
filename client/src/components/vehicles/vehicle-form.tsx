@@ -461,7 +461,6 @@ export function VehicleForm({ vehicle, onSuccess, onCancel }: VehicleFormProps) 
                         field.onChange(value && value > 0 ? value : '');
                       }}
                       min="1"
-                      step="0.001"
                       className="h-9"
                       required
                     />
@@ -482,7 +481,6 @@ export function VehicleForm({ vehicle, onSuccess, onCancel }: VehicleFormProps) 
                   placeholder="" 
                   value={cmt || ''} 
                   onChange={(e) => setCmt(e.target.valueAsNumber || undefined)}
-                  step="0.001"
                   className="h-9" 
                 />
               </FormItem>

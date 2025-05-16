@@ -39,32 +39,16 @@ export const TransporterInfo = ({
       if (!transporterId) return null;
       console.log(`[TransporterInfo] Buscando dados do transportador ID: ${transporterId}`);
       
-      try {
-        // Usar o endpoint público que não requer autenticação
-        const res = await fetch(`/api/public/transporters/${transporterId}`);
-        
-        if (!res.ok) {
-          console.error(`[TransporterInfo] Erro ao buscar transportador ID ${transporterId}:`, res.status);
-          return null;
-        }
-        
-        // Primeiro capturamos o texto da resposta para depuração
-        const responseText = await res.text();
-        console.log(`[TransporterInfo] Resposta bruta para ID ${transporterId}:`, responseText);
-        
-        // Tentar converter para JSON
-        try {
-          const data = JSON.parse(responseText);
-          console.log(`[TransporterInfo] Dados do transportador ID ${transporterId} carregados:`, data);
-          return data;
-        } catch (parseError) {
-          console.error(`[TransporterInfo] Erro ao analisar JSON:`, parseError);
-          return null;
-        }
-      } catch (error) {
-        console.error(`[TransporterInfo] Erro na requisição:`, error);
+      // Usar o endpoint público que não requer autenticação
+      const res = await fetch(`/api/public/transporters/${transporterId}`);
+      
+      if (!res.ok) {
+        console.error(`[TransporterInfo] Erro ao buscar transportador ID ${transporterId}:`, res.status);
         return null;
       }
+      const data = await res.json();
+      console.log(`[TransporterInfo] Dados do transportador ID ${transporterId} carregados:`, data);
+      return data;
     },
     enabled: !!transporterId,
     staleTime: 10 * 60 * 1000, // Cache por 10 minutos
@@ -81,10 +65,10 @@ export const TransporterInfo = ({
           </span>
         ) : transporter ? (
           <span className="font-medium">
-            {transporter.name || `ID: ${transporterId}`}
+            {transporter.name}
           </span>
         ) : (
-          <span className="text-gray-500 italic">Transportador {transporterId} não encontrado</span>
+          <span className="text-gray-500 italic">Transportador não encontrado</span>
         )}
       </span>
     );
@@ -100,7 +84,7 @@ export const TransporterInfo = ({
       ) : transporter ? (
         <>
           <p className="text-gray-900 font-medium">
-            {transporter.name || `Transportador ID: ${transporterId}`}
+            {transporter.name}
           </p>
           {transporter.documentNumber && (
             <p className="text-sm text-gray-700">
@@ -109,14 +93,9 @@ export const TransporterInfo = ({
               </span> {transporter.documentNumber}
             </p>
           )}
-          {transporter.city && transporter.state && (
-            <p className="text-sm text-gray-700">
-              <span className="font-medium">Localização:</span> {transporter.city}, {transporter.state}
-            </p>
-          )}
         </>
       ) : (
-        <p className="text-gray-500">Transportador ID: {transporterId} não encontrado</p>
+        <p className="text-gray-500">Transportador não encontrado</p>
       )}
     </div>
   );

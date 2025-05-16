@@ -568,8 +568,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Buscando veículo com a placa: ${plate}`);
       
-      // Usar a função getVehicleByPlate que foi implementada
-      const vehicle = await storage.getVehicleByPlate(plate);
+      // Buscar todos os veículos
+      const allVehicles = await storage.getAllVehicles();
+      console.log(`Total de veículos encontrados: ${allVehicles.length}`);
+      
+      // Buscar todas as placas disponíveis para debug
+      const availablePlates = allVehicles.map(v => v.plate);
+      console.log('Placas disponíveis:', availablePlates.join(', '));
+      
+      // Encontrar o veículo com a placa correspondente
+      const vehicle = allVehicles.find(v => v.plate.toUpperCase() === plate);
       
       if (!vehicle) {
         console.log(`Veículo não encontrado com a placa ${plate}`);
@@ -762,10 +770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Se for usuário administrativo, buscar todos os rascunhos
       if (isAdminUser(user)) {
         console.log(`Usuário ${user.email} (${user.role}) tem acesso administrativo. Buscando todos os rascunhos.`);
-        // Garantindo explicitamente que apenas rascunhos reais são retornados
-        const rascunhos = await storage.getLicenseDraftsByUserId(0);
-        allDrafts = rascunhos.filter(draft => draft.isDraft === true);
-        console.log(`Total de rascunhos encontrados: ${rascunhos.length}, filtrados (apenas isDraft=true): ${allDrafts.length}`);
+        allDrafts = await storage.getLicenseDraftsByUserId(0); // 0 = todos os rascunhos
       } else {
         console.log(`Usuário ${user.email} (${user.role}) tem acesso comum. Buscando apenas seus rascunhos.`);
         
@@ -784,7 +789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (transporterIds.length > 0) {
           rascunhosNoBanco = await db.select()
             .from(licenseRequests)
-            .where(eq(licenseRequests.isDraft, true)) // Garantir que o campo isDraft é true
+            .where(eq(licenseRequests.isDraft, true))
             .where(
               or(
                 eq(licenseRequests.userId, user.id),
@@ -797,15 +802,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Se não houver transportadores, buscar apenas por userId
           rascunhosNoBanco = await db.select()
             .from(licenseRequests)
-            .where(eq(licenseRequests.isDraft, true)) // Garantir que o campo isDraft é true
+            .where(eq(licenseRequests.isDraft, true))
             .where(eq(licenseRequests.userId, user.id));
             
           console.log(`[DEBUG RASCUNHOS] Encontrados ${rascunhosNoBanco.length} rascunhos para usuário ${user.id} sem transportadores associados`);
         }
         
-        // Garantia adicional de que apenas rascunhos reais sejam retornados
-        allDrafts = rascunhosNoBanco.filter(draft => draft.isDraft === true);
-        console.log(`Garantia adicional: ${rascunhosNoBanco.length} encontrados, ${allDrafts.length} após filtro de isDraft`);
+        allDrafts = rascunhosNoBanco;
       }
       
       // Verificar se deve incluir rascunhos de renovação
@@ -843,33 +846,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Verificar width (largura)
       if (draftData.width === undefined || draftData.width === null || draftData.width === "") {
-        draftData.width = isPrancha ? 320 : 2.60; // 3.20m para prancha (inteiro), 2.60m para outros (float)
+        draftData.width = isPrancha ? 320 : 260; // 3.20m para prancha, 2.60m para outros
         console.log(`Aplicando valor padrão para largura: ${draftData.width}`);
       } else {
         // Garantir que é um número
         draftData.width = Number(draftData.width);
-        
-        // Se não for prancha, manter como float de duas casas decimais
-        if (!isPrancha && (draftData.width === 260 || draftData.width >= 250 && draftData.width <= 270)) {
-          draftData.width = 2.60;
-        }
-        
         console.log(`Convertendo largura para número: ${draftData.width}`);
       }
       
       // Verificar height (altura)
       if (draftData.height === undefined || draftData.height === null || draftData.height === "") {
-        draftData.height = isPrancha ? 495 : 4.40; // 4.95m para prancha (inteiro), 4.40m para outros (float)
+        draftData.height = isPrancha ? 495 : 440; // 4.95m para prancha, 4.40m para outros
         console.log(`Aplicando valor padrão para altura: ${draftData.height}`);
       } else {
         // Garantir que é um número
         draftData.height = Number(draftData.height);
-        
-        // Se não for prancha, manter como float de duas casas decimais
-        if (!isPrancha && (draftData.height === 440 || draftData.height >= 430 && draftData.height <= 450)) {
-          draftData.height = 4.40;
-        }
-        
         console.log(`Convertendo altura para número: ${draftData.height}`);
       }
       
@@ -998,28 +989,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verificar acesso - usuários staff (admin, operacional, supervisor) podem excluir qualquer rascunho
       const isStaff = isAdminUser(user) || user.role === 'operational' || user.role === 'supervisor';
       
-      // Verificar se o usuário é dono direto do rascunho
-      const isOwner = existingDraft.userId === user.id;
-      
-      // Verificar se o usuário tem acesso ao transportador associado ao rascunho
-      let hasTransporterAccess = false;
-      
-      if (!isOwner && !isStaff && existingDraft.transporterId) {
-        // Verificar se o usuário tem acesso ao transportador
-        const userTransporters = await db.select()
-          .from(transporters)
-          .where(eq(transporters.userId, user.id));
-          
-        const transporterIds = userTransporters.map(t => t.id);
-        hasTransporterAccess = transporterIds.includes(existingDraft.transporterId);
-        
-        console.log(`Usuário ${user.id} tem acesso aos transportadores: ${transporterIds.join(', ')}`);
-        console.log(`Rascunho pertence ao transportador: ${existingDraft.transporterId}`);
-        console.log(`Usuário tem acesso ao transportador? ${hasTransporterAccess ? 'SIM' : 'NÃO'}`);
-      }
-      
-      // Permitir excluir se o usuário é staff, dono do rascunho ou tem acesso ao transportador
-      if (!isStaff && !isOwner && !hasTransporterAccess) {
+      if (!isStaff && existingDraft.userId !== user.id) {
         console.log(`Usuário ${user.id} (${user.role}) tentou excluir rascunho ${draftId} do usuário ${existingDraft.userId}`);
         return res.status(403).json({ message: 'Acesso negado' });
       }
@@ -1062,69 +1032,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Usuário ${user.id} (${user.role}) autorizado a submeter rascunho ${draftId}`);
       
-      // Verificar se todos os veículos necessários estão cadastrados
-      const requiredVehicleIds = [];
-      
-      // Veículo principal (tractorUnitId) - sempre obrigatório
-      if (existingDraft.tractorUnitId) {
-        requiredVehicleIds.push(existingDraft.tractorUnitId);
-      } else {
-        return res.status(400).json({ message: 'O veículo principal (cavalo/trator) não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-      }
-      
-      // Primeiro reboque/semirreboque - obrigatório para todos os tipos, exceto flatbed
-      if (existingDraft.type !== 'flatbed' && !existingDraft.firstTrailerId) {
-        return res.status(400).json({ message: 'O primeiro semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-      } else if (existingDraft.firstTrailerId) {
-        requiredVehicleIds.push(existingDraft.firstTrailerId);
-      }
-      
-      // Segundo reboque - obrigatório para bitrens e rodotrens
-      if ((existingDraft.type.startsWith('bitrain') || existingDraft.type === 'road_train') && !existingDraft.secondTrailerId) {
-        return res.status(400).json({ message: 'O segundo semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-      } else if (existingDraft.secondTrailerId) {
-        requiredVehicleIds.push(existingDraft.secondTrailerId);
-      }
-      
-      // Dolly - obrigatório para rodotrem
-      if (existingDraft.type === 'road_train' && !existingDraft.dollyId) {
-        return res.status(400).json({ message: 'O dolly não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-      } else if (existingDraft.dollyId) {
-        requiredVehicleIds.push(existingDraft.dollyId);
-      }
-      
-      // Prancha - obrigatório para tipo flatbed
-      if (existingDraft.type === 'flatbed' && !existingDraft.flatbedId) {
-        return res.status(400).json({ message: 'A prancha não está cadastrada. Cadastre o veículo antes de submeter a licença.' });
-      } else if (existingDraft.flatbedId) {
-        requiredVehicleIds.push(existingDraft.flatbedId);
-      }
-      
-      // Verificar se todos os veículos existem no banco de dados
-      for (const vehicleId of requiredVehicleIds) {
-        const vehicle = await storage.getVehicleById(vehicleId);
-        if (!vehicle) {
-          return res.status(400).json({ 
-            message: `Um dos veículos necessários (ID: ${vehicleId}) não está registrado. Cadastre todos os veículos antes de submeter a licença.` 
-          });
-        }
-      }
-      
-      // Verificar se todas as placas adicionais estão cadastradas
-      if (existingDraft.additionalPlates && existingDraft.additionalPlates.length > 0) {
-        for (const plate of existingDraft.additionalPlates) {
-          // Ignorar placas vazias
-          if (!plate || plate.trim() === '') continue;
-          
-          // Verificar se a placa está cadastrada
-          const vehicle = await storage.getVehicleByPlate(plate);
-          if (!vehicle) {
-            return res.status(400).json({
-              message: `A placa adicional ${plate} não está cadastrada. Cadastre todos os veículos adicionais antes de submeter a licença.`
-            });
-          }
-        }
-      }
       
       // Garantir que todos os campos obrigatórios não sejam nulos antes de submeter
       const draftData = { ...existingDraft };
@@ -1198,168 +1105,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`Usuário ${user.id} (${user.role}) autorizado a submeter rascunho ${draftId}`);
         
-        // Verificar se todos os veículos necessários estão cadastrados
-        const requiredVehicleIds = [];
-        
-        // Veículo principal (tractorUnitId) - sempre obrigatório
-        if (existingDraft.tractorUnitId) {
-          requiredVehicleIds.push(existingDraft.tractorUnitId);
-        } else {
-          return res.status(400).json({ message: 'O veículo principal (cavalo/trator) não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        }
-        
-        // Primeiro reboque/semirreboque - obrigatório para todos os tipos, exceto flatbed
-        if (existingDraft.type !== 'flatbed' && !existingDraft.firstTrailerId) {
-          return res.status(400).json({ message: 'O primeiro semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        } else if (existingDraft.firstTrailerId) {
-          requiredVehicleIds.push(existingDraft.firstTrailerId);
-        }
-        
-        // Segundo reboque - obrigatório para bitrens e rodotrens
-        if ((existingDraft.type.startsWith('bitrain') || existingDraft.type === 'road_train') && !existingDraft.secondTrailerId) {
-          return res.status(400).json({ message: 'O segundo semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        } else if (existingDraft.secondTrailerId) {
-          requiredVehicleIds.push(existingDraft.secondTrailerId);
-        }
-        
-        // Dolly - obrigatório para rodotrem
-        if (existingDraft.type === 'road_train' && !existingDraft.dollyId) {
-          return res.status(400).json({ message: 'O dolly não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        } else if (existingDraft.dollyId) {
-          requiredVehicleIds.push(existingDraft.dollyId);
-        }
-        
-        // Prancha - obrigatório para tipo flatbed
-        if (existingDraft.type === 'flatbed' && !existingDraft.flatbedId) {
-          return res.status(400).json({ message: 'A prancha não está cadastrada. Cadastre o veículo antes de submeter a licença.' });
-        } else if (existingDraft.flatbedId) {
-          requiredVehicleIds.push(existingDraft.flatbedId);
-        }
-        
-        // Verificar se todos os veículos existem no banco de dados
-        for (const vehicleId of requiredVehicleIds) {
-          const vehicle = await storage.getVehicleById(vehicleId);
-          if (!vehicle) {
-            return res.status(400).json({ 
-              message: `Um dos veículos necessários (ID: ${vehicleId}) não está registrado. Cadastre todos os veículos antes de submeter a licença.` 
-            });
-          }
-        }
-        
-        // Verificar se todas as placas adicionais estão cadastradas
-        if (existingDraft.additionalPlates && existingDraft.additionalPlates.length > 0) {
-          for (const plate of existingDraft.additionalPlates) {
-            // Ignorar placas vazias
-            if (!plate || plate.trim() === '') continue;
-            
-            // Verificar se a placa está cadastrada
-            const vehicle = await storage.getVehicleByPlate(plate);
-            if (!vehicle) {
-              return res.status(400).json({
-                message: `A placa adicional ${plate} não está cadastrada. Cadastre todos os veículos adicionais antes de submeter a licença.`
-              });
-            }
-          }
-        }
-
         // Generate a real request number
         const requestNumber = `AET-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
         
-        // Identificar se é um pedido de renovação
-        const isRenewal = licenseData.comments && 
-                          typeof licenseData.comments === 'string' && 
-                          licenseData.comments.toLowerCase().includes('renovação');
-
-        console.log(`É pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
-        
-        // Sanitizar dados para renovação
-        if (isRenewal) {
-          console.log("Sanitizando dados para renovação");
-          // Garantir que as dimensões são números
-          if (licenseData.length !== undefined) {
-            licenseData.length = Number(licenseData.length);
-            console.log("Comprimento normalizado:", licenseData.length);
-          }
-          
-          if (licenseData.width !== undefined) {
-            licenseData.width = Number(licenseData.width);
-            // Para não-pranchas, se o valor estiver no formato antigo (260), converter para decimal (2.60)
-            const isPranchaType = licenseData.type === "flatbed";
-            if (!isPranchaType && licenseData.width > 10) {
-              licenseData.width = Number((licenseData.width / 100).toFixed(2));
-              console.log(`Convertendo largura de cm para metros: ${licenseData.width}`);
-            }
-            // Para não-pranchas, se o valor estiver no formato antigo (440), converter para decimal (4.40)
-            if (!isPranchaType && licenseData.height > 10) {
-              licenseData.height = Number((licenseData.height / 100).toFixed(2));
-              console.log(`Convertendo altura de cm para metros: ${licenseData.height}`);
-            }
-            
-            // Forçar valor padrão para não-pranchas
-            if (!isPranchaType) {
-              licenseData.height = 4.40;
-              console.log(`Forçando valor padrão para altura não-prancha: ${licenseData.height}`);
-            }
-            
-            // Forçar valor padrão para não-pranchas
-            if (!isPranchaType) {
-              licenseData.width = 2.60;
-              console.log(`Forçando valor padrão para largura não-prancha: ${licenseData.width}`);
-            }
-            console.log("Largura normalizada:", licenseData.width);
-          }
-          
-          if (licenseData.height !== undefined) {
-            licenseData.height = Number(licenseData.height);
-            console.log("Altura normalizada:", licenseData.height);
-          }
-          
-          // Garantir que o cargoType seja válido
-          if (!licenseData.cargoType || typeof licenseData.cargoType !== 'string') {
-            licenseData.cargoType = licenseData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
-            console.log("Tipo de carga normalizado:", licenseData.cargoType);
-          }
-        }
-        
-        // Em vez de atualizar o rascunho e depois submetê-lo, vamos usar um método direto e mais confiável
-        console.log("=== RENOVAÇÃO DE LICENÇA - MÉTODO MANUAL ===");
-        
-        // Obter o rascunho mais atualizado
-        const draftRequest = await storage.getLicenseRequestById(draftId);
-        if (!draftRequest) {
-          return res.status(404).json({ message: 'Rascunho não encontrado após atualização' });
-        }
-        
-        // Preparar dados para criar uma nova licença a partir do rascunho
-        const newLicenseData = {
-          transporterId: Number(licenseData.transporterId),
-          type: licenseData.type,
-          mainVehiclePlate: licenseData.mainVehiclePlate,
-          tractorUnitId: licenseData.tractorUnitId ? Number(licenseData.tractorUnitId) : null,
-          firstTrailerId: licenseData.firstTrailerId ? Number(licenseData.firstTrailerId) : null,
-          secondTrailerId: licenseData.secondTrailerId ? Number(licenseData.secondTrailerId) : null,
-          dollyId: licenseData.dollyId ? Number(licenseData.dollyId) : null,
-          flatbedId: licenseData.flatbedId ? Number(licenseData.flatbedId) : null,
-          length: Number(licenseData.length || 2500), // 25m default
-          width: Number(licenseData.width || 260),    // 2.60m default
-          height: Number(licenseData.height || 440),  // 4.40m default
-          cargoType: licenseData.cargoType || 'dry_cargo',
-          additionalPlates: licenseData.additionalPlates || [],
-          additionalPlatesDocuments: licenseData.additionalPlatesDocuments || [],
-          states: licenseData.states || [],
-          requestNumber,
-          status: "pending_registration",
+        // Update the draft with the new data
+        await storage.updateLicenseDraft(draftId, {
+          ...licenseData,
           isDraft: false,
-          comments: licenseData.comments || "",
-        };
+        });
         
-        console.log("Dados finais da licença renovada:", newLicenseData);
-        
-        // Criar a nova licença
-        const licenseRequest = await storage.createLicenseRequest(user.id, newLicenseData);
-        
-        // Remover o rascunho original
-        await storage.deleteLicenseRequest(draftId);
+        // Submit the updated draft as a real license request
+        const licenseRequest = await storage.submitLicenseDraft(draftId, requestNumber);
         
         console.log("Licença submetida com sucesso:", licenseRequest.id);
         return res.json(licenseRequest);
@@ -1377,70 +1133,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!licenseData.requestedStates || licenseData.requestedStates.length === 0) {
           return res.status(400).json({ message: 'Selecione pelo menos um estado' });
-        }
-        
-        // Verificar veículos necessários
-        const requiredVehicleIds = [];
-        
-        // Veículo principal (tractorUnitId) - sempre obrigatório
-        if (licenseData.tractorUnitId) {
-          requiredVehicleIds.push(licenseData.tractorUnitId);
-        } else {
-          return res.status(400).json({ message: 'O veículo principal (cavalo/trator) não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        }
-        
-        // Primeiro reboque/semirreboque - obrigatório para todos os tipos, exceto flatbed
-        if (licenseData.type !== 'flatbed' && !licenseData.firstTrailerId) {
-          return res.status(400).json({ message: 'O primeiro semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        } else if (licenseData.firstTrailerId) {
-          requiredVehicleIds.push(licenseData.firstTrailerId);
-        }
-        
-        // Segundo reboque - obrigatório para bitrens e rodotrens
-        if ((licenseData.type.startsWith('bitrain') || licenseData.type === 'road_train') && !licenseData.secondTrailerId) {
-          return res.status(400).json({ message: 'O segundo semirreboque não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        } else if (licenseData.secondTrailerId) {
-          requiredVehicleIds.push(licenseData.secondTrailerId);
-        }
-        
-        // Dolly - obrigatório para rodotrem
-        if (licenseData.type === 'road_train' && !licenseData.dollyId) {
-          return res.status(400).json({ message: 'O dolly não está cadastrado. Cadastre o veículo antes de submeter a licença.' });
-        } else if (licenseData.dollyId) {
-          requiredVehicleIds.push(licenseData.dollyId);
-        }
-        
-        // Prancha - obrigatório para tipo flatbed
-        if (licenseData.type === 'flatbed' && !licenseData.flatbedId) {
-          return res.status(400).json({ message: 'A prancha não está cadastrada. Cadastre o veículo antes de submeter a licença.' });
-        } else if (licenseData.flatbedId) {
-          requiredVehicleIds.push(licenseData.flatbedId);
-        }
-        
-        // Verificar se todos os veículos existem no banco de dados
-        for (const vehicleId of requiredVehicleIds) {
-          const vehicle = await storage.getVehicleById(vehicleId);
-          if (!vehicle) {
-            return res.status(400).json({ 
-              message: `Um dos veículos necessários (ID: ${vehicleId}) não está registrado. Cadastre todos os veículos antes de submeter a licença.` 
-            });
-          }
-        }
-        
-        // Verificar se todas as placas adicionais estão cadastradas
-        if (licenseData.additionalPlates && licenseData.additionalPlates.length > 0) {
-          for (const plate of licenseData.additionalPlates) {
-            // Ignorar placas vazias
-            if (!plate || plate.trim() === '') continue;
-            
-            // Verificar se a placa está cadastrada
-            const vehicle = await storage.getVehicleByPlate(plate);
-            if (!vehicle) {
-              return res.status(400).json({
-                message: `A placa adicional ${plate} não está cadastrada. Cadastre todos os veículos adicionais antes de submeter a licença.`
-              });
-            }
-          }
         }
         
         // Prepara dados para criar a licença
@@ -1574,99 +1266,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const licenseData = { ...req.body };
       
       console.log("Dados de licença recebidos:", JSON.stringify(licenseData, null, 2));
-      
-      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes
-      const isPrancha = licenseData.type === "flatbed";
-      
-      // Verificar se é um pedido de renovação com rascunho que deve ser excluído
-      const draftToDeleteId = licenseData.draftToDeleteId;
-      if (draftToDeleteId) {
-        console.log(`Pedido de renovação detectado. Rascunho ${draftToDeleteId} será excluído após sucesso.`);
-        // Remover este campo para não interferir na validação
-        delete licenseData.draftToDeleteId;
-      }
-      
-      // Verificar se é uma renovação através dos comentários
-      const isRenewal = (licenseData.comments && 
-                       typeof licenseData.comments === 'string' && 
-                       licenseData.comments.toLowerCase().includes('renovação')) ||
-                       licenseData.isRenewal === true;
-      
-      // Verificar flag para pular validação de dimensões
-      const skipDimensionValidation = isRenewal || licenseData.skipDimensionValidation === true;
-      
-      if (isRenewal) {
-        console.log('[RENOVAÇÃO SERVER] Renovação detectada. Skip validação dimensões:', skipDimensionValidation);
-        console.log("Detectada renovação de licença com base nos comentários.");
-      }
-      
       console.log("Tipo de licença:", licenseData.type);
       console.log("Tipo de carga:", licenseData.cargoType);
       console.log("Comprimento:", licenseData.length);
       console.log("Largura:", licenseData.width);
       console.log("Altura:", licenseData.height);
+      console.log("Comprimento da licença:", licenseData.length);
       console.log("Tipo do valor do comprimento:", typeof licenseData.length);
       
       // Sanitização mais rigorosa dos campos de dimensões com valores padrão
       console.log("Sanitizando dados para tipo " + licenseData.type);
       
-      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes já definidos anteriormente
+      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes
+      const isPrancha = licenseData.type === "flatbed";
       
-      // Se for renovação com skip de validação, preservar os valores originais
-      if (skipDimensionValidation) {
-        console.log(`[RENOVAÇÃO SERVER] Preservando valores originais de dimensão:`);
-        console.log(`[RENOVAÇÃO SERVER] - Largura: ${licenseData.width}`);
-        console.log(`[RENOVAÇÃO SERVER] - Altura: ${licenseData.height}`);
-        
-        // Apenas garantir que os valores são números
-        if (licenseData.width !== undefined && licenseData.width !== null) {
-          licenseData.width = Number(licenseData.width);
-        }
-        if (licenseData.height !== undefined && licenseData.height !== null) {
-          licenseData.height = Number(licenseData.height);
-        }
+      // Verificar width (largura)
+      if (licenseData.width === undefined || licenseData.width === null || licenseData.width === "") {
+        licenseData.width = isPrancha ? 320 : 260; // 3.20m para prancha, 2.60m para outros
+        console.log(`Aplicando valor padrão para largura: ${licenseData.width}`);
       } else {
-        // Verificar width (largura)
-        if (licenseData.width === undefined || licenseData.width === null || licenseData.width === "") {
-          licenseData.width = isPrancha ? 320 : 2.60; // 3.20m para prancha, 2.60m para outros
-          console.log(`Aplicando valor padrão para largura: ${licenseData.width}`);
-        } else {
-          // Garantir que é um número
-          licenseData.width = Number(licenseData.width);
-          // Para não-pranchas, se o valor estiver no formato antigo (260), converter para decimal (2.60)
-          if (!isPrancha && licenseData.width > 10) {
-            licenseData.width = Number((licenseData.width / 100).toFixed(2));
-            console.log(`Convertendo largura de cm para metros: ${licenseData.width}`);
-          }
-          
-          // Forçar valor padrão para não-pranchas
-          if (!isPrancha) {
-            licenseData.width = 2.60;
-            console.log(`Forçando valor padrão para largura não-prancha: ${licenseData.width}`);
-          }
-          console.log(`Convertendo largura para número: ${licenseData.width}`);
-        }
-        
-        // Verificar height (altura)
-        if (licenseData.height === undefined || licenseData.height === null || licenseData.height === "") {
-          licenseData.height = isPrancha ? 495 : 4.40; // 4.95m para prancha, 4.40m para outros
-          console.log(`Aplicando valor padrão para altura: ${licenseData.height}`);
-        } else {
-          // Garantir que é um número
-          licenseData.height = Number(licenseData.height);
-          // Para não-pranchas, se o valor estiver no formato antigo (440), converter para decimal (4.40)
-          if (!isPrancha && licenseData.height > 10) {
-            licenseData.height = Number((licenseData.height / 100).toFixed(2));
-            console.log(`Convertendo altura de cm para metros: ${licenseData.height}`);
-          }
-          
-          // Forçar valor padrão para não-pranchas
-          if (!isPrancha) {
-            licenseData.height = 4.40;
-            console.log(`Forçando valor padrão para altura não-prancha: ${licenseData.height}`);
-          }
-          console.log(`Convertendo altura para número: ${licenseData.height}`);
-        }
+        // Garantir que é um número
+        licenseData.width = Number(licenseData.width);
+        console.log(`Convertendo largura para número: ${licenseData.width}`);
+      }
+      
+      // Verificar height (altura)
+      if (licenseData.height === undefined || licenseData.height === null || licenseData.height === "") {
+        licenseData.height = isPrancha ? 495 : 440; // 4.95m para prancha, 4.40m para outros
+        console.log(`Aplicando valor padrão para altura: ${licenseData.height}`);
+      } else {
+        // Garantir que é um número
+        licenseData.height = Number(licenseData.height);
+        console.log(`Convertendo altura para número: ${licenseData.height}`);
       }
       
       // Verificar cargoType (tipo de carga)
@@ -1832,35 +1463,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!licenseData.mainVehiclePlate) {
           return res.status(400).json({ message: "A placa principal é obrigatória" });
         }
-        // Verificar se é uma renovação com flag de skip validação
-        const isRenewal = (licenseData.comments && 
-                          typeof licenseData.comments === 'string' && 
-                          licenseData.comments.toLowerCase().includes('renovação')) ||
-                          licenseData.isRenewal === true;
-        
-        const skipDimensionValidation = isRenewal || licenseData.skipDimensionValidation === true;
-        
-        if (skipDimensionValidation) {
-          console.log(`[RENOVAÇÃO SERVER] Preservando valores originais de dimensão na validação:`);
-          console.log(`[RENOVAÇÃO SERVER] - Largura: ${licenseData.width}`);
-          
-          // Apenas garantir que o valor é número
-          if (licenseData.width !== undefined && licenseData.width !== null) {
-            licenseData.width = Number(licenseData.width);
-          }
-        } else {
-          // Para não-pranchas, se o valor estiver no formato antigo (260), converter para decimal (2.60)
-          if (!isPrancha && licenseData.width > 10) {
-            licenseData.width = Number((licenseData.width / 100).toFixed(2));
-            console.log(`Convertendo largura de cm para metros: ${licenseData.width}`);
-          }
-          
-          // Forçar valor padrão para não-pranchas
-          if (!isPrancha) {
-            licenseData.width = 2.60;
-            console.log(`Forçando valor padrão para largura não-prancha: ${licenseData.width}`);
-          }
-        }
         
         if (!licenseData.length || licenseData.length <= 0) {
           return res.status(400).json({ message: "O comprimento deve ser positivo" });
@@ -1871,42 +1473,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Sanitização mais rigorosa dos campos de dimensões com valores padrão
-        // Verificar se é uma renovação com flag de skip validação
-        const isRenewal = (licenseData.comments && 
-                          typeof licenseData.comments === 'string' && 
-                          licenseData.comments.toLowerCase().includes('renovação')) ||
-                          licenseData.isRenewal === true;
-        
-        const skipDimensionValidation = isRenewal || licenseData.skipDimensionValidation === true;
-        
-        if (skipDimensionValidation) {
-          console.log(`[RENOVAÇÃO SERVER] Preservando valores originais de altura na validação:`);
-          console.log(`[RENOVAÇÃO SERVER] - Altura: ${licenseData.height}`);
-          
-          // Apenas garantir que o valor é número
-          if (licenseData.height !== undefined && licenseData.height !== null) {
-            licenseData.height = Number(licenseData.height);
-          }
-        } else {
-          // Para não-pranchas, se o valor estiver no formato antigo (440), converter para decimal (4.40)
-          if (!isPrancha && licenseData.height > 10) {
-            licenseData.height = Number((licenseData.height / 100).toFixed(2));
-            console.log(`Convertendo altura de cm para metros: ${licenseData.height}`);
-          }
-          
-          // Forçar valor padrão para não-pranchas
-          if (!isPrancha) {
-            licenseData.height = 4.40;
-            console.log(`Forçando valor padrão para altura não-prancha: ${licenseData.height}`);
-          }
-        }
       console.log("Sanitizando dados para tipo " + licenseData.type);
       
-      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes (já definido anteriormente)
+      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes
+      const isPrancha = licenseData.type === "flatbed";
       
       // Verificar width (largura)
       if (licenseData.width === undefined || licenseData.width === null || licenseData.width === "") {
-        licenseData.width = isPrancha ? 320 : 2.60; // 3.20m para prancha, 2.60m para outros
+        licenseData.width = isPrancha ? 320 : 260; // 3.20m para prancha, 2.60m para outros
         console.log(`Aplicando valor padrão para largura: ${licenseData.width}`);
       } else {
         // Garantir que é um número
@@ -1916,7 +1490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Verificar height (altura)
       if (licenseData.height === undefined || licenseData.height === null || licenseData.height === "") {
-        licenseData.height = isPrancha ? 495 : 4.40; // 4.95m para prancha, 4.40m para outros
+        licenseData.height = isPrancha ? 495 : 440; // 4.95m para prancha, 4.40m para outros
         console.log(`Aplicando valor padrão para altura: ${licenseData.height}`);
       } else {
         // Garantir que é um número
@@ -1971,12 +1545,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Pedido de licença não encontrado' });
       }
       
-      // Verificar se o usuário é o dono da licença, está associado ao transportador, ou tem papel administrativo
-      const userTransporters = await storage.getTransportersByUserId(userId);
-      const userTransporterIds = userTransporters.map(t => t.id);
-      const isAssociatedWithTransporter = userTransporterIds.includes(originalLicense.transporterId);
-      
-      if (originalLicense.userId !== userId && !isAssociatedWithTransporter && !isAdminUser(req.user!)) {
+      // Verificar se o usuário é o dono da licença ou tem papel administrativo
+      if (originalLicense.userId !== userId && !isAdminUser(req.user!)) {
         return res.status(403).json({ message: 'Você não tem permissão para renovar esta licença' });
       }
       

@@ -14,7 +14,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { submitRenewalRequest } from "./license-form";
 
 interface LicenseDetailsCardProps {
   license: LicenseRequest;
@@ -90,7 +89,6 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditVehicleModalOpen, setIsEditVehicleModalOpen] = useState(false);
-  const [isSubmittingRenewal, setIsSubmittingRenewal] = useState(false);
   
   // Estado para o formulário de edição
   const [editForm, setEditForm] = useState({
@@ -108,60 +106,6 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
   // Toast para feedback
   const { toast } = useToast();
   
-  // Função para enviar renovação diretamente
-  const handleSubmitRenewal = async () => {
-    try {
-      setIsSubmittingRenewal(true);
-      
-      // Definir valores padrão para dimensões com base no tipo de licença
-      const isPrancha = license.type === 'flatbed';
-      
-      // Preparar dados para renovação, incluindo comentário que identifica como renovação
-      const formData = {
-        ...license,
-        // Garantir campos mínimos para que a renovação funcione
-        length: license.length || (isPrancha ? 25 : 30),
-        // Para não-prancha, forçar o padrão de 2,60 metros para largura
-        width: isPrancha ? (license.width || 3.2) : 2.6,
-        // Para não-prancha, forçar o padrão de 4,40 metros para altura
-        height: isPrancha ? (license.height || 4.95) : 4.4,
-        cargoType: license.cargoType || (isPrancha ? 'indivisible_cargo' : 'dry_cargo'),
-        states: license.states || [],
-        isDraft: false,
-        // Garantir que o comentário inclua a palavra "renovação"
-        comments: license.comments?.includes('Renovação')
-          ? license.comments
-          : `Renovação da licença ${license.requestNumber || ''} ${license.states?.join(',') || ''}`
-      };
-      
-      // Usar a função especializada para renovações
-      await submitRenewalRequest(license.id, formData);
-      
-      toast({
-        title: "Renovação enviada com sucesso",
-        description: "O pedido de renovação foi enviado para análise.",
-      });
-      
-      // Fechar o modal
-      setIsViewModalOpen(false);
-      
-      // Invalidar consultas para atualizar a interface
-      queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/licenses/${license.id}`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/licenses/issued'] });
-      
-    } catch (error) {
-      console.error("Erro ao enviar renovação:", error);
-      toast({
-        title: "Erro ao enviar renovação",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar a renovação",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmittingRenewal(false);
-    }
-  };
-
   // Mutation para atualizar o veículo
   const updateVehicleMutation = useMutation({
     mutationFn: async (data: Partial<Vehicle> & { id: number }) => {
@@ -1140,26 +1084,12 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
               <X className="mr-2 h-4 w-4" />
               Fechar
             </Button>
-            
-            <div className="flex space-x-2">
-              {/* Botão para enviar renovação diretamente */}
-              <Button 
-                type="button" 
-                variant="default"
-                className="bg-green-600 hover:bg-green-700 gap-1"
-                onClick={handleSubmitRenewal}
-                disabled={isSubmittingRenewal}
-              >
-                <RefreshCw className={`h-4 w-4 ${isSubmittingRenewal ? 'animate-spin' : ''}`} />
-                {isSubmittingRenewal ? "Processando..." : "Enviar Renovação"}
-              </Button>
-              
-              {/* Botão de download */}
-              <Button type="button" className="gap-1">
-                <FileDown className="h-4 w-4" />
-                Baixar CRLV
-              </Button>
-            </div>
+            <Button type="button" className="gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              </svg>
+              Baixar CRLV
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

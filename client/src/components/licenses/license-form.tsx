@@ -49,9 +49,7 @@ import {
   Building2, 
   Link as LinkIcon,
   FileUp,
-  Check,
-  Send,
-  RefreshCw
+  Check
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "wouter";
@@ -110,178 +108,6 @@ interface LicenseFormProps {
   preSelectedTransporterId?: number | null;
 }
 
-// Função para submeter uma renovação
-export async function submitRenewalRequest(draftId: number, formData: any) {
-  try {
-    console.log("Processando envio de renovação com ID:", draftId);
-    
-    // Garantir valores para campos essenciais
-    const requestData = { ...formData };
-    
-    if (!requestData.cargoType) {
-      requestData.cargoType = requestData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
-    }
-    
-    // --- CONVERSÃO DE DIMENSÕES ---
-    // Primeiro: garantir valores padrão se não existirem
-    if (!requestData.length) requestData.length = 25; // 25 metros
-    if (!requestData.width) requestData.width = 2.6;  // 2.6 metros
-    if (!requestData.height) requestData.height = 4.4; // 4.4 metros
-    
-    console.log("[RENOVAÇÃO] Valores originais (metros):", {
-      length: requestData.length,
-      width: requestData.width,
-      height: requestData.height
-    });
-    
-    // Segundo: verificar se as dimensões estão em metros (valor < 100) e converter para centímetros
-    // Mantendo o tipo float para preservar as casas decimais
-    
-    // Verificar se é uma prancha
-    const isPrancha = requestData.type === 'flatbed';
-    
-    // Tratar comprimento para garantir formato float com casa decimal
-    if (typeof requestData.length === 'number') {
-      // Remover conversão de metros para centímetros, manter os valores como estão
-      let lengthValue = requestData.length;
-      
-      // Garantir que o comprimento seja salvo como float no formato correto (25.00)
-      const lengthStr = lengthValue.toString();
-      if (!lengthStr.includes('.')) {
-        // Formatar o número adicionando o ponto após os dois primeiros dígitos
-        const firstPart = lengthStr.substring(0, 2);
-        const secondPart = lengthStr.substring(2);
-        requestData.length = parseFloat(`${firstPart}.${secondPart}`);
-        console.log(`[RENOVAÇÃO] Comprimento formatado com ponto decimal: ${requestData.length}`);
-      } else {
-        // Se já tem ponto decimal, manter o valor
-        requestData.length = lengthValue;
-      }
-    }
-    
-    // Para não-prancha, manter valores originais em float para largura e altura
-    if (!isPrancha) {
-      console.log("[RENOVAÇÃO] Mantendo valores originais conforme solicitado, sem conversão:");
-      // Para não-prancha, forçar os valores padrão como float com duas casas decimais
-      requestData.width = parseFloat("2.60");  // Valor padrão com duas casas decimais para não-prancha
-      requestData.height = parseFloat("4.40"); // Valor padrão com duas casas decimais para não-prancha
-      
-      // Garantir que sempre sejam números com duas casas decimais
-      console.log(`[RENOVAÇÃO] Definindo largura e altura para valores padrão com duas casas decimais:`);
-      console.log(`  - Largura: ${requestData.width.toFixed(2)}`);
-      console.log(`  - Altura: ${requestData.height.toFixed(2)}`);
-      
-      // Adicionar parâmetros para indicar que são valores em metros (não centímetros)
-      requestData.isRenewal = true;
-      requestData.skipDimensionValidation = true;
-    } else {
-      // Para prancha, converter normalmente
-      // Largura
-      if (typeof requestData.width === 'number' && requestData.width < 100) {
-        requestData.width = requestData.width * 100;
-      }
-      
-      // Altura
-      if (typeof requestData.height === 'number' && requestData.height < 100) {
-        requestData.height = requestData.height * 100;
-      }
-    }
-    
-    // Transformar em request normal (não draft)
-    requestData.isDraft = false;
-    
-    console.log("[RENOVAÇÃO_FINAL] Dimensões convertidas para centímetros:", {
-      length: requestData.length,
-      width: requestData.width,
-      height: requestData.height
-    });
-    
-    console.log("[RENOVAÇÃO] Valores formatados (mantendo unidades originais):", {
-      length: requestData.length,
-      width: requestData.width,
-      height: requestData.height
-    });
-    
-    console.log("Dados da renovação:", JSON.stringify(requestData));
-    
-    // Criar nova licença (contornando o endpoint de submit)
-    const url = '/api/licenses';
-    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({
-        ...requestData,
-        draftToDeleteId: draftId // Para que o backend possa excluir o rascunho após criar
-      })
-    });
-    
-    // Verificar se há resposta de erro do servidor
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: `Erro ao processar renovação: ${response.status} ${response.statusText}` }));
-      throw new Error(errorData.message || `Erro ao processar renovação: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    
-    // Invalidar cache
-    queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
-    
-    return data;
-  } catch (error) {
-    console.error("Erro ao submeter renovação:", error);
-    throw error;
-  }
-}
-
-// Função para submeter um rascunho diretamente (pode ser chamada de fora do componente)
-export async function submitDraftDirectly(draftId: number, formData?: any) {
-  try {
-    // Se temos dados de formulário e comentários, verificar se é renovação
-    const isRenewal = formData?.comments && 
-                      typeof formData.comments === 'string' && 
-                      formData.comments.toLowerCase().includes('renovação');
-    
-    console.log(`submitDraftDirectly - É renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
-    
-    // Tratamento especial para renovações
-    if (isRenewal && formData) {
-      // Usar função dedicada para renovações
-      return await submitRenewalRequest(draftId, formData);
-    } else {
-      // Caminho normal para rascunhos que não são renovações
-      const url = `/api/licenses/drafts/${draftId}/submit`;
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-      
-      // Verificar se há resposta de erro do servidor
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: `Erro ao enviar rascunho: ${response.status} ${response.statusText}` }));
-        throw new Error(errorData.message || `Erro ao enviar rascunho: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      // Invalidar cache
-      queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
-      
-      return data;
-    }
-  } catch (error) {
-    console.error("Erro ao submeter rascunho diretamente:", error);
-    throw error;
-  }
-}
-
 export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporterId }: LicenseFormProps) {
   const { toast } = useToast();
   const [licenseType, setLicenseType] = useState<string>(draft?.type || "");
@@ -332,7 +158,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       states: draft.states,
       isDraft: draft.isDraft,
       comments: draft.comments || undefined,
-      cargoType: draft.cargoType as any || undefined, // Usar o tipo de carga do rascunho ou undefined (usando 'as any' para evitar erro de tipo)
+      cargoType: undefined, // Adicionado para support ao tipo de carga
     } : {
       type: "",
       transporterId: preSelectedTransporterId || undefined, // Usar o transportador pré-selecionado
@@ -350,7 +176,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       additionalPlatesDocuments: [],
       isDraft: true,
       comments: "",
-      cargoType: undefined as any, // Inicializar como undefined para validação de formulário
+      cargoType: undefined, // Adicionado para support ao tipo de carga
     },
   });
 
@@ -402,12 +228,6 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           limits = currentCargoType === 'oversized' 
             ? DIMENSION_LIMITS.oversized 
             : DIMENSION_LIMITS.flatbed;
-        }
-        
-        // Para conjuntos que não são prancha, forçar os valores padrão de largura e altura
-        if (currentType !== 'flatbed' && name === "type") {
-          form.setValue('width', 2.6);  // Largura fixa de 2,60m
-          form.setValue('height', 4.4); // Altura fixa de 4,40m
         }
         
         // Aplicar validações de comprimento específicas
@@ -550,12 +370,11 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     // Adjust dimensions from meters to centimeters for storage
-    // Mantendo os valores como float (sem arredondar)
     const dataToSubmit = {
       ...values,
-      length: (values.length || 0) * 100, // Convert to centimeters
-      width: values.width ? values.width * 100 : undefined, // Convert to centimeters if exists
-      height: values.height ? values.height * 100 : undefined, // Convert to centimeters if exists
+      length: Math.round((values.length || 0) * 100), // Convert to centimeters
+      width: values.width ? Math.round(values.width * 100) : undefined, // Convert to centimeters if exists
+      height: values.height ? Math.round(values.height * 100) : undefined, // Convert to centimeters if exists
     };
     
     if (values.isDraft) {
@@ -564,582 +383,48 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     } else {
       // Remove isDraft from payload when submitting a license request
       const { isDraft, ...requestData } = dataToSubmit;
-      // Log para depuração
-      console.log('Enviando requisição:', requestData);
-      
-      // Garantir que o campo cargoType é válido antes de enviar
-      if (!requestData.cargoType) {
-        console.error('Erro: cargoType não definido no envio final');
-        toast({
-          title: "Erro de validação",
-          description: "Por favor, selecione um tipo de carga para continuar",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Verificar se é um pedido de renovação
-      const isRenewal = requestData.comments && 
-                      typeof requestData.comments === 'string' && 
-                      requestData.comments.toLowerCase().includes('renovação');
-                      
-      console.log(`Verificação de renovação: ${isRenewal ? 'É renovação' : 'Não é renovação'}`);
-                      
-      // Abordagem especial para renovações para evitar problemas
-      if (isRenewal && draft?.id) {
-        console.log("Usando abordagem direta para renovação de licença");
-        
-        // Garantir que temos valores válidos para campos obrigatórios
-        const isPrancha = requestData.type === 'flatbed';
-        if (!requestData.cargoType) {
-          requestData.cargoType = isPrancha ? 'indivisible_cargo' : 'dry_cargo';
-        }
-        
-        // Definir valores com base no tipo de conjunto
-        if (!requestData.length) {
-          requestData.length = isPrancha ? 2500 : 3000; // 25m ou 30m em centímetros
-        }
-        
-        // Para conjuntos que não são prancha, forçar sempre 2,60m de largura
-        if (isPrancha && !requestData.width) {
-          requestData.width = 320; // 3.2m em centímetros para prancha
-        } else if (!isPrancha) {
-          requestData.width = 2.60; // Forçar 2.60m como float para não-prancha
-        }
-        
-        // Para conjuntos que não são prancha, forçar sempre 4,40m de altura
-        if (isPrancha && !requestData.height) {
-          requestData.height = 495; // 4.95m em centímetros para prancha
-        } else if (!isPrancha) {
-          requestData.height = 4.40; // Forçar 4.40m como float para não-prancha
-        }
-        
-        // Criar uma nova licença (não usando o endpoint de submit do rascunho)
-        const url = '/api/licenses';
-        const method = "POST";
-        
-        // Incluir o ID do rascunho a ser excluído após sucesso
-        const payload = {
-          ...requestData,
-          draftToDeleteId: draft.id // Campo adicional para que o backend remova o rascunho após criar a licença
-        };
-        
-        console.log("Enviando renovação com payload modificado:", payload);
-        
-        // Enviar usando o apiRequest em vez de fetch direto (evita uso de await no escopo do componente)
-        apiRequest(method, url, payload)
-          .then(response => {
-            if (!response.ok) {
-              throw new Error(`Erro ao processar renovação: ${response.status} ${response.statusText}`);
-            }
-            return response.json();
-          })
-          .then(data => {
-            // Notificar sucesso
-            toast({
-              title: "Renovação enviada",
-              description: "A solicitação de renovação de licença foi enviada com sucesso",
-            });
-            
-            // Invalidar cache e completar
-            queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
-            queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
-            onComplete();
-          })
-          .catch(error => {
-            console.error("Erro ao processar renovação:", error);
-            toast({
-              title: "Erro na renovação",
-              description: error instanceof Error ? error.message : "Erro ao processar renovação",
-              variant: "destructive",
-            });
-          });
-      } else {
-        // Para solicitações normais, usar o fluxo padrão
-        console.log("Usando fluxo padrão para envio de solicitação");
-        submitRequestMutation.mutate(requestData as any);
-      }
+      submitRequestMutation.mutate(requestData as any);
     }
   };
 
-  // Função de validação do formulário integrada diretamente ao handleSubmitRequest
+  // Função para verificar se os campos obrigatórios estão preenchidos
+  const checkRequiredFields = () => {
+    const values = form.getValues();
+    const isWidthEmpty = values.width === undefined || values.width === null;
+    const isHeightEmpty = values.height === undefined || values.height === null;
+    const isCargoTypeEmpty = values.cargoType === undefined || values.cargoType === null || values.cargoType === '';
+    
+    return isWidthEmpty || isHeightEmpty || isCargoTypeEmpty;
+  };
 
   const handleSaveDraft = () => {
     form.setValue("isDraft", true);
     form.handleSubmit(onSubmit)();
   };
 
-  const handleSubmitRequest = async () => {
-    // Obter valores do formulário para verificação
-    const values = form.getValues();
-    
-    // Verificar se é um pedido de renovação
-    const isRenewal = values.comments && 
-                     typeof values.comments === 'string' && 
-                     values.comments.toLowerCase().includes('renovação');
-    
-    console.log(`É pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
-    
-    // Se for renovação, adicionar campos adicionais para garantir validade
-    if (isRenewal) {
-      // Garantir que dimensões e tipo de carga estão preenchidos
-      if (!values.length) values.length = 25; // 25m
-      if (!values.width) values.width = 2.6;  // 2.6m
-      if (!values.height) values.height = 4.4; // 4.4m
-      if (!values.cargoType) values.cargoType = values.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
-      
-      console.log('Valores ajustados para renovação:', {
-        length: values.length,
-        width: values.width,
-        height: values.height,
-        cargoType: values.cargoType
-      });
-      
-      // Atualizar o formulário com os valores ajustados
-      form.setValue('length', values.length);
-      form.setValue('width', values.width);
-      form.setValue('height', values.height);
-      form.setValue('cargoType', values.cargoType as any);
-      
-      // Para renovações, usar nossa função específica quando for um draft existente
-      if (draft && draft.id) {
-        // Validar campos antes de enviar
-        const isValid = await validateFields();
-        if (!isValid) return;
-        
-        try {
-          // Usar a função específica para renovações
-          await submitRenewalRequest(draft.id, values);
-          
-          toast({
-            title: "Renovação enviada com sucesso",
-            description: "O pedido de renovação foi enviado para análise",
-          });
-          
-          // Chamar onComplete para fechar o modal e atualizar a lista
-          onComplete();
-          return; // Sair da função aqui para não executar o restante
-        } catch (error) {
-          console.error("Erro ao enviar renovação:", error);
-          toast({
-            title: "Erro ao enviar renovação",
-            description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar a renovação",
-            variant: "destructive",
-          });
-          return; // Sair da função em caso de erro
-        }
-      }
-    }
-    
-    // Usar a nova função de validação assíncrona para verificar todos os campos
-    const isValid = await validateFields();
-    if (!isValid) return;
-    
-    // Já verificamos se é renovação no início da função, usar a mesma variável
-    // Re-verificar se é renovação antes de validar dimensões
-    
-    // Validar dimensões, mas pular se for renovação
-    if (!isRenewal) {
-      validateDimensions(values);
-    } else {
-      console.log("[RENOVAÇÃO] Pulando validação de dimensões no envio da licença");
-      // Adicionar flags para renovação como parte do formulário
-      const formValues = values as any;
-      formValues.isRenewal = true;
-      formValues.skipDimensionValidation = true;
-    }
-    
-    // Atualizar o valor isDraft para false e submeter
-    form.setValue("isDraft", false);
-    form.handleSubmit(onSubmit)();
-  };
-  
-  // Função para submeter um rascunho existente diretamente
-  const handleSubmitDraftDirectly = async () => {
-    if (!draft || !draft.id) {
-      toast({
-        title: "Erro",
-        description: "Não é possível enviar um rascunho que ainda não foi salvo",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Obter valores do formulário para verificação
-    const values = form.getValues();
-    
-    // Verificar se é um pedido de renovação
-    const isRenewal = values.comments && 
-                     typeof values.comments === 'string' && 
-                     values.comments.toLowerCase().includes('renovação');
-    
-    console.log(`É pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
-    
-    // Preparar valores para envio
-    if (isRenewal) {
-      // Garantir que dimensões e tipo de carga estão preenchidos
-      if (!values.length) {
-        values.length = 25; // 25m
-        form.setValue('length', values.length);
-      }
-      if (!values.width) {
-        values.width = 2.6;  // 2.6m
-        form.setValue('width', values.width);
-      }
-      if (!values.height) {
-        values.height = 4.4; // 4.4m
-        form.setValue('height', values.height);
-      }
-      if (!values.cargoType) {
-        values.cargoType = values.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
-        form.setValue('cargoType', values.cargoType as any);
-      }
-      
-      // Forçar conversão de metros para centímetros apenas para o envio
-      // Manter os valores originais no formulário (em metros)
-      const valuesOriginal = { ...values };
-      
-      // Converter para centímetros diretamente nos valores, mantendo o tipo float
-      if (typeof values.length === 'number' && values.length < 100) {
-        values.length = values.length * 100;
-      }
-      
-      if (typeof values.width === 'number' && values.width < 100) {
-        values.width = values.width * 100;
-      }
-      
-      if (typeof values.height === 'number' && values.height < 100) {
-        values.height = values.height * 100;
-      }
-      
-      console.log('[RENOVAÇÃO] Valores originais (metros):', {
-        length: valuesOriginal.length,
-        width: valuesOriginal.width,
-        height: valuesOriginal.height,
-      });
-      
-      console.log('[RENOVAÇÃO] Valores convertidos (centímetros):', {
-        length: values.length,
-        width: values.width,
-        height: values.height,
-      });
-    }
-    
-    // Validar campos antes de enviar
-    const isValid = await validateFields();
-    if (!isValid) return;
-    
-    try {
-      if (isRenewal) {
-        // Usar função específica para renovações
-        await submitRenewalRequest(draft.id, values);
-      } else {
-        // Usar função direta para rascunhos comuns (evitar recursão)
-        const url = `/api/licenses/drafts/${draft.id}/submit`;
-        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ message: `Erro ao enviar rascunho: ${response.status} ${response.statusText}` }));
-          throw new Error(errorData.message || `Erro ao enviar rascunho: ${response.status} ${response.statusText}`);
-        }
-        
-        await response.json();
-        
-        // Invalidar cache
-        queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
-      }
-      
-      toast({
-        title: isRenewal ? "Renovação enviada com sucesso" : "Rascunho enviado com sucesso",
-        description: isRenewal 
-          ? "O pedido de renovação foi enviado para análise" 
-          : "O pedido de licença foi enviado para análise",
-        variant: "success",
-      });
-      
-      // Chamar onComplete para fechar o modal e atualizar a lista
-      onComplete();
-    } catch (error) {
-      console.error("Erro ao submeter rascunho:", error);
-      toast({
-        title: "Erro ao enviar rascunho",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar o rascunho",
-        variant: "destructive",
-      });
-    }
-  };
-  
-  // Verificar se uma placa está cadastrada no sistema (função auxiliar)
-  const verifyPlateRegistered = async (plate: string): Promise<boolean> => {
-    try {
-      // Ignorar placas vazias
-      if (!plate || plate.trim() === '') return true;
-      
-      console.log(`Buscando veículo com placa: ${plate}`);
-      const response = await fetch(`/api/public/vehicle-by-plate/${plate}`);
-      
-      if (response.status === 404) {
-        console.log(`Resposta para ${plate}: Veículo não encontrado`);
-        return false;
-      }
-      
-      if (!response.ok) {
-        console.error(`Erro ao verificar placa ${plate}: ${response.statusText}`);
-        return false;
-      }
-      
-      const data = await response.json();
-      console.log(`Resposta para ${plate}:`, data);
-      return true;
-    } catch (error) {
-      console.error(`Erro ao verificar placa ${plate}:`, error);
-      return false;
-    }
-  };
-  
-  // Verificar campos básicos no handleSubmitRequest
-  const validateFields = async () => {
-    const values = form.getValues();
-    const missingFields = [];
-    
-    if (!values.type) missingFields.push("Tipo de Conjunto");
-    if (!values.transporterId) missingFields.push("Transportador");
-    
-    // Verificação especial para o tipo de carga
-    if (!values.cargoType) {
-      missingFields.push("Tipo de Carga");
-      
-      // Definir o campo como erro no formulário
-      form.setError('cargoType', { 
-        type: 'manual', 
-        message: 'Selecione um tipo de carga para continuar' 
-      });
-      
-      // Se o tipo de licença estiver definido, fazer foco na seção de carga
-      if (values.type) {
-        // Destacar visualmente a seção de carga
-        const cargoTypeSection = document.getElementById('cargo-type-section');
-        if (cargoTypeSection) {
-          cargoTypeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // Adicionar classe para destacar o campo com erro
-          cargoTypeSection.classList.add('border-red-300', 'bg-red-50');
-          setTimeout(() => {
-            cargoTypeSection.classList.remove('border-red-300', 'bg-red-50');
-          }, 3000);
-        }
-      }
-    }
-    
-    if (!values.length) missingFields.push("Comprimento");
-    if (!values.width) missingFields.push("Largura");
-    if (!values.height) missingFields.push("Altura");
-    if (!values.states || values.states.length === 0) missingFields.push("Estados");
-    
-    // Verificar veículos com base no tipo
-    if (values.type === 'bitrain_9_axles' || values.type === 'bitrain_7_axles' || values.type === 'bitrain_6_axles') {
-      if (!values.tractorUnitId) missingFields.push("Unidade Tratora");
-      if (!values.firstTrailerId) missingFields.push("1ª Carreta");
-      if (!values.secondTrailerId) missingFields.push("2ª Carreta");
-    } else if (values.type === 'flatbed') {
-      if (!values.flatbedId) missingFields.push("Prancha");
-    } else if (values.type === 'romeo_and_juliet') {
-      if (!values.tractorUnitId) missingFields.push("Caminhão");
-      if (!values.firstTrailerId) missingFields.push("Reboque");
-    }
-    
-    // Se encontrou campos faltando
-    if (missingFields.length > 0) {
-      // Mostrar aviso 
+  const handleSubmitRequest = () => {
+    // Verificar se os campos obrigatórios estão preenchidos
+    if (checkRequiredFields()) {
+      // Mostrar aviso e não prosseguir com a submissão
       setShowRequiredFieldsWarning(true);
       
       // Rolar para o topo para garantir que o usuário veja o aviso
       window.scrollTo({ top: 0, behavior: 'smooth' });
       
-      // Construir mensagem com os campos faltantes
-      const fieldsText = missingFields.join(", ");
-      
-      // Notificar o usuário através de toast com detalhamento
+      // Notificar o usuário através de toast
       toast({
-        title: "Campos obrigatórios não preenchidos",
-        description: `Por favor, preencha os seguintes campos: ${fieldsText}`,
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios para enviar sua solicitação",
         variant: "destructive",
       });
       
-      // Registrar os valores atuais no console para debug
-      console.log('Formulário incompleto:', { 
-        camposFaltantes: missingFields,
-        valores: values 
-      });
-      
-      return false;
-    }
-    
-    // Verificar se todas as placas adicionais estão cadastradas
-    if (values.additionalPlates && values.additionalPlates.length > 0) {
-      const notRegisteredPlates = [];
-      
-      for (const plate of values.additionalPlates) {
-        // Ignorar placas vazias
-        if (!plate || plate.trim() === '') continue;
-        
-        const isRegistered = await verifyPlateRegistered(plate);
-        if (!isRegistered) {
-          notRegisteredPlates.push(plate);
-        }
-      }
-      
-      if (notRegisteredPlates.length > 0) {
-        // Formatar lista de placas para exibição
-        const platesList = notRegisteredPlates.join(", ");
-        
-        // Notificar o usuário através de toast com detalhamento
-        toast({
-          title: "Placas adicionais não cadastradas",
-          description: `As seguintes placas adicionais não estão cadastradas no sistema: ${platesList}. Cadastre todos os veículos antes de submeter a licença.`,
-          variant: "destructive",
-        });
-        
-        return false;
-      }
+      return;
     }
     
     // Se tudo estiver preenchido, continuar com a submissão
     setShowRequiredFieldsWarning(false);
-    
-    // Antes de enviar, garantir que o cargoType esteja definido corretamente
-    // Se ainda não tiver valor, tentar usar o estado local
-    if (!values.cargoType && cargoType) {
-      form.setValue("cargoType", cargoType as any);
-    }
-    
-    // Registrar para debug o valor final que será enviado
-    console.log('Valores finais antes de enviar:', form.getValues());
-    
     form.setValue("isDraft", false);
     form.handleSubmit(onSubmit)();
-  };
-
-  // Função para validar dimensões com base no tipo de licença e carga
-  const validateDimensions = (values: any) => {
-    // Obter o tipo de conjunto e de carga
-    const licenseType = values.type || 'default';
-    const cargoType = values.cargoType;
-    
-    // Verificar e converter valores de dimensão se necessário
-    // Se os valores estiverem em centímetros (acima de 100), converter para metros
-    const length = Number(values.length);
-    const width = Number(values.width);
-    const height = Number(values.height);
-    
-    // Verificar se é renovação para tratar valores corretamente
-    const isRenewal = values.comments && 
-                     typeof values.comments === 'string' && 
-                     values.comments.toLowerCase().includes('renovação');
-    
-    // Se for renovação, pular todas as validações e tratamentos de unidades
-    if (isRenewal) {
-      console.log(`[RENOVAÇÃO] Pulando validações de dimensões. Mantendo valores originais:`, {
-        length, width, height
-      });
-      
-      // Forçar flags para renovação
-      values.isRenewal = true;
-      values.skipDimensionValidation = true;
-    } else {
-      // Somente validar para novas licenças (não renovações)
-      console.log(`Validando comprimento:`, length, `tipo:`, typeof length);
-      const lengthInCentimeters = length > 100;
-      console.log(`Valor em metros:`, length, `Está em centímetros:`, lengthInCentimeters);
-      
-      console.log(`Validando largura:`, width, `tipo:`, typeof width);
-      const widthInCentimeters = width > 100;
-      console.log(`Largura em metros:`, width, `Está em centímetros:`, widthInCentimeters);
-      
-      console.log(`Validando altura:`, height, `tipo:`, typeof height);
-      const heightInCentimeters = height > 100;
-      console.log(`Altura em metros:`, height, `Está em centímetros:`, heightInCentimeters);
-    }
-    
-    // Determinar quais limites usar com base no tipo
-    let limits;
-    
-    if (licenseType === 'flatbed') {
-      // Para pranchas, usar limite específico
-      limits = DIMENSION_LIMITS.flatbed;
-    } else {
-      // Para outros tipos, usar limite padrão
-      limits = DIMENSION_LIMITS.default;
-    }
-    
-    // Para carga SUPERDIMENSIONADA, não há limites
-    if (cargoType === 'oversized') {
-      limits = DIMENSION_LIMITS.oversized;
-    }
-    
-    // Ajustar os valores no formulário se necessário (conversão de cm para m)
-    // Pular as conversões para renovações
-    if (!isRenewal) {
-      if (length > 100) {
-        const convertedLength = length / 100;
-        form.setValue('length', convertedLength);
-        console.log(`Convertendo comprimento de ${length}cm para ${convertedLength}m`);
-      }
-      
-      if (width > 100) {
-        const convertedWidth = width / 100;
-        form.setValue('width', convertedWidth);
-        console.log(`Convertendo largura de ${width}cm para ${convertedWidth}m`);
-      }
-      
-      if (height > 100) {
-        const convertedHeight = height / 100;
-        form.setValue('height', convertedHeight);
-        console.log(`Convertendo altura de ${height}cm para ${convertedHeight}m`);
-      }
-    } else {
-      console.log(`[RENOVAÇÃO] Mantendo valores originais sem conversão:`, {
-        length, width, height
-      });
-    }
-    
-    // Validação dos limites e mensagens de aviso
-    if (cargoType !== 'oversized') {
-      // Só validar limites para cargas que não são superdimensionadas
-      const updatedLength = Number(form.getValues('length'));
-      const updatedWidth = Number(form.getValues('width'));
-      const updatedHeight = Number(form.getValues('height'));
-      
-      if (updatedLength > limits.maxLength) {
-        toast({
-          title: "Aviso sobre dimensões",
-          description: `O comprimento (${updatedLength}m) excede o limite máximo de ${limits.maxLength}m para este tipo de conjunto. A licença pode ser recusada.`,
-          variant: "warning",
-        });
-      }
-      
-      if (updatedWidth > limits.maxWidth) {
-        toast({
-          title: "Aviso sobre dimensões",
-          description: `A largura (${updatedWidth}m) excede o limite máximo de ${limits.maxWidth}m para este tipo de conjunto. A licença pode ser recusada.`,
-          variant: "warning",
-        });
-      }
-      
-      if (updatedHeight > limits.maxHeight) {
-        toast({
-          title: "Aviso sobre dimensões",
-          description: `A altura (${updatedHeight}m) excede o limite máximo de ${limits.maxHeight}m para este tipo de conjunto. A licença pode ser recusada.`,
-          variant: "warning",
-        });
-      }
-    }
   };
 
   const isProcessing = saveAsDraftMutation.isPending || submitRequestMutation.isPending;
@@ -1212,107 +497,19 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   <p>
                     Os seguintes campos são obrigatórios para enviar a solicitação:
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pl-5 mt-2">
-                    {/* Campos básicos */}
-                    {!form.getValues('type') && (
-                      <div className="flex items-center">
-                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                        <span>Tipo de Conjunto</span>
-                      </div>
+                  <ul className="list-disc pl-5 mt-1 space-y-1">
+                    {form.getValues('width') === undefined && (
+                      <li>Largura do conjunto</li>
                     )}
-                    {!form.getValues('transporterId') && (
-                      <div className="flex items-center">
-                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                        <span>Transportador</span>
-                      </div>
+                    {form.getValues('height') === undefined && (
+                      <li>Altura do conjunto</li>
                     )}
-                    {!form.getValues('cargoType') && (
-                      <div className="flex items-center">
-                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                        <span>Tipo de Carga</span>
-                      </div>
+                    {(form.getValues('cargoType') === undefined || form.getValues('cargoType') === '') && (
+                      <li>Tipo de carga</li>
                     )}
-                    
-                    {/* Dimensões */}
-                    {!form.getValues('length') && (
-                      <div className="flex items-center">
-                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                        <span>Comprimento</span>
-                      </div>
-                    )}
-                    {!form.getValues('width') && (
-                      <div className="flex items-center">
-                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                        <span>Largura</span>
-                      </div>
-                    )}
-                    {!form.getValues('height') && (
-                      <div className="flex items-center">
-                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                        <span>Altura</span>
-                      </div>
-                    )}
-                    
-                    {/* Estados */}
-                    {(!form.getValues('states') || form.getValues('states').length === 0) && (
-                      <div className="flex items-center">
-                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                        <span>Estados</span>
-                      </div>
-                    )}
-                    
-                    {/* Veículos dependendo do tipo */}
-                    {form.getValues('type') === 'bitrain_9_axles' || 
-                     form.getValues('type') === 'bitrain_7_axles' || 
-                     form.getValues('type') === 'bitrain_6_axles' ? (
-                      <>
-                        {!form.getValues('tractorUnitId') && (
-                          <div className="flex items-center">
-                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                            <span>Unidade Tratora</span>
-                          </div>
-                        )}
-                        {!form.getValues('firstTrailerId') && (
-                          <div className="flex items-center">
-                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                            <span>1ª Carreta</span>
-                          </div>
-                        )}
-                        {!form.getValues('secondTrailerId') && (
-                          <div className="flex items-center">
-                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                            <span>2ª Carreta</span>
-                          </div>
-                        )}
-                      </>
-                    ) : form.getValues('type') === 'flatbed' ? (
-                      <>
-                        {!form.getValues('flatbedId') && (
-                          <div className="flex items-center">
-                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                            <span>Prancha</span>
-                          </div>
-                        )}
-                      </>
-                    ) : form.getValues('type') === 'romeo_and_juliet' ? (
-                      <>
-                        {!form.getValues('tractorUnitId') && (
-                          <div className="flex items-center">
-                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                            <span>Caminhão</span>
-                          </div>
-                        )}
-                        {!form.getValues('firstTrailerId') && (
-                          <div className="flex items-center">
-                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                            <span>Reboque</span>
-                          </div>
-                        )}
-                      </>
-                    ) : null}
-                  </div>
-                  <p className="mt-3 text-sm">
-                    <span className="font-medium">Dica:</span> Preencha todos os campos acima indicados para poder enviar sua solicitação.
+                  </ul>
+                  <p className="mt-2">
+                    Por favor, preencha todos os campos marcados como <span className="text-yellow-600 font-medium">Obrigatório</span> antes de enviar.
                   </p>
                 </div>
               </div>
@@ -1565,18 +762,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-base font-medium">Tipo de Conjunto</FormLabel>
-                  <Select onValueChange={(value) => {
-                    // Atualizar o tipo do conjunto
-                    field.onChange(value);
-                    
-                    // Quando o tipo muda, resetar o valor do tipo de carga
-                    // para forçar o usuário a selecionar um tipo compatível
-                    if (value !== field.value) {
-                      setLicenseType(value);
-                      form.setValue("cargoType", undefined as any);
-                      setCargoType("");
-                    }
-                  }} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger className="h-10">
                         <SelectValue placeholder="Selecione um tipo" />
@@ -1633,10 +819,10 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                 name="cargoType"
                 render={({ field }) => {
                   // Verificar se o campo está vazio
-                  const isEmpty = !field.value; // Simplificação para checar se é falsy
+                  const isEmpty = field.value === undefined || field.value === null || field.value === '';
                   
                   return (
-                    <FormItem id="cargo-type-section">
+                    <FormItem>
                       <FormLabel className="text-base font-medium flex items-center">
                         Tipo de Carga
                         {isEmpty && (
@@ -1646,16 +832,8 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                         )}
                       </FormLabel>
                       <Select 
-                        onValueChange={(value) => {
-                          // Garantir que o tipo de carga seja salvo no formulário
-                          field.onChange(value);
-                          // Atualizar o estado local para referência também
-                          setCargoType(value);
-                          // Remover erros relacionados a este campo
-                          form.clearErrors('cargoType');
-                        }} 
+                        onValueChange={field.onChange} 
                         defaultValue={field.value}
-                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger className={`h-10 ${isEmpty ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}>
@@ -1726,13 +904,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   fieldType="largura"
                   label="Largura do Conjunto (metros)"
                   placeholder="Ex.: 2,60"
-                  disabled={licenseType !== 'flatbed'} // Desabilitar para conjuntos não-prancha
                   description={
                     licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
                       ? 'Informe a largura total do conjunto em metros (sem limite para carga superdimensionada)'
                       : licenseType === 'flatbed'
                         ? 'Informe a largura total do conjunto em metros (max: 3,20)'
-                        : 'Largura padrão de 2,60 metros para este tipo de conjunto (não editável)'
+                        : 'Informe a largura total do conjunto em metros (max: 2,60)'
                   }
                 />
               )}
@@ -1747,13 +924,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   fieldType="altura"
                   label="Altura do Conjunto (metros)"
                   placeholder="Ex.: 4,40"
-                  disabled={licenseType !== 'flatbed'} // Desabilitar para conjuntos não-prancha
                   description={
                     licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
                       ? 'Informe a altura total do conjunto em metros (sem limite para carga superdimensionada)'
                       : licenseType === 'flatbed'
                         ? 'Informe a altura total do conjunto em metros (max: 4,95)'
-                        : 'Altura padrão de 4,40 metros para este tipo de conjunto (não editável)'
+                        : 'Informe a altura total do conjunto em metros (max: 4,40)'
                   }
                 />
               )}
@@ -2823,7 +1999,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             type="button" 
             variant="outline" 
             onClick={onCancel}
-            className="w-full sm:w-auto order-4 sm:order-1"
+            className="w-full sm:w-auto order-3 sm:order-1"
           >
             Cancelar
           </Button>
@@ -2832,65 +2008,19 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             variant="outline"
             onClick={handleSaveDraft}
             disabled={isProcessing}
-            className="w-full sm:w-auto order-3 sm:order-2"
+            className="w-full sm:w-auto order-2"
           >
             {saveAsDraftMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
             Salvar Rascunho
           </Button>
-          {/* Botão para envio direto de rascunho, mostrado apenas quando estamos editando um rascunho existente */}
-          {draft && draft.id && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleSubmitDraftDirectly}
-              className="w-full sm:w-auto order-2 sm:order-3 bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
-            >
-              <Send className="mr-2 h-4 w-4" />
-              Enviar Rascunho
-            </Button>
-          )}
-          {/* Botão para enviar como renovação diretamente */}
-          {(draft?.comments && draft.comments.toLowerCase().includes('renovação')) && (
-            <Button 
-              type="button"
-              onClick={() => {
-                const isRenewal = true;
-                console.log("Enviando como renovação diretamente");
-                
-                // Preparar dados para renovação
-                const formValues = form.getValues();
-                const isPrancha = formValues.type === 'flatbed';
-                
-                // Definir os valores padrão para dimensões e campos obrigatórios
-                const requestData = {
-                  ...formValues,
-                  length: formValues.length || (isPrancha ? 25 : 30),
-                  width: isPrancha ? (formValues.width || 3.2) : 2.6,
-                  height: isPrancha ? (formValues.height || 4.95) : 4.4,
-                  cargoType: formValues.cargoType || (isPrancha ? 'indivisible_cargo' : 'dry_cargo'),
-                  isDraft: false,
-                  skipDimensionValidation: true,
-                  isRenewal: true
-                };
-                
-                // Enviar a requisição
-                submitRenewalRequest(draft?.id || 0, requestData);
-              }}
-              disabled={isProcessing}
-              className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto order-2 sm:order-3"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Enviar Renovação
-            </Button>
-          )}
           <Button
             type="button"
             onClick={handleSubmitRequest}
             disabled={isProcessing}
-            className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto order-1 sm:order-4"
+            className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto order-1 sm:order-3"
           >
             {submitRequestMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-            Enviar Novo Pedido
+            Enviar Pedido
           </Button>
         </div>
       </form>

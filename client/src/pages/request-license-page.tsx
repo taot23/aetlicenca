@@ -127,7 +127,7 @@ export default function RequestLicensePage() {
           <h2 className="text-lg font-medium text-gray-800">AETs Pendentes de Envio</h2>
         </div>
         <LicenseList 
-          licenses={(draftLicenses || []).filter(draft => draft.isDraft === true)} 
+          licenses={draftLicenses || []} 
           isLoading={isLoading}
           isDraftList
           onEdit={handleEditDraft}

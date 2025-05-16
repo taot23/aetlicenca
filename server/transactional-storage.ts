@@ -221,13 +221,10 @@ export class TransactionalStorage implements IStorage {
   }
   
   async getVehicleByPlate(plate: string): Promise<Vehicle | undefined> {
-    // Garante que estamos trabalhando com a placa em letras maiúsculas
-    const plateUpper = plate.toUpperCase();
-    
-    const results = await db.select().from(vehicles);
-    
-    // Procura por correspondência de placa, ignorando diferenças de maiúsculas/minúsculas
-    const vehicle = results.find(v => v.plate.toUpperCase() === plateUpper);
+    const [vehicle] = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.plate, plate));
     
     return vehicle;
   }
@@ -404,10 +401,10 @@ export class TransactionalStorage implements IStorage {
         dollyId: licenseData.dollyId,
         secondTrailerId: licenseData.secondTrailerId,
         flatbedId: licenseData.flatbedId,
-        length: licenseData.length ? Math.round(Number(licenseData.length)) : null,
-        // Usar os valores sanitizados e arredondados para inteiros
-        width: width ? Math.round(Number(width)) : null,
-        height: height ? Math.round(Number(height)) : null,
+        length: licenseData.length,
+        // Usar os valores sanitizados
+        width: Number(width),
+        height: Number(height),
         cargoType,
         additionalPlates: licenseData.additionalPlates || [],
         additionalPlatesDocuments: licenseData.additionalPlatesDocuments || [],
@@ -513,57 +510,21 @@ export class TransactionalStorage implements IStorage {
     // Sanitizar campos de dimensões e tipo de carga com valores padrão baseados no tipo de licença
     let width = draft.width;
     let height = draft.height;
-    let length = draft.length;
     let cargoType = draft.cargoType;
     
-    // Imprimir dados para diagnóstico detalhado
-    console.log("SubmitLicenseDraft - valores iniciais:", {
-      width,
-      height,
-      length,
-      cargoType,
-      type: draft.type,
-      comments: draft.comments
-    });
-    
-    // Verificar se é um pedido de renovação
-    const isRenewal = draft.comments && 
-                     typeof draft.comments === 'string' && 
-                     draft.comments.toLowerCase().includes('renovação');
-    
-    console.log(`Pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
-    
-    // Se a largura não estiver definida ou for inválida, usar valor padrão com base no tipo de licença
-    if (width === undefined || width === null || isNaN(Number(width))) {
+    // Se a largura não estiver definida, usar valor padrão com base no tipo de licença
+    if (width === undefined || width === null) {
       width = draft.type === "flatbed" ? 320 : 260; // 3.20m ou 2.60m
-      console.log("Largura ajustada para valor padrão:", width);
-    } else {
-      width = Number(width);
-      console.log("Largura convertida para número:", width);
     }
     
-    // Se a altura não estiver definida ou for inválida, usar valor padrão com base no tipo de licença
-    if (height === undefined || height === null || isNaN(Number(height))) {
+    // Se a altura não estiver definida, usar valor padrão com base no tipo de licença
+    if (height === undefined || height === null) {
       height = draft.type === "flatbed" ? 495 : 440; // 4.95m ou 4.40m
-      console.log("Altura ajustada para valor padrão:", height);
-    } else {
-      height = Number(height);
-      console.log("Altura convertida para número:", height);
     }
     
-    // Se o comprimento não estiver definido ou for inválido, usar valor padrão com base no tipo de licença
-    if (length === undefined || length === null || isNaN(Number(length))) {
-      length = draft.type === "flatbed" ? 2500 : 2500; // 25m padrão em centímetros
-      console.log("Comprimento ajustado para valor padrão:", length);
-    } else {
-      length = Number(length);
-      console.log("Comprimento convertido para número:", length);
-    }
-    
-    // Se o tipo de carga não estiver definido ou for inválido, usar valor padrão com base no tipo de licença
-    if (cargoType === undefined || cargoType === null || cargoType === "" || typeof cargoType !== 'string') {
+    // Se o tipo de carga não estiver definido, usar valor padrão com base no tipo de licença
+    if (cargoType === undefined || cargoType === null || cargoType === "") {
       cargoType = draft.type === "flatbed" ? "indivisible_cargo" : "dry_cargo";
-      console.log("Tipo de carga ajustado para valor padrão:", cargoType);
     }
     
     // Log para diagnóstico
@@ -580,23 +541,17 @@ export class TransactionalStorage implements IStorage {
     });
     
     // Atualizar o rascunho para um pedido real
-    // Preparar dados a serem atualizados no banco
-    const updateData = {
-      isDraft: false,
-      requestNumber,
-      status: "pending_registration",
-      width: Number(width),
-      height: Number(height),
-      length: Number(length),
-      cargoType,
-      updatedAt: new Date()
-    };
-    
-    console.log("Dados finais antes de atualizar no banco:", updateData);
-    
     const [licenseRequest] = await db
       .update(licenseRequests)
-      .set(updateData)
+      .set({
+        isDraft: false,
+        requestNumber,
+        status: "pending_registration",
+        width: Number(width),
+        height: Number(height),
+        cargoType,
+        updatedAt: new Date()
+      })
       .where(eq(licenseRequests.id, id))
       .returning();
     
@@ -881,52 +836,13 @@ export class TransactionalStorage implements IStorage {
   }
   
   async deleteLicenseRequest(id: number): Promise<void> {
-    // Primeiro, verificar se a licença existe
-    const license = await db
-      .select()
-      .from(licenseRequests)
+    const result = await db
+      .delete(licenseRequests)
       .where(eq(licenseRequests.id, id))
-      .limit(1);
-      
-    if (!license.length) {
-      throw new Error("Pedido de licença não encontrado");
-    }
+      .returning();
     
-    // Se for um rascunho, posso excluir diretamente, se não, preciso excluir histórico primeiro
-    if (license[0].isDraft) {
-      // Excluir diretamente, pois rascunhos não devem ter histórico
-      const result = await db
-        .delete(licenseRequests)
-        .where(eq(licenseRequests.id, id))
-        .returning();
-      
-      if (!result.length) {
-        throw new Error("Falha ao excluir rascunho");
-      }
-    } else {
-      // Primeiro excluir quaisquer registros de histórico de status
-      try {
-        // Tentar excluir usando transação
-        return await withTransaction(async (tx) => {
-          // 1. Excluir registros de histórico de status
-          await tx
-            .delete(statusHistories)
-            .where(eq(statusHistories.licenseId, id));
-            
-          // 2. Excluir a licença
-          const result = await tx
-            .delete(licenseRequests)
-            .where(eq(licenseRequests.id, id))
-            .returning();
-            
-          if (!result.length) {
-            throw new Error("Falha ao excluir licença");
-          }
-        });
-      } catch (error) {
-        console.error("Erro ao excluir licença com histórico:", error);
-        throw error;
-      }
+    if (!result.length) {
+      throw new Error("Pedido de licença não encontrado");
     }
   }
   
