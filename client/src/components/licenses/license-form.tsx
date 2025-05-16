@@ -665,6 +665,16 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       if (!values.firstTrailerId) missingFields.push("Reboque");
     }
     
+    // CORREÇÃO FINAL PARA PEDIDOS DE PRANCHA
+    // Ignorar completamente o campo "Prancha" nas validações
+    if (values.type === 'flatbed') {
+      const pranchaIndex = missingFields.indexOf("Prancha");
+      if (pranchaIndex !== -1) {
+        console.log("[DEBUG] Removendo 'Prancha' da lista de campos obrigatórios");
+        missingFields.splice(pranchaIndex, 1);
+      }
+    }
+    
     // Se encontrou campos faltando
     if (missingFields.length > 0) {
       // Mostrar aviso 
