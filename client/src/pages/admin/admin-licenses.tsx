@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   Loader2, Search, FileText, CheckCircle, XCircle, File, Clock, 
-  MapPin, X, UploadCloud, Pencil, AlertCircle, Eye, EyeOff, Trash2 
+  MapPin, X, UploadCloud, Pencil, AlertCircle, Eye, EyeOff, Trash2,
+  RefreshCw
 } from "lucide-react";
 import {
   AlertDialog,
@@ -573,7 +574,7 @@ export default function AdminLicensesPage() {
     <AdminLayout>
       <div className="container mx-auto py-4 px-3 md:px-6 md:py-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6">
-          <div>
+          <div className="flex items-center gap-4">
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight leading-tight">Licenças</h1>
             <p className="text-sm md:text-base text-muted-foreground mt-1">
               Gerencie todas as licenças no sistema.
