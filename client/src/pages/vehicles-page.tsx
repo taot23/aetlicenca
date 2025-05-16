@@ -80,10 +80,24 @@ export default function VehiclesPage() {
   return (
     <MainLayout>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0 mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Veículos Cadastrados</h1>
-        <Button onClick={handleAddVehicle} className="w-full sm:w-auto">
-          <Plus className="mr-2 h-4 w-4" /> Cadastrar Veículo
-        </Button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Veículos Cadastrados</h1>
+          <p className="text-gray-600 mt-1">Gerencie todos os veículos cadastrados no sistema</p>
+        </div>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button 
+            onClick={() => refetch()} 
+            variant="outline" 
+            className="flex items-center gap-1 bg-white"
+            title="Atualizar lista de veículos"
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Atualizar
+          </Button>
+          <Button onClick={handleAddVehicle} className="w-full sm:w-auto">
+            <Plus className="mr-2 h-4 w-4" /> Cadastrar Veículo
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow mb-6">
