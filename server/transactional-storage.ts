@@ -510,57 +510,21 @@ export class TransactionalStorage implements IStorage {
     // Sanitizar campos de dimensões e tipo de carga com valores padrão baseados no tipo de licença
     let width = draft.width;
     let height = draft.height;
-    let length = draft.length;
     let cargoType = draft.cargoType;
     
-    // Imprimir dados para diagnóstico detalhado
-    console.log("SubmitLicenseDraft - valores iniciais:", {
-      width,
-      height,
-      length,
-      cargoType,
-      type: draft.type,
-      comments: draft.comments
-    });
-    
-    // Verificar se é um pedido de renovação
-    const isRenewal = draft.comments && 
-                     typeof draft.comments === 'string' && 
-                     draft.comments.toLowerCase().includes('renovação');
-    
-    console.log(`Pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
-    
-    // Se a largura não estiver definida ou for inválida, usar valor padrão com base no tipo de licença
-    if (width === undefined || width === null || isNaN(Number(width))) {
+    // Se a largura não estiver definida, usar valor padrão com base no tipo de licença
+    if (width === undefined || width === null) {
       width = draft.type === "flatbed" ? 320 : 260; // 3.20m ou 2.60m
-      console.log("Largura ajustada para valor padrão:", width);
-    } else {
-      width = Number(width);
-      console.log("Largura convertida para número:", width);
     }
     
-    // Se a altura não estiver definida ou for inválida, usar valor padrão com base no tipo de licença
-    if (height === undefined || height === null || isNaN(Number(height))) {
+    // Se a altura não estiver definida, usar valor padrão com base no tipo de licença
+    if (height === undefined || height === null) {
       height = draft.type === "flatbed" ? 495 : 440; // 4.95m ou 4.40m
-      console.log("Altura ajustada para valor padrão:", height);
-    } else {
-      height = Number(height);
-      console.log("Altura convertida para número:", height);
     }
     
-    // Se o comprimento não estiver definido ou for inválido, usar valor padrão com base no tipo de licença
-    if (length === undefined || length === null || isNaN(Number(length))) {
-      length = draft.type === "flatbed" ? 2500 : 2500; // 25m padrão em centímetros
-      console.log("Comprimento ajustado para valor padrão:", length);
-    } else {
-      length = Number(length);
-      console.log("Comprimento convertido para número:", length);
-    }
-    
-    // Se o tipo de carga não estiver definido ou for inválido, usar valor padrão com base no tipo de licença
-    if (cargoType === undefined || cargoType === null || cargoType === "" || typeof cargoType !== 'string') {
+    // Se o tipo de carga não estiver definido, usar valor padrão com base no tipo de licença
+    if (cargoType === undefined || cargoType === null || cargoType === "") {
       cargoType = draft.type === "flatbed" ? "indivisible_cargo" : "dry_cargo";
-      console.log("Tipo de carga ajustado para valor padrão:", cargoType);
     }
     
     // Log para diagnóstico
@@ -577,23 +541,17 @@ export class TransactionalStorage implements IStorage {
     });
     
     // Atualizar o rascunho para um pedido real
-    // Preparar dados a serem atualizados no banco
-    const updateData = {
-      isDraft: false,
-      requestNumber,
-      status: "pending_registration",
-      width: Number(width),
-      height: Number(height),
-      length: Number(length),
-      cargoType,
-      updatedAt: new Date()
-    };
-    
-    console.log("Dados finais antes de atualizar no banco:", updateData);
-    
     const [licenseRequest] = await db
       .update(licenseRequests)
-      .set(updateData)
+      .set({
+        isDraft: false,
+        requestNumber,
+        status: "pending_registration",
+        width: Number(width),
+        height: Number(height),
+        cargoType,
+        updatedAt: new Date()
+      })
       .where(eq(licenseRequests.id, id))
       .returning();
     

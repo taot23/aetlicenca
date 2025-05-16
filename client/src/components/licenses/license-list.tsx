@@ -21,7 +21,6 @@ import { format } from "date-fns";
 import { TransporterInfo } from "@/components/transporters/transporter-info";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SortableHeader } from "@/components/ui/sortable-header";
-import { submitDraftDirectly } from "./license-form";
 
 interface LicenseListProps {
   licenses: LicenseRequest[];
@@ -71,7 +70,26 @@ export function LicenseList({
     },
   });
 
-  // A submissão de rascunhos agora usa submitDraftDirectly diretamente, não precisamos mais dessa mutação
+  // Submit draft mutation
+  const submitMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("POST", `/api/licenses/drafts/${id}/submit`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Solicitação enviada",
+        description: "A solicitação de licença foi enviada com sucesso",
+      });
+      onRefresh();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível enviar a solicitação",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleDeleteClick = (license: LicenseRequest) => {
     setSelectedLicense(license);
@@ -85,28 +103,8 @@ export function LicenseList({
     }
   };
 
-  const handleSubmitDraft = async (license: LicenseRequest) => {
-    try {
-      // Usar a função direta em vez da mutação
-      await submitDraftDirectly(license.id);
-      
-      // Atualizar a lista após o envio bem-sucedido
-      toast({
-        title: "Rascunho enviado com sucesso",
-        description: "O pedido de licença foi enviado para análise.",
-        variant: "success",
-      });
-      
-      // Atualizar os dados
-      onRefresh();
-    } catch (error) {
-      console.error("Erro ao enviar rascunho:", error);
-      toast({
-        title: "Erro ao enviar rascunho",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar o rascunho",
-        variant: "destructive",
-      });
-    }
+  const handleSubmitDraft = (license: LicenseRequest) => {
+    submitMutation.mutate(license.id);
   };
 
   const getLicenseTypeLabel = (type: string) => {
@@ -289,6 +287,7 @@ export function LicenseList({
             size="icon"
             onClick={() => handleSubmitDraft(license)}
             className="text-green-600 hover:text-green-800 hover:bg-green-50 ml-1"
+            disabled={submitMutation.isPending}
           >
             <Send className="h-4 w-4" />
           </Button>
@@ -459,6 +458,7 @@ export function LicenseList({
                         size="sm"
                         onClick={() => handleSubmitDraft(license)}
                         className="text-green-600 border-green-200"
+                        disabled={submitMutation.isPending}
                       >
                         <Send className="h-4 w-4 mr-1" /> Enviar
                       </Button>
