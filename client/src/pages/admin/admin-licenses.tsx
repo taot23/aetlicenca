@@ -833,6 +833,8 @@ export default function AdminLicensesPage() {
                                       badgeClass = "bg-red-50 border-red-200 text-red-800";
                                     } else if (stateStatus === "pending_approval") {
                                       badgeClass = "bg-yellow-50 border-yellow-200 text-yellow-800";
+                                    } else if (stateStatus === "registration_in_progress") {
+                                      badgeClass = "bg-orange-50 border-orange-200 text-orange-800";
                                     } else if (stateStatus === "under_review") {
                                       badgeClass = "bg-blue-50 border-blue-200 text-blue-800";
                                     }
