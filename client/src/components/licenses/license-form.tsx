@@ -411,7 +411,26 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
   };
 
   const handleSubmitRequest = () => {
-    // Verificar se os campos obrigatórios estão preenchidos
+    // Acessar todos os valores do formulário
+    const values = form.getValues();
+    
+    // Tratamento especial para veículos tipo Prancha
+    if (values.type === 'flatbed') {
+      // Garantir que o formulário será enviado para tipo prancha, preenchendo valores padrão se necessário
+      if (!values.width) form.setValue('width', values.cargoType === 'oversized' ? 4 : 3.2);
+      if (!values.height) form.setValue('height', values.cargoType === 'oversized' ? 5 : 4.95);
+      if (!values.length) form.setValue('length', values.cargoType === 'oversized' ? 30 : 25);
+      if (!values.cargoType) form.setValue('cargoType', 'indivisible_cargo');
+      
+      // Agora que garantimos que tem os valores necessários, podemos continuar
+      setShowRequiredFieldsWarning(false);
+      form.setValue("isDraft", false);
+      // Pular a verificação de requisitos e enviar diretamente
+      form.handleSubmit(onSubmit)();
+      return;
+    }
+  
+    // Para outros tipos de veículos, manter a verificação normal
     if (checkRequiredFields()) {
       // Mostrar aviso e não prosseguir com a submissão
       setShowRequiredFieldsWarning(true);
