@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Input } from "@/components/ui/input";
-import { FileDown, CheckCircle, Search, Download } from "lucide-react";
+import { FileDown, CheckCircle, Search, Download, RefreshCw } from "lucide-react";
 import { 
   Select,
   SelectContent,
@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LicenseRequest } from "@shared/schema";
 import { LicenseList } from "@/components/licenses/license-list";
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from "@/components/ui/dialog";
@@ -28,6 +28,7 @@ export default function TrackLicensePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const queryClient = useQueryClient();
   const [selectedLicense, setSelectedLicense] = useState<LicenseRequest | null>(null);
   const [sortColumn, setSortColumn] = useState<string | null>("createdAt");
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>('desc');
@@ -254,9 +255,20 @@ export default function TrackLicensePage() {
 
   return (
     <MainLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Acompanhar Licença</h1>
-        <p className="text-gray-600 mt-1">Acompanhe o status de todas as suas licenças solicitadas</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Acompanhar Licença</h1>
+          <p className="text-gray-600 mt-1">Acompanhe o status de todas as suas licenças solicitadas</p>
+        </div>
+        <Button 
+          onClick={handleRefresh} 
+          variant="outline" 
+          className="flex items-center gap-1 bg-white"
+          title="Atualizar lista de licenças"
+        >
+          <RefreshCw className="h-4 w-4 mr-1" />
+          Atualizar
+        </Button>
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow mb-6">
