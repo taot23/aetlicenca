@@ -335,9 +335,9 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         
         // Se for tipo prancha, diferentes regras se aplicam
         if (licenseType === "flatbed") {
-          // Se for carga superdimensionada, não tem limite
-          if (cargoType === "oversized") {
-            return; // Válido
+          // Se for carga superdimensionada, indivisível ou máquinas agrícolas, não tem limite
+          if (cargoType === "oversized" || cargoType === "indivisible_cargo" || cargoType === "agricultural_machinery") {
+            return; // Válido sem restrições
           }
           // Para prancha normal, máximo de 25m sem mínimo
           if (valueInMeters > 25.0) {
