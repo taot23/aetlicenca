@@ -317,9 +317,12 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
     length: z.coerce.number()
       .positive("O comprimento deve ser positivo")
       .superRefine((val, ctx) => {
+        console.log("Validando comprimento:", val, "tipo:", typeof val);
+        
         // Verificamos se estamos recebendo o valor em centímetros (>100) ou metros (<100)
         const isInCentimeters = val > 100;
         const valueInMeters = isInCentimeters ? val / 100 : val;
+        console.log("Valor em metros:", valueInMeters, "Está em centímetros:", isInCentimeters);
         
         // Se for tipo prancha, diferentes regras se aplicam
         if (ctx.data && (ctx.data as any).type === "flatbed") {
@@ -356,9 +359,12 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         path: ["width"]
       })
       .superRefine((val, ctx) => {
+        console.log("Validando largura:", val, "tipo:", typeof val);
+        
         // Verificamos se estamos recebendo o valor em centímetros (>100) ou metros (<100)
         const isInCentimeters = val > 100;
         const valueInMeters = isInCentimeters ? val / 100 : val;
+        console.log("Largura em metros:", valueInMeters, "Está em centímetros:", isInCentimeters);
         
         // Se for tipo prancha, diferentes regras se aplicam
         if (ctx.data && (ctx.data as any).type === "flatbed") {
@@ -390,9 +396,12 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         path: ["height"]
       })
       .superRefine((val, ctx) => {
+        console.log("Validando altura:", val, "tipo:", typeof val);
+        
         // Verificamos se estamos recebendo o valor em centímetros (>100) ou metros (<100)
         const isInCentimeters = val > 100;
         const valueInMeters = isInCentimeters ? val / 100 : val;
+        console.log("Altura em metros:", valueInMeters, "Está em centímetros:", isInCentimeters);
         
         // Se for tipo prancha, diferentes regras se aplicam
         if (ctx.data && (ctx.data as any).type === "flatbed") {
