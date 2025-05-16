@@ -5,10 +5,15 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
+// Corrigir a definição do tipo para incluir as variantes de toast adicionais
+type ExtendedToastProps = ToastProps & {
+  variant?: "default" | "destructive" | "success" | "warning"
+}
+
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
 
-type ToasterToast = ToastProps & {
+type ToasterToast = ExtendedToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
@@ -139,7 +144,7 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
+function toast({ ...props }: Toast & { variant?: "default" | "destructive" | "success" | "warning" }) {
   const id = genId()
 
   const update = (props: ToasterToast) =>
