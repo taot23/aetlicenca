@@ -13,7 +13,9 @@ export function Toaster() {
 
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+      {toasts.map(function ({ id, title, description, action, variant, ...props }) {
+        // Remover a propriedade variant antes de passar para o Toast
+        // para evitar o erro de tipo
         return (
           <Toast key={id} {...props}>
             <div className="grid gap-1">
