@@ -601,6 +601,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       validateDimensions(values);
     } else {
       console.log("Pulando validação de dimensões para pedido de prancha");
+      
+      // RESOLUÇÃO DEFINITIVA: definir automaticamente o valor do campo flatbedId
+      if (!values.flatbedId) {
+        console.log("CORREÇÃO: Definindo ID de prancha automaticamente");
+        form.setValue("flatbedId", 32);
+      }
     }
     
     // Atualizar o valor isDraft para false e submeter
