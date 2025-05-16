@@ -1327,63 +1327,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "A placa principal é obrigatória" });
         }
         
-        // APENAS converter valores em metros para centímetros sem validação adicional
-        // As validações específicas por tipo de conjunto são tratadas no frontend
-        
-        // Converter comprimento (metros -> centímetros)
-        if (licenseData.length !== undefined && licenseData.length > 0) {
-          console.log("Comprimento recebido:", licenseData.length);
-          
-          // Se o valor parece estar em metros (valor menor que 100)
-          if (licenseData.length < 100) {
-            licenseData.length = Math.round(licenseData.length * 100);
-            console.log("Comprimento em centímetros:", licenseData.length);
-          }
-        }
-        
-        // Converter largura (metros -> centímetros)
-        if (licenseData.width !== undefined && licenseData.width > 0) {
-          console.log("Largura recebida:", licenseData.width);
-          
-          // Se o valor parece estar em metros (valor menor que 100)
-          if (licenseData.width < 100) {
-            licenseData.width = Math.round(licenseData.width * 100);
-            console.log("Largura em centímetros:", licenseData.width);
-          }
-        }
-        
-        // Converter altura (metros -> centímetros)
-        if (licenseData.height !== undefined && licenseData.height > 0) {
-          console.log("Altura recebida:", licenseData.height);
-          
-          // Se o valor parece estar em metros (valor menor que 100)
-          if (licenseData.height < 100) {
-            licenseData.height = Math.round(licenseData.height * 100);
-            console.log("Altura em centímetros:", licenseData.height);
-          }
-        }
-        
-        // Ajustar o comprimento com base no tipo de licença
-        if (licenseData.type === 'flatbed') {
-          console.log("Este é um tipo prancha, aplicando regras específicas");
-          if (licenseData.cargoType === 'oversized') {
-            console.log("Carga superdimensionada: sem limite de dimensões");
-            // Não precisa fazer nenhuma validação
-          } else {
-            console.log("Prancha normal: máximo 25m, sem mínimo");
-            if (licenseData.length > 2500) { // centímetros
-              return res.status(400).json({ message: "O comprimento máximo para prancha é de 25,00 metros" });
-            }
-          }
-        } else {
-          console.log("Não é prancha: min 19.8m, max 30m");
-          if (licenseData.length < 1980) { // centímetros
-            return res.status(400).json({ message: "O comprimento mínimo é de 19,80 metros para este tipo de conjunto" });
-          }
-          if (licenseData.length > 3000) { // centímetros
-            return res.status(400).json({ message: "O comprimento máximo é de 30,00 metros para este tipo de conjunto" });
-          }
-        }
+        // Nenhuma validação ou conversão de dimensões no backend
+        // Todas as validações são feitas no frontend conforme o tipo específico
+        // Valores de comprimento, largura e altura são mantidos exatamente como enviados do frontend
       } catch (error: any) {
         console.error("Erro de validação manual:", error);
         return res.status(400).json({ message: error.message || "Erro na validação" });
