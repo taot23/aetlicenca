@@ -335,11 +335,13 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         
         // Se for tipo prancha, diferentes regras se aplicam
         if (licenseType === "flatbed") {
-          // Se for carga superdimensionada, indivisível ou máquinas agrícolas, não tem limite
-          if (cargoType === "oversized" || cargoType === "indivisible_cargo" || cargoType === "agricultural_machinery") {
+          // Se for APENAS carga superdimensionada, não tem limite
+          if (cargoType === "oversized") {
             return; // Válido sem restrições
           }
-          // Para prancha normal, máximo de 25m sem mínimo
+          
+          // Para todos os outros tipos de prancha (incluindo carga indivisível e máquinas agrícolas)
+          // máximo de 25m sem mínimo
           if (valueInMeters > 25.0) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
@@ -386,11 +388,13 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         
         // Se for tipo prancha, diferentes regras se aplicam
         if (licenseType === "flatbed") {
-          // Se for um tipo de carga sem limites rígidos
-          if (cargoType === "oversized" || cargoType === "indivisible_cargo" || cargoType === "agricultural_machinery") {
+          // Se for APENAS carga superdimensionada, não tem limite
+          if (cargoType === "oversized") {
             return; // Válido sem restrições
           }
-          // Para prancha normal, máximo de 3.20m
+          
+          // Para todos os outros tipos de prancha (incluindo carga indivisível e máquinas agrícolas)
+          // máximo de 3.20m
           if (valueInMeters > 3.20) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
@@ -432,11 +436,13 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         
         // Se for tipo prancha, diferentes regras se aplicam
         if (licenseType === "flatbed") {
-          // Se for um tipo de carga sem limites rígidos
-          if (cargoType === "oversized" || cargoType === "indivisible_cargo" || cargoType === "agricultural_machinery") {
+          // Se for APENAS carga superdimensionada, não tem limite
+          if (cargoType === "oversized") {
             return; // Válido sem restrições
           }
-          // Para prancha normal, máximo de 4.95m
+          
+          // Para todos os outros tipos de prancha (incluindo carga indivisível e máquinas agrícolas)
+          // máximo de 4.95m
           if (valueInMeters > 4.95) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
