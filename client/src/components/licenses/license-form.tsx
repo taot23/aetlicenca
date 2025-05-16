@@ -657,7 +657,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       if (!values.firstTrailerId) missingFields.push("1ª Carreta");
       if (!values.secondTrailerId) missingFields.push("2ª Carreta");
     } else if (values.type === 'flatbed') {
-      if (!values.flatbedId) missingFields.push("Prancha");
+      // Verifica se temos veículos do tipo prancha cadastrados
+      if (flatbeds.length === 0) {
+        missingFields.push("Prancha (Cadastre um veículo do tipo Prancha primeiro)");
+      } else if (!values.flatbedId) {
+        missingFields.push("Prancha");
+      }
     } else if (values.type === 'romeo_and_juliet') {
       if (!values.tractorUnitId) missingFields.push("Caminhão");
       if (!values.firstTrailerId) missingFields.push("Reboque");
