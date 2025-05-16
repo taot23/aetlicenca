@@ -88,6 +88,17 @@ export default function TrackLicensePage() {
     transporterId: number | null;
   }
 
+  // Função para atualizar os dados
+  const handleRefresh = () => {
+    refetch();
+    // Toast para feedback ao usuário
+    toast({
+      title: "Atualizando dados",
+      description: "Buscando as informações mais recentes das licenças.",
+      duration: 2000,
+    });
+  };
+
   // Função para ordenar licenças
   const handleSort = (column: string) => {
     if (sortColumn === column) {

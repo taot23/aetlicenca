@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Input } from "@/components/ui/input";
+import { RefreshCw } from "lucide-react";
 import { 
   Select,
   SelectContent,
@@ -8,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LicenseRequest, LicenseStatus } from "@shared/schema";
 import { format, isAfter, isBefore, addDays, differenceInDays } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ export default function IssuedLicensesPage() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc' | null>('desc');
   const [renewDialogOpen, setRenewDialogOpen] = useState(false);
   const [licenseToRenew, setLicenseToRenew] = useState<{licenseId: number, state: string} | null>(null);
+  const queryClient = useQueryClient();
   const itemsPerPage = 10;
 
   const { data: issuedLicenses, isLoading, refetch } = useQuery<LicenseRequest[]>({
@@ -351,11 +353,33 @@ export default function IssuedLicensesPage() {
     }
   });
 
+  // Função para atualizar os dados
+  const handleRefresh = () => {
+    refetch();
+    // Toast para feedback ao usuário
+    toast({
+      title: "Atualizando dados",
+      description: "Buscando as informações mais recentes das licenças emitidas.",
+      duration: 2000,
+    });
+  };
+
   return (
     <MainLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Licenças Emitidas</h1>
-        <p className="text-gray-600 mt-1">Histórico de todas as licenças liberadas</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Licenças Emitidas</h1>
+          <p className="text-gray-600 mt-1">Histórico de todas as licenças liberadas</p>
+        </div>
+        <Button 
+          onClick={handleRefresh} 
+          variant="outline" 
+          className="flex items-center gap-1 bg-white"
+          title="Atualizar lista de licenças"
+        >
+          <RefreshCw className="h-4 w-4 mr-1" />
+          Atualizar
+        </Button>
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow mb-6">
