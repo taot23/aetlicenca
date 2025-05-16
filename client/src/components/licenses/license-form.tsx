@@ -918,21 +918,24 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             <FormField
               control={form.control}
               name="height"
-              render={({ field }) => (
-                <DimensionField
-                  field={field}
-                  fieldType="altura"
-                  label="Altura do Conjunto (metros)"
-                  placeholder="Ex.: 4,40"
-                  description={
-                    licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
-                      ? 'Informe a altura total do conjunto em metros (sem limite para carga superdimensionada)'
-                      : licenseType === 'flatbed'
-                        ? 'Informe a altura total do conjunto em metros (max: 4,95)'
-                        : 'Informe a altura total do conjunto em metros (max: 4,40)'
-                  }
-                />
-              )}
+              render={({ field }) => {
+                // Forçar atualização do texto baseado nos tipos selecionados
+                const description = licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
+                  ? 'Informe a altura total do conjunto em metros (sem limite para carga superdimensionada)'
+                  : licenseType === 'flatbed'
+                    ? 'Informe a altura total do conjunto em metros (max: 4,95)'
+                    : 'Informe a altura total do conjunto em metros (max: 4,40)';
+                
+                return (
+                  <DimensionField
+                    field={field}
+                    fieldType="altura"
+                    label="Altura do Conjunto (metros)"
+                    placeholder="Ex.: 4,40"
+                    description={description}
+                  />
+                );
+              }}
             />
           </div>
         </div>
