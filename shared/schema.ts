@@ -337,6 +337,7 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
               message: "O comprimento máximo para prancha é de 25,00 metros",
             });
           }
+          // PRANCHAS NÃO TÊM COMPRIMENTO MÍNIMO
         } else {
           // Para outros tipos, entre 19.8m e 30m
           if (valueInMeters < 19.8) {
