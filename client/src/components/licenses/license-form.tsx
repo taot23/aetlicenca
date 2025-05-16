@@ -428,8 +428,11 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         }
         
         // Aplicar validações de comprimento específicas
-        if (currentType === 'flatbed' && currentCargoType === 'oversized') {
-          // Sem limites para carga superdimensionada
+        if (currentType === 'flatbed' && 
+            (currentCargoType === 'oversized' || 
+             currentCargoType === 'indivisible_cargo' || 
+             currentCargoType === 'agricultural_machinery')) {
+          // Sem limites para carga superdimensionada, indivisível ou máquinas agrícolas
           form.clearErrors('length');
           form.clearErrors('width');
           form.clearErrors('height');
