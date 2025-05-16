@@ -1327,48 +1327,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "A placa principal é obrigatória" });
         }
         
-        // Funcão simples para converter metros para centímetros
-        const metersToCentimeters = (value: number) => Math.round(value * 100);
+        // APENAS converter valores em metros para centímetros sem validação adicional
+        // As validações específicas por tipo de conjunto são tratadas no frontend
         
-        // Converter todas as dimensões de metros para centímetros
-        // Sem validação adicional - confiar nas validações do frontend para cada tipo
-        
-        // Converter comprimento
-        if (licenseData.length !== undefined) {
-          console.log("Comprimento recebido:", licenseData.length, "tipo:", typeof licenseData.length);
+        // Converter comprimento (metros -> centímetros)
+        if (licenseData.length !== undefined && licenseData.length > 0) {
+          console.log("Comprimento recebido:", licenseData.length);
           
-          // Converter valor em metros para centímetros se necessário
+          // Se o valor parece estar em metros (valor menor que 100)
           if (licenseData.length < 100) {
-            licenseData.length = metersToCentimeters(licenseData.length);
-            console.log("Comprimento convertido para centímetros:", licenseData.length);
+            licenseData.length = Math.round(licenseData.length * 100);
+            console.log("Comprimento em centímetros:", licenseData.length);
           }
         }
         
-        // Converter largura
-        if (licenseData.width !== undefined) {
-          console.log("Largura recebida:", licenseData.width, "tipo:", typeof licenseData.width);
+        // Converter largura (metros -> centímetros)
+        if (licenseData.width !== undefined && licenseData.width > 0) {
+          console.log("Largura recebida:", licenseData.width);
           
-          // Converter valor em metros para centímetros se necessário
+          // Se o valor parece estar em metros (valor menor que 100)
           if (licenseData.width < 100) {
-            licenseData.width = metersToCentimeters(licenseData.width);
-            console.log("Largura convertida para centímetros:", licenseData.width);
+            licenseData.width = Math.round(licenseData.width * 100);
+            console.log("Largura em centímetros:", licenseData.width);
           }
         }
         
-        // Converter altura
-        if (licenseData.height !== undefined) {
-          console.log("Altura recebida:", licenseData.height, "tipo:", typeof licenseData.height);
+        // Converter altura (metros -> centímetros)
+        if (licenseData.height !== undefined && licenseData.height > 0) {
+          console.log("Altura recebida:", licenseData.height);
           
-          // Converter valor em metros para centímetros se necessário
+          // Se o valor parece estar em metros (valor menor que 100)
           if (licenseData.height < 100) {
-            licenseData.height = metersToCentimeters(licenseData.height);
-            console.log("Altura convertida para centímetros:", licenseData.height);
+            licenseData.height = Math.round(licenseData.height * 100);
+            console.log("Altura em centímetros:", licenseData.height);
           }
-        }
-        
-        // Modifica o comprimento se necessário
-        if (licenseData.length <= 0) {
-          return res.status(400).json({ message: "O comprimento deve ser positivo" });
         }
         
         // Ajustar o comprimento com base no tipo de licença
