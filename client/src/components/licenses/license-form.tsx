@@ -406,7 +406,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       console.log("[DEBUG] Ajustando valores para pedido de prancha");
       // Definir valores padrão para campos obrigatórios
       if (!adjustedValues.flatbedId) adjustedValues.flatbedId = 999;
-      if (!adjustedValues.cargoType) adjustedValues.cargoType = "DIMENSIONADA";
+      if (!adjustedValues.cargoType) adjustedValues.cargoType = "oversized";
       if (!adjustedValues.length) adjustedValues.length = 20;
       if (!adjustedValues.width) adjustedValues.width = 3;
       if (!adjustedValues.height) adjustedValues.height = 4;
@@ -681,10 +681,14 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       if (!values.tractorUnitId) missingFields.push("Unidade Tratora");
       if (!values.firstTrailerId) missingFields.push("1ª Carreta");
       if (!values.secondTrailerId) missingFields.push("2ª Carreta");
+    } else if (values.type === 'road_train_9_axles') {
+      if (!values.tractorUnitId) missingFields.push("Unidade Tratora");
+      if (!values.firstTrailerId) missingFields.push("1ª Carreta");
+      if (!values.secondTrailerId) missingFields.push("2ª Carreta");
+      if (!values.dollyId) missingFields.push("Dolly");
     } else if (values.type === 'flatbed') {
-      // Solução final: remover completamente a validação de prancha para permitir o envio
-      // Isso é temporário até que possamos resolver o problema corretamente
-      console.log("[DEBUG] Pulando validação de prancha para permitir o envio do pedido");
+      console.log("[DEBUG] Validação de prancha desativada");
+      // Não validar nenhum campo para prancha
     } else if (values.type === 'romeo_and_juliet') {
       if (!values.tractorUnitId) missingFields.push("Caminhão");
       if (!values.firstTrailerId) missingFields.push("Reboque");
