@@ -90,14 +90,216 @@ const DIMENSION_LIMITS = {
     maxHeight: 999.99
   }
 };
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
+// Funções auxiliares para formatar campos de dimensão com vírgula e limites específicos
+function formatNumericInput(value: string, maxDigits: number = 6): string {
+  // Esta é uma função básica que apenas formata a entrada, preservando a digitação
+  // e garantindo que o formato esteja correto, sem aplicar regras de negócio
+  
+  // Remover caracteres inválidos (manter apenas números, vírgula e ponto)
+  let formattedValue = value.replace(/[^\d.,]/g, '');
+  
+  // Substituir ponto por vírgula para exibição
+  formattedValue = formattedValue.replace(/\./g, ',');
+  
+  // Garantir que só tem uma vírgula
+  const parts = formattedValue.split(',');
+  if (parts.length > 2) {
+    formattedValue = parts[0] + ',' + parts[1];
+  }
+  
+  // Limitar a 2 casas decimais sem completar zeros à direita
+  if (parts.length > 1 && parts[1].length > 2) {
+    formattedValue = parts[0] + ',' + parts[1].substring(0, 2);
+  }
+  
+  // Limitar tamanho total para evitar overflow
+  if (formattedValue.length > maxDigits) {
+    formattedValue = formattedValue.substring(0, maxDigits);
+  }
+  
+  return formattedValue;
+}
+
+// Esta função completa os zeros para o formato visual final (00,00)
+function formatFinalValue(value: string): string {
+  if (!value) return '';
+  
+  // Remover qualquer caractere que não seja número, vírgula ou ponto
+  let cleanValue = value.replace(/[^\d.,]/g, '');
+  
+  // Substituir ponto por vírgula para padronização
+  cleanValue = cleanValue.replace('.', ',');
+  
+  // Separar parte inteira e decimal
+  const parts = cleanValue.split(',');
+  const integerPart = parts[0] || '0';
+  
+  // Se não tem parte decimal, adicionar ,00
+  if (parts.length === 1) {
+    return integerPart + ',00';
+  }
+  
+  // Garantir exatamente 2 casas decimais sem arredondamento
+  let decimalPart = parts[1] || '';
+  
+  // Truncar para exatamente 2 dígitos se tiver mais
+  if (decimalPart.length > 2) {
+    decimalPart = decimalPart.substring(0, 2);
+  }
+  
+  // Completar com zeros se tiver menos de 2 dígitos
+  while (decimalPart.length < 2) {
+    decimalPart += '0';
+  }
+  
+  return integerPart + ',' + decimalPart;
+}
+
+// Função para limitar comprimento (19,80 a 30,00 metros para maioria dos conjuntos)
+function formatLengthInput(value: string, licenseType: string, cargoType?: string): { 
+  displayValue: string; 
+  numericValue: number | undefined; 
+} {
+  // Formatar entrada numérica padrão
+  const formattedValue = formatNumericInput(value);
+  
+  // Converter para número para verificar limites
+  const numericValue = parseFloat(formattedValue.replace(',', '.'));
+  
+  // Se não for um número, retornar valor formatado apenas
+  if (isNaN(numericValue)) {
+    return {
+      displayValue: formattedValue,
+      numericValue: undefined
+    };
+  }
+  
+  // Determinar limites com base no tipo de licença
+  let finalValue = formattedValue;
+  let finalNumeric = numericValue;
+  
+  // Durante a digitação, apenas verificamos limites máximos, nunca mínimos
+  // para permitir que o usuário digite livremente os valores
+  if (licenseType === 'flatbed') {
+    // Para pranchas com carga superdimensionada, não aplicamos limite rígido
+    if (cargoType === 'oversized') {
+      if (numericValue > 100) {
+        finalNumeric = 100;
+        // Só formatamos com zeros adicionais no final da edição (onBlur)
+      }
+    } 
+    // Para outras pranchas, limite de 25 metros
+    else if (numericValue > 25) {
+      finalNumeric = 25;
+      // Só formatamos com zeros adicionais no final da edição (onBlur)
+    }
+  } 
+  // Para os demais conjuntos, apenas verificar o limite máximo
+  else if (numericValue > 30) {
+    finalNumeric = 30;
+    // Só formatamos com zeros adicionais no final da edição (onBlur)
+  }
+  
+  return {
+    displayValue: finalValue,
+    numericValue: finalNumeric
+  };
+}
+
+// Função para limitar largura (2,60m para conjuntos normais, 3,20m para prancha)
+function formatWidthInput(value: string, licenseType: string, cargoType?: string): { 
+  displayValue: string; 
+  numericValue: number | undefined; 
+} {
+  // Formatar entrada numérica padrão
+  const formattedValue = formatNumericInput(value);
+  
+  // Converter para número para verificar limites
+  const numericValue = parseFloat(formattedValue.replace(',', '.'));
+  
+  // Se não for um número, retornar valor formatado apenas
+  if (isNaN(numericValue)) {
+    return {
+      displayValue: formattedValue,
+      numericValue: undefined
+    };
+  }
+  
+  // Determinar limites com base no tipo de licença
+  let finalValue = formattedValue;
+  let finalNumeric = numericValue;
+  
+  // Durante a digitação, apenas verificamos limites máximos
+  if (licenseType === 'flatbed') {
+    // Para pranchas com carga superdimensionada, não aplicamos limite rígido
+    if (cargoType === 'oversized') {
+      if (numericValue > 10) {
+        finalNumeric = 10;
+      }
+    } 
+    // Para outras pranchas, limite de 3,20 metros
+    else if (numericValue > 3.20) {
+      finalNumeric = 3.20;
+    }
+  } 
+  // Para os demais conjuntos, limite de 2,60 metros
+  else if (numericValue > 2.60) {
+    finalNumeric = 2.60;
+  }
+  
+  return {
+    displayValue: finalValue,
+    numericValue: finalNumeric
+  };
+}
+
+// Função para limitar altura (4,40m para conjuntos normais, 4,95m para prancha)
+function formatHeightInput(value: string, licenseType: string, cargoType?: string): { 
+  displayValue: string; 
+  numericValue: number | undefined; 
+} {
+  // Formatar entrada numérica padrão
+  const formattedValue = formatNumericInput(value);
+  
+  // Converter para número para verificar limites
+  const numericValue = parseFloat(formattedValue.replace(',', '.'));
+  
+  // Se não for um número, retornar valor formatado apenas
+  if (isNaN(numericValue)) {
+    return {
+      displayValue: formattedValue,
+      numericValue: undefined
+    };
+  }
+  
+  // Determinar limites com base no tipo de licença
+  let finalValue = formattedValue;
+  let finalNumeric = numericValue;
+  
+  // Durante a digitação, apenas verificamos limites máximos
+  if (licenseType === 'flatbed') {
+    // Para pranchas com carga superdimensionada, não aplicamos limite rígido
+    if (cargoType === 'oversized') {
+      if (numericValue > 10) {
+        finalNumeric = 10;
+      }
+    } 
+    // Para outras pranchas, limite de 4,95 metros
+    else if (numericValue > 4.95) {
+      finalNumeric = 4.95;
+    }
+  } 
+  // Para os demais conjuntos, limite de 4,40 metros
+  else if (numericValue > 4.40) {
+    finalNumeric = 4.40;
+  }
+  
+  return {
+    displayValue: finalValue,
+    numericValue: finalNumeric
+  };
+}
 
 interface LicenseFormProps {
   draft?: LicenseRequest | null;
@@ -109,8 +311,6 @@ interface LicenseFormProps {
 export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporterId }: LicenseFormProps) {
   const { toast } = useToast();
   const [licenseType, setLicenseType] = useState<string>(draft?.type || "");
-  const [cargoType, setCargoType] = useState<string>("");
-  const [showVehicleDialog, setShowVehicleDialog] = useState(false);
 
   // Fetch vehicles for the dropdown selectors
   const { data: vehicles, isLoading: isLoadingVehicles } = useQuery<Vehicle[]>({
@@ -124,10 +324,9 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
 
   // Define filtered vehicle lists based on type
   const tractorUnits = vehicles?.filter(v => v.type === "tractor_unit") || [];
-  const trucks = vehicles?.filter(v => v.type === "truck") || [];
   const semiTrailers = vehicles?.filter(v => v.type === "semi_trailer") || [];
-  const trailers = vehicles?.filter(v => v.type === "trailer") || [];
   const dollys = vehicles?.filter(v => v.type === "dolly") || [];
+  const trailers = vehicles?.filter(v => v.type === "trailer") || [];
   const flatbeds = vehicles?.filter(v => v.type === "flatbed") || [];
 
   // Define a schema that can be validated partially (for drafts)
@@ -150,12 +349,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       length: draft.length / 100, // Convert from cm to meters for display
       width: draft.width ? draft.width / 100 : undefined, // Convert from cm to meters for display
       height: draft.height ? draft.height / 100 : undefined, // Convert from cm to meters for display
+      cargoType: draft.cargoType || undefined,
       additionalPlates: draft.additionalPlates || [],
       additionalPlatesDocuments: draft.additionalPlatesDocuments || [],
       states: draft.states,
       isDraft: draft.isDraft,
       comments: draft.comments || undefined,
-      cargoType: undefined, // Adicionado para support ao tipo de carga
     } : {
       type: "",
       transporterId: preSelectedTransporterId || undefined, // Usar o transportador pré-selecionado
@@ -165,15 +364,15 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       dollyId: undefined,
       secondTrailerId: undefined,
       flatbedId: undefined,
-      length: undefined, // Valor não preenchido inicialmente
+      length: 0,
       width: undefined,
       height: undefined,
+      cargoType: undefined,
       additionalPlates: [],
       states: [],
       additionalPlatesDocuments: [],
       isDraft: true,
       comments: "",
-      cargoType: undefined, // Adicionado para support ao tipo de carga
     },
   });
 
@@ -195,14 +394,6 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     const subscription = form.watch((value, { name }) => {
       if (name === "type") {
         setLicenseType(value.type as string);
-        
-        // Reset cargo type when changing license type
-        form.setValue("cargoType", undefined);
-        setCargoType("");
-      }
-      
-      if (name === "cargoType") {
-        setCargoType(value.cargoType as string);
       }
       
       // Set main vehicle plate based on tractor unit selection
@@ -211,107 +402,6 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         if (selectedVehicle) {
           form.setValue("mainVehiclePlate", selectedVehicle.plate);
         }
-      }
-      
-      // Apply dynamic validation based on license type and cargo type
-      const currentType = value.type as string;
-      const currentCargoType = value.cargoType as string;
-      
-      // Ajustar validações de dimensões com base no tipo de conjunto e carga
-      if (currentType && (name === "type" || name === "cargoType" || name === "length" || name === "width" || name === "height")) {
-        let limits = DIMENSION_LIMITS.default;
-        
-        if (currentType === 'flatbed') {
-          limits = currentCargoType === 'oversized' 
-            ? DIMENSION_LIMITS.oversized 
-            : DIMENSION_LIMITS.flatbed;
-        }
-        
-        // Aplicar validações de comprimento específicas
-        if (currentType === 'flatbed' && currentCargoType === 'oversized') {
-          // Sem limites para carga superdimensionada
-          form.clearErrors('length');
-          form.clearErrors('width');
-          form.clearErrors('height');
-        } else {
-          // Verificar e validar dimensões atuais
-          const currentLength = form.getValues('length');
-          const currentWidth = form.getValues('width');
-          const currentHeight = form.getValues('height');
-          
-          // Validar comprimento se estiver definido
-          if (currentLength !== undefined) {
-            if (currentType === 'flatbed') {
-              // Para pranchas, a restrição de comprimento mínimo não se aplica
-              if (currentLength > limits.maxLength) {
-                form.setError('length', { 
-                  type: 'manual', 
-                  message: `O comprimento máximo para este tipo de conjunto é ${limits.maxLength.toFixed(2).replace('.', ',')} metros` 
-                });
-              } else {
-                form.clearErrors('length');
-              }
-            } else {
-              // Para outros tipos, validar tanto mínimo quanto máximo
-              if (currentLength < limits.minLength) {
-                form.setError('length', { 
-                  type: 'manual', 
-                  message: `O comprimento mínimo para este tipo de conjunto é ${limits.minLength.toFixed(2).replace('.', ',')} metros` 
-                });
-              } else if (currentLength > limits.maxLength) {
-                form.setError('length', { 
-                  type: 'manual', 
-                  message: `O comprimento máximo para este tipo de conjunto é ${limits.maxLength.toFixed(2).replace('.', ',')} metros` 
-                });
-              } else {
-                form.clearErrors('length');
-              }
-            }
-          }
-          
-          // Validar largura se estiver definida
-          if (currentWidth !== undefined) {
-            if (currentWidth > limits.maxWidth) {
-              form.setError('width', { 
-                type: 'manual', 
-                message: `A largura máxima para este tipo de conjunto é ${limits.maxWidth.toFixed(2).replace('.', ',')} metros` 
-              });
-            } else {
-              form.clearErrors('width');
-            }
-          }
-          
-          // Validar altura se estiver definida
-          if (currentHeight !== undefined) {
-            if (currentHeight > limits.maxHeight) {
-              form.setError('height', { 
-                type: 'manual', 
-                message: `A altura máxima para este tipo de conjunto é ${limits.maxHeight.toFixed(2).replace('.', ',')} metros` 
-              });
-            } else {
-              form.clearErrors('height');
-            }
-          }
-        }
-        
-        // Atualizar textos descritivos para as dimensões
-        const lengthDesc = currentType === 'flatbed' && currentCargoType === 'oversized'
-          ? 'Digite o comprimento em metros (sem limite para carga superdimensionada)'
-          : currentType === 'flatbed'
-            ? `Digite o comprimento em metros (max: ${limits.maxLength.toFixed(2).replace('.', ',')})`
-            : `Digite o comprimento em metros (min: ${limits.minLength.toFixed(2).replace('.', ',')} - max: ${limits.maxLength.toFixed(2).replace('.', ',')})`;
-            
-        const widthDesc = currentType === 'flatbed' && currentCargoType === 'oversized'
-          ? 'Informe a largura total do conjunto em metros (sem limite para carga superdimensionada)'
-          : currentType === 'flatbed'
-            ? `Informe a largura total do conjunto em metros (max: ${limits.maxWidth.toFixed(2).replace('.', ',')})`
-            : `Informe a largura total do conjunto em metros (max: ${limits.maxWidth.toFixed(2).replace('.', ',')})`;
-            
-        const heightDesc = currentType === 'flatbed' && currentCargoType === 'oversized'
-          ? 'Informe a altura total do conjunto em metros (sem limite para carga superdimensionada)'
-          : currentType === 'flatbed'
-            ? `Informe a altura total do conjunto em metros (max: ${limits.maxHeight.toFixed(2).replace('.', ',')})`
-            : `Informe a altura total do conjunto em metros (max: ${limits.maxHeight.toFixed(2).replace('.', ',')})`;
       }
     });
     
@@ -366,7 +456,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // Adjust dimensions from meters to centimeters for storage
+    // Adjust length from meters to centimeters for storage
     const dataToSubmit = {
       ...values,
       length: Math.round((values.length || 0) * 100), // Convert to centimeters
@@ -390,565 +480,190 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
   };
 
   const handleSubmitRequest = () => {
-    form.setValue("isDraft", false);
-    form.handleSubmit(onSubmit)();
+    // Prevenir múltiplos envios
+    if (isProcessing) {
+      toast({
+        title: "Processando",
+        description: "Aguarde, sua solicitação já está sendo processada...",
+      });
+      return;
+    }
+    
+    // Preparar dados para envio
+    try {
+      // Definir que não é rascunho
+      form.setValue("isDraft", false);
+      
+      // Obter valores do formulário
+      const values = form.getValues();
+      
+      // Preparar dados para envio com conversão de unidades
+      const dataToSubmit = {
+        ...values,
+        length: Math.round((values.length || 0) * 100), // Convert to centimeters
+        width: values.width ? Math.round(values.width * 100) : undefined, // Convert to centimeters if exists
+        height: values.height ? Math.round(values.height * 100) : undefined, // Convert to centimeters if exists
+        isDraft: false
+      };
+      
+      // Remover isDraft do payload
+      const { isDraft, ...requestData } = dataToSubmit;
+      
+      // Mostrar toast de envio
+      toast({
+        title: "Enviando pedido",
+        description: "Processando sua solicitação...",
+      });
+      
+      // Enviar diretamente, evitando usar form.handleSubmit que pode falhar no modal
+      console.log("Enviando dados:", requestData);
+      submitRequestMutation.mutate(requestData as any);
+    } catch (error) {
+      console.error("Erro ao preparar envio:", error);
+      toast({
+        title: "Erro ao enviar",
+        description: "Ocorreu um erro ao processar sua solicitação. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const isProcessing = saveAsDraftMutation.isPending || submitRequestMutation.isPending;
 
-  // Mutation para criar um novo veículo
-  const createVehicleMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof insertVehicleSchema>) => {
-      const res = await apiRequest("POST", "/api/vehicles", data);
-      return await res.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Veículo cadastrado",
-        description: "O veículo foi cadastrado com sucesso",
-      });
-      
-      // Atualizar a lista de veículos
-      queryClient.invalidateQueries({
-        queryKey: ["/api/vehicles"]
-      });
-      
-      setShowVehicleDialog(false);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro",
-        description: error.message || "Não foi possível cadastrar o veículo",
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Formulário para cadastro de veículo
-  const vehicleForm = useForm<z.infer<typeof insertVehicleSchema>>({
-    resolver: zodResolver(insertVehicleSchema),
-    defaultValues: {
-      plate: "",
-      type: "",
-      brand: "",
-      model: "",
-      year: undefined,
-      axleCount: undefined,
-      renavam: "",
-      remarks: ""
-    }
-  });
-  
-  const handleCreateVehicle = (data: z.infer<typeof insertVehicleSchema>) => {
-    createVehicleMutation.mutate(data);
-  };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-      
-      <Dialog open={showVehicleDialog} onOpenChange={setShowVehicleDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Cadastrar Novo Veículo</DialogTitle>
-            <DialogDescription>
-              Preencha as informações do veículo para adicioná-lo ao sistema
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...vehicleForm}>
-            <form onSubmit={vehicleForm.handleSubmit(handleCreateVehicle)} className="space-y-4">
-              <FormField
-                control={vehicleForm.control}
-                name="plate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Placa</FormLabel>
-                    <FormControl>
-                      <Input placeholder="ABC-1234" {...field} className="uppercase" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={vehicleForm.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo de Veículo</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o tipo" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="tractor_unit">Unidade Tratora (Cavalo)</SelectItem>
-                        <SelectItem value="truck">Caminhão</SelectItem>
-                        <SelectItem value="semi_trailer">Semirreboque</SelectItem>
-                        <SelectItem value="trailer">Reboque</SelectItem>
-                        <SelectItem value="dolly">Dolly</SelectItem>
-                        <SelectItem value="flatbed">Prancha</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={vehicleForm.control}
-                  name="brand"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Marca</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Marca" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+          <FormField
+          control={form.control}
+          name="transporterId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Transportador</FormLabel>
+              <Select 
+                onValueChange={(value) => field.onChange(parseInt(value))} 
+                defaultValue={field.value?.toString()}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o transportador" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {isLoadingTransporters ? (
+                    <SelectItem value="loading">Carregando transportadores...</SelectItem>
+                  ) : transporters.length > 0 ? (
+                    transporters.map((transporter) => (
+                      <SelectItem key={transporter.id} value={transporter.id.toString()}>
+                        {transporter.name} {transporter.documentNumber ? `- ${transporter.documentNumber}` : ''}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no_transporter">Nenhum transportador vinculado</SelectItem>
                   )}
-                />
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Selecione o transportador para o qual esta licença será emitida.
+                Caso não encontre o transportador desejado, vá para "Minhas Empresas" e vincule o transportador à sua conta.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tipo de Conjunto</FormLabel>
+              <div className="flex flex-col space-y-3">
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um tipo" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="roadtrain_9_axles">Rodotrem 9 eixos</SelectItem>
+                    <SelectItem value="bitrain_9_axles">Bitrem 9 eixos</SelectItem>
+                    <SelectItem value="bitrain_7_axles">Bitrem 7 eixos</SelectItem>
+                    <SelectItem value="bitrain_6_axles">Bitrem 6 eixos</SelectItem>
+                    <SelectItem value="flatbed">Prancha</SelectItem>
+                    <SelectItem value="romeo_and_juliet">Romeu e Julieta</SelectItem>
+                  </SelectContent>
+                </Select>
                 
-                <FormField
-                  control={vehicleForm.control}
-                  name="model"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Modelo</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Modelo" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={vehicleForm.control}
-                  name="year"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ano</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="2023" 
-                          {...field}
-                          value={field.value || ''} 
-                          onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={vehicleForm.control}
-                  name="axleCount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quantidade de Eixos</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="2" 
-                          {...field}
-                          value={field.value || ''} 
-                          onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              
-              <FormField
-                control={vehicleForm.control}
-                name="renavam"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Renavam</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Renavam" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={vehicleForm.control}
-                name="remarks"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Observações</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Observações sobre o veículo..." 
-                        className="resize-none" 
-                        {...field} 
-                        value={field.value || ''}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setShowVehicleDialog(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  type="submit"
-                  disabled={createVehicleMutation.isPending}
-                >
-                  {createVehicleMutation.isPending && (
-                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Cadastrar Veículo
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-        <div className="border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h3 className="font-semibold text-gray-800 text-lg mb-4 flex items-center">
-            <Building2 className="mr-2 h-5 w-5" />
-            Dados do Transportador
-          </h3>
-          
-          <div className="grid grid-cols-1 gap-4">
-            <FormField
-              control={form.control}
-              name="transporterId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-base font-medium">Transportador</FormLabel>
-                  <div className="relative">
-                    <Select 
-                      onValueChange={(value) => field.onChange(parseInt(value))} 
-                      defaultValue={field.value?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-10 pr-10">
-                          <SelectValue placeholder="Buscar transportador..." />
-                          <Search className="absolute right-3 top-2.5 h-5 w-5 text-muted-foreground" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {isLoadingTransporters ? (
-                          <SelectItem value="loading">
-                            <div className="flex items-center space-x-2">
-                              <LoaderCircle className="h-4 w-4 animate-spin" />
-                              <span>Carregando transportadores...</span>
-                            </div>
-                          </SelectItem>
-                        ) : transporters.length > 0 ? (
-                          transporters.map((transporter) => (
-                            <SelectItem key={transporter.id} value={transporter.id.toString()}>
-                              <div className="font-medium">{transporter.name}</div>
-                              {transporter.documentNumber && (
-                                <div className="text-xs text-muted-foreground">{transporter.documentNumber}</div>
-                              )}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="no_transporter">Nenhum transportador vinculado</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
+                {licenseType && (
+                  <div className="p-3 border rounded-md flex flex-col items-center">
+                    <VehicleTypeImage type={licenseType} iconSize={100} />
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {licenseType === 'roadtrain_9_axles' && 'Rodotrem 9 eixos'}
+                      {licenseType === 'bitrain_9_axles' && 'Bitrem 9 eixos'}
+                      {licenseType === 'bitrain_7_axles' && 'Bitrem 7 eixos'}
+                      {licenseType === 'bitrain_6_axles' && 'Bitrem 6 eixos'}
+                      {licenseType === 'flatbed' && 'Prancha'}
+                      {licenseType === 'romeo_and_juliet' && 'Romeu e Julieta'}
+                    </p>
                   </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-
-        <div className="border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h3 className="font-semibold text-gray-800 text-lg mb-4 flex items-center">
-            <Truck className="mr-2 h-5 w-5" />
-            Tipo de Conjunto
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-base font-medium">Tipo de Conjunto</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Selecione um tipo" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="roadtrain_9_axles">
-                        <div className="flex items-center">
-                          <VehicleTypeImage type="roadtrain_9_axles" className="mr-2" iconSize={24} />
-                          <span>Rodotrem 9 eixos</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="bitrain_9_axles">
-                        <div className="flex items-center">
-                          <VehicleTypeImage type="bitrain_9_axles" className="mr-2" iconSize={24} />
-                          <span>Bitrem 9 eixos</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="bitrain_7_axles">
-                        <div className="flex items-center">
-                          <VehicleTypeImage type="bitrain_7_axles" className="mr-2" iconSize={24} />
-                          <span>Bitrem 7 eixos</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="bitrain_6_axles">
-                        <div className="flex items-center">
-                          <VehicleTypeImage type="bitrain_6_axles" className="mr-2" iconSize={24} />
-                          <span>Bitrem 6 eixos</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="flatbed">
-                        <div className="flex items-center">
-                          <VehicleTypeImage type="flatbed" className="mr-2" iconSize={24} />
-                          <span>Prancha</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="romeo_and_juliet">
-                        <div className="flex items-center">
-                          <VehicleTypeImage type="romeo_and_juliet" className="mr-2" iconSize={24} />
-                          <span>Romeu e Julieta</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Campo de Tipo de Carga - varia conforme tipo de conjunto */}
-            {licenseType && (
-              <FormField
-                control={form.control}
-                name="cargoType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base font-medium">Tipo de Carga</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-10">
-                          <SelectValue placeholder="Selecione o tipo de carga" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {licenseType === 'flatbed' 
-                          ? FLATBED_CARGO_TYPES.map(option => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))
-                          : NON_FLATBED_CARGO_TYPES.map(option => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))
-                        }
-                      </SelectContent>
-                    </Select>
-                    <FormDescription className="text-xs text-muted-foreground mt-1">
-                      {licenseType === 'flatbed' 
-                        ? 'Selecione o tipo de carga para este conjunto de prancha'
-                        : 'Selecione o tipo de carga para este conjunto'
-                      }
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
                 )}
-              />
-            )}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            <FormField
-              control={form.control}
-              name="length"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-base font-medium">Comprimento (metros)</FormLabel>
+        {/* Tipo de carga */}
+        {licenseType && (
+          <FormField
+            control={form.control}
+            name="cargoType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de Carga</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value?.toString()}
+                >
                   <FormControl>
-                    <Input 
-                      type="text" 
-                      inputMode="decimal"
-                      pattern="[0-9]*[.,]?[0-9]*"
-                      placeholder="Ex.: 19,80" 
-                      {...field}
-                      className="mobile-input h-10"
-                      value={
-                        typeof field.value === 'number' 
-                          ? field.value.toString().replace('.', ',') 
-                          : field.value || ''
-                      }
-                      onFocus={(e) => {
-                        // Adicionar a classe ao body quando o input receber foco
-                        document.body.classList.add('keyboard-active');
-                        // Rolar a página para cima quando o input receber foco
-                        window.scrollTo(0, 0);
-                        // Adicionar pequeno atraso para garantir que o teclado apareça antes de reposicionar
-                        setTimeout(() => {
-                          e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 300);
-                      }}
-                      onBlur={() => {
-                        // Remover a classe do body quando o input perder o foco
-                        document.body.classList.remove('keyboard-active');
-                      }}
-                      onChange={(e) => {
-                        // Permite apenas números e um único separador decimal (ponto ou vírgula)
-                        const value = e.target.value;
-                        // Substituir vírgula por ponto e garantir que só tenha um separador decimal
-                        const sanitized = value.replace(/,/g, '.').replace(/(\..*)\./g, '$1');
-                        // Converte para número e atualiza o campo
-                        field.onChange(sanitized === '' ? undefined : parseFloat(sanitized) || 0);
-                      }}
-                    />
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo de carga" />
+                    </SelectTrigger>
                   </FormControl>
-                  <FormDescription className="text-xs text-muted-foreground mt-1">
-                    {licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
-                      ? 'Digite o comprimento em metros (sem limite para carga superdimensionada)'
-                      : licenseType === 'flatbed'
-                        ? 'Digite o comprimento em metros (max: 25,00)'
-                        : 'Digite o comprimento em metros (min: 19,80 - max: 30,00)'
-                    }
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="width"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-base font-medium">Largura do Conjunto (metros)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="text" 
-                      inputMode="decimal"
-                      pattern="[0-9]*[.,]?[0-9]*"
-                      placeholder="Ex.: 2,60" 
-                      {...field}
-                      className="mobile-input h-10"
-                      value={
-                        typeof field.value === 'number' 
-                          ? field.value.toString().replace('.', ',') 
-                          : field.value || ''
-                      }
-                      onFocus={(e) => {
-                        document.body.classList.add('keyboard-active');
-                        window.scrollTo(0, 0);
-                        setTimeout(() => {
-                          e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 300);
-                      }}
-                      onBlur={() => {
-                        document.body.classList.remove('keyboard-active');
-                      }}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        const sanitized = value.replace(/,/g, '.').replace(/(\..*)\./g, '$1');
-                        field.onChange(sanitized === '' ? undefined : parseFloat(sanitized) || 0);
-                      }}
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs text-muted-foreground mt-1">
-                    {licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
-                      ? 'Informe a largura total do conjunto em metros (sem limite para carga superdimensionada)'
-                      : licenseType === 'flatbed'
-                        ? 'Informe a largura total do conjunto em metros (max: 3,20)'
-                        : 'Informe a largura total do conjunto em metros (max: 2,60)'
-                    }
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="height"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-base font-medium">Altura do Conjunto (metros)</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="text" 
-                      inputMode="decimal"
-                      pattern="[0-9]*[.,]?[0-9]*"
-                      placeholder="Ex.: 4,40" 
-                      {...field}
-                      className="mobile-input h-10"
-                      value={
-                        typeof field.value === 'number' 
-                          ? field.value.toString().replace('.', ',') 
-                          : field.value || ''
-                      }
-                      onFocus={(e) => {
-                        document.body.classList.add('keyboard-active');
-                        window.scrollTo(0, 0);
-                        setTimeout(() => {
-                          e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 300);
-                      }}
-                      onBlur={() => {
-                        document.body.classList.remove('keyboard-active');
-                      }}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        const sanitized = value.replace(/,/g, '.').replace(/(\..*)\./g, '$1');
-                        field.onChange(sanitized === '' ? undefined : parseFloat(sanitized) || 0);
-                      }}
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs text-muted-foreground mt-1">
-                    {licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
-                      ? 'Informe a altura total do conjunto em metros (sem limite para carga superdimensionada)'
-                      : licenseType === 'flatbed'
-                        ? 'Informe a altura total do conjunto em metros (max: 4,95)'
-                        : 'Informe a altura total do conjunto em metros (max: 4,40)'
-                    }
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
+                  <SelectContent>
+                    {licenseType === 'flatbed' ? (
+                      // Opções de carga para prancha
+                      FLATBED_CARGO_TYPES.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      // Opções de carga para outros tipos
+                      NON_FLATBED_CARGO_TYPES.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormDescription className="text-xs text-muted-foreground mt-1">
+                  {licenseType === 'flatbed' 
+                    ? 'Selecione o tipo de carga para este conjunto de prancha'
+                    : 'Selecione o tipo de carga para este conjunto'
+                  }
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         {/* Dynamic fields for Rodotrem 9 eixos */}
         {licenseType === 'roadtrain_9_axles' && (
-          <div className="border border-gray-200 rounded-lg p-5 shadow-sm">
-            <h3 className="font-semibold text-gray-800 text-lg mb-4 flex items-center">
-              <VehicleTypeImage type="roadtrain_9_axles" className="mr-2" iconSize={32} />
-              Veículos do Rodotrem
-            </h3>
+          <div className="border border-gray-200 rounded-md p-4 space-y-4">
+            <h3 className="font-medium text-gray-800 mb-2">Veículos do Rodotrem</h3>
             
             <FormField
               control={form.control}
@@ -1009,7 +724,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="no_trailer">Nenhum semirreboque cadastrado</SelectItem>
+                        <SelectItem value="no_trailer">Nenhuma carreta cadastrada</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
@@ -1077,7 +792,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="no_trailer">Nenhum semirreboque cadastrado</SelectItem>
+                        <SelectItem value="no_trailer">Nenhuma carreta cadastrada</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
@@ -1088,21 +803,10 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           </div>
         )}
 
-        {/* Dynamic fields for Bitrem */}
+        {/* Dynamic fields for Bitrems */}
         {(licenseType === 'bitrain_9_axles' || licenseType === 'bitrain_7_axles' || licenseType === 'bitrain_6_axles') && (
-          <div className="border border-gray-200 rounded-lg p-5 shadow-sm">
-            <h3 className="font-semibold text-gray-800 text-lg mb-4 flex items-center">
-              {licenseType === 'bitrain_6_axles' ? (
-                <VehicleTypeImage type="bitrain_6_axles" className="mr-2" iconSize={32} />
-              ) : licenseType === 'bitrain_9_axles' ? (
-                <VehicleTypeImage type="bitrain_9_axles" className="mr-2" iconSize={32} />
-              ) : licenseType === 'bitrain_7_axles' ? (
-                <VehicleTypeImage type="bitrain_7_axles" className="mr-2" iconSize={32} />
-              ) : (
-                <Truck className="mr-2 h-8 w-8" />
-              )}
-              Veículos do Bitrem
-            </h3>
+          <div className="border border-gray-200 rounded-md p-4 space-y-4">
+            <h3 className="font-medium text-gray-800 mb-2">Veículos do Bitrem</h3>
             
             <FormField
               control={form.control}
@@ -1163,7 +867,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="no_trailer">Nenhum semirreboque cadastrado</SelectItem>
+                        <SelectItem value="no_trailer">Nenhuma carreta cadastrada</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
@@ -1197,7 +901,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="no_trailer">Nenhum semirreboque cadastrado</SelectItem>
+                        <SelectItem value="no_trailer">Nenhuma carreta cadastrada</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
@@ -1210,11 +914,8 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
 
         {/* Dynamic fields for Prancha */}
         {licenseType === 'flatbed' && (
-          <div className="border border-gray-200 rounded-lg p-5 shadow-sm">
-            <h3 className="font-semibold text-gray-800 text-lg mb-4 flex items-center">
-              <VehicleTypeImage type="flatbed" className="mr-2" iconSize={32} />
-              Veículos da Prancha
-            </h3>
+          <div className="border border-gray-200 rounded-md p-4 space-y-4">
+            <h3 className="font-medium text-gray-800 mb-2">Veículos da Prancha</h3>
             
             <FormField
               control={form.control}
@@ -1286,27 +987,17 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           </div>
         )}
 
-        {/* Dynamic fields for Romeo and Juliet */}
+        {/* Romeu e Julieta fields */}
         {licenseType === 'romeo_and_juliet' && (
-          <div className="border border-gray-200 rounded-lg p-5 shadow-sm">
-            <h3 className="font-semibold text-gray-800 text-lg mb-4 flex items-center">
-              <VehicleTypeImage type="romeo_and_juliet" className="mr-2" iconSize={32} />
-              Veículos do Romeu e Julieta
-            </h3>
-            
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800 flex items-center">
-                <Check className="h-4 w-4 mr-2 flex-shrink-0" />
-                Para o conjunto "Romeu e Julieta", a unidade tratora deve ser do tipo "Caminhão" e a 1ª carreta deve ser do tipo "Reboque".
-              </p>
-            </div>
+          <div className="border border-gray-200 rounded-md p-4 space-y-4">
+            <h3 className="font-medium text-gray-800 mb-2">Veículos do Romeu e Julieta</h3>
             
             <FormField
               control={form.control}
               name="tractorUnitId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Unidade Tratora (Caminhão)</FormLabel>
+                  <FormLabel>Caminhão</FormLabel>
                   <Select 
                     onValueChange={(value) => field.onChange(parseInt(value))} 
                     defaultValue={field.value?.toString()}
@@ -1319,22 +1010,24 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                     <SelectContent>
                       {isLoadingVehicles ? (
                         <SelectItem value="loading">Carregando...</SelectItem>
-                      ) : trucks.length > 0 ? (
-                        trucks.map((vehicle) => (
-                          <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
-                            {vehicle.plate}
-                          </SelectItem>
-                        ))
+                      ) : tractorUnits
+                          .filter(v => v.model?.toLowerCase().includes('caminhão'))
+                          .length > 0 ? (
+                        tractorUnits
+                          .filter(v => v.model?.toLowerCase().includes('caminhão'))
+                          .map((vehicle) => (
+                            <SelectItem key={vehicle.id} value={vehicle.id.toString()}>
+                              {vehicle.plate}
+                            </SelectItem>
+                          ))
                       ) : (
-                        <SelectItem value="no_truck">
-                          <div className="flex flex-col">
-                            <span>Nenhum caminhão cadastrado</span>
-                            <span className="text-xs text-muted-foreground">Você precisa cadastrar um veículo do tipo "Caminhão"</span>
-                          </div>
-                        </SelectItem>
+                        <SelectItem value="no_truck">Nenhum caminhão cadastrado</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
+                  <FormDescription>
+                    Para o Romeu e Julieta, a unidade tratora deve ser um caminhão
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -1345,7 +1038,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
               name="firstTrailerId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>1ª Carreta (Reboque)</FormLabel>
+                  <FormLabel>Reboque</FormLabel>
                   <Select 
                     onValueChange={(value) => field.onChange(parseInt(value))} 
                     defaultValue={field.value?.toString()}
@@ -1365,15 +1058,13 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="no_trailer">
-                          <div className="flex flex-col">
-                            <span>Nenhum reboque cadastrado</span>
-                            <span className="text-xs text-muted-foreground">Você precisa cadastrar um veículo do tipo "Reboque"</span>
-                          </div>
-                        </SelectItem>
+                        <SelectItem value="no_trailer">Nenhum reboque cadastrado</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
+                  <FormDescription>
+                    Para o Romeu e Julieta, o reboque deve ser do tipo "Reboque"
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -1381,219 +1072,364 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           </div>
         )}
 
-        <div className="border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h3 className="font-semibold text-gray-800 text-lg mb-4 flex items-center">
-            {licenseType === 'bitrain_6_axles' ? (
-              <VehicleTypeImage type="bitrain_6_axles" className="mr-2" iconSize={32} />
-            ) : licenseType === 'bitrain_9_axles' ? (
-              <VehicleTypeImage type="bitrain_9_axles" className="mr-2" iconSize={32} />
-            ) : licenseType === 'bitrain_7_axles' ? (
-              <VehicleTypeImage type="bitrain_7_axles" className="mr-2" iconSize={32} />
-            ) : licenseType === 'roadtrain_9_axles' ? (
-              <VehicleTypeImage type="roadtrain_9_axles" className="mr-2" iconSize={32} />
-            ) : licenseType === 'flatbed' ? (
-              <VehicleTypeImage type="flatbed" className="mr-2" iconSize={32} />
-            ) : licenseType === 'romeo_and_juliet' ? (
-              <VehicleTypeImage type="romeo_and_juliet" className="mr-2" iconSize={32} />
-            ) : (
-              <Truck className="mr-2 h-8 w-8" />
-            )}
-            Placas Adicionais
-          </h3>
-          <div className="text-sm text-muted-foreground mb-4">
-            Adicione placas de veículos que fazem parte da composição mas não foram selecionados acima
+        {/* Adicionar campo para placas adicionais */}
+        <div className="border border-gray-200 rounded-md p-4 space-y-4">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-medium text-gray-800">Placas Adicionais</h3>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const currentPlates = form.getValues("additionalPlates") || [];
+                form.setValue("additionalPlates", [...currentPlates, ""]);
+              }}
+              className="h-8 px-2 text-xs"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar Placa
+            </Button>
           </div>
           
-          {/* Novo componente de campo de placas adicionais com autopreenchimento */}
-          <CampoPlacaAdicional 
-            form={form} 
-            vehicles={vehicles} 
-            isLoadingVehicles={isLoadingVehicles}
-            licenseType={licenseType}
-          />
+          <div className="space-y-3">
+            {form.watch("additionalPlates")?.map((_, index) => (
+              <CampoPlacaAdicional
+                key={index}
+                index={index}
+                form={form}
+                onRemove={() => {
+                  const plates = [...(form.getValues("additionalPlates") || [])];
+                  plates.splice(index, 1);
+                  form.setValue("additionalPlates", plates);
+                }}
+              />
+            ))}
+          </div>
+
+          {form.watch("additionalPlates")?.length === 0 && (
+            <div className="text-sm text-gray-500 italic">
+              Nenhuma placa adicional. Clique no botão acima para adicionar.
+            </div>
+          )}
         </div>
 
-        <div className="border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h3 className="font-semibold text-gray-800 text-lg mb-4 flex items-center">
-            <FileUp className="mr-2 h-5 w-5" />
-            Documentos
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
-              <h4 className="text-blue-700 font-medium mb-2 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                </svg>
-                Documentação dos Veículos
-              </h4>
-              <p className="text-sm text-blue-600 mb-3">
-                Os CRLVs dos veículos serão vinculados automaticamente a partir do cadastro de veículos.
-                Caso não encontre algum veículo, cadastre-o clicando no +:
-              </p>
-              <div className="text-xs text-gray-500">
-                Formatos aceitos: PDF, JPG, PNG
-              </div>
-            </div>
+        <FormField
+          control={form.control}
+          name="length"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-base font-medium">Comprimento (metros)</FormLabel>
+              <FormControl>
+                <Input 
+                  type="text" 
+                  inputMode="decimal"
+                  pattern="[0-9]*[.,]?[0-9]*"
+                  placeholder="Ex.: 19,80" 
+                  {...field}
+                  className="mobile-input h-10"
+                  value={
+                    typeof field.value === 'number' 
+                      ? field.value.toString().replace('.', ',') 
+                      : field.value || ''
+                  }
+                  onFocus={(e) => {
+                    // Adicionar a classe ao body quando o input receber foco
+                    document.body.classList.add('keyboard-active');
+                    // Rolar a página para cima quando o input receber foco
+                    window.scrollTo(0, 0);
+                    // Adicionar pequeno atraso para garantir que o teclado apareça antes de reposicionar
+                    setTimeout(() => {
+                      e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
+                  }}
+                  onBlur={(e) => {
+                    // Remover a classe do body quando o input perder o foco
+                    document.body.classList.remove('keyboard-active');
+                    
+                    // Formatar o valor final com 2 casas decimais obrigatórias
+                    if (e.target.value) {
+                      // Garantir formatação com 2 casas decimais ao sair do campo
+                      const formattedValue = formatFinalValue(e.target.value);
+                      e.target.value = formattedValue;
+                      
+                      // Converter para valor numérico exato para o form
+                      const parts = formattedValue.split(',');
+                      const intPart = parseInt(parts[0]);
+                      const decimalPart = parts[1] || "00";
+                      
+                      // Converter para número com precisão exata (sem arredondamento)
+                      const numericValue = (intPart * 100 + parseInt(decimalPart.padEnd(2, "0").substring(0, 2))) / 100;
+                      
+                      if (!isNaN(numericValue)) {
+                        field.onChange(numericValue);
+                      }
+                    }
+                  }}
+                  onChange={(e) => {
+                    // Usar a função específica para comprimento
+                    const { displayValue, numericValue } = formatLengthInput(
+                      e.target.value,
+                      licenseType,
+                      form.watch('cargoType')
+                    );
+                    
+                    // Atualizar campo visual
+                    e.target.value = displayValue;
+                    
+                    // Atualizar valor numérico no form se válido
+                    if (numericValue !== undefined) {
+                      field.onChange(numericValue);
+                    }
+                  }}
+                />
+              </FormControl>
+              <FormDescription>
+                {licenseType === 'flatbed' ? (
+                  form.watch('cargoType') === 'oversized' ? (
+                    "Para carga SUPERDIMENSIONADA, não há limite pré-definido de comprimento."
+                  ) : (
+                    "Para prancha, o comprimento máximo é de 25,00 metros."
+                  )
+                ) : (
+                  "O comprimento deve ser de no mínimo 19,80 metros e no máximo 30,00 metros."
+                )}
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-            <div className="bg-amber-50 p-4 rounded-md border border-amber-100">
-              <h4 className="text-amber-700 font-medium mb-2 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                  <path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
-                </svg>
-                Tempo de Processamento
-              </h4>
-              <p className="text-sm text-amber-600 mb-3">
-                Após o envio, a solicitação passará por análise do órgão competente.
-                O prazo médio para análise varia de acordo com cada estado.
-              </p>
-              <div className="text-xs text-gray-500">
-                Acompanhe o status na página "Acompanhar Licença"
-              </div>
-            </div>
-          </div>
-          
-          <FormField
-            control={form.control}
-            name="comments"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-base font-medium">Observações</FormLabel>
-                <FormControl>
-                  <Textarea
-                    placeholder="Adicione observações relevantes para este pedido de licença..."
-                    className="min-h-[120px] resize-y"
-                    value={field.value as string || ""}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                  />
-                </FormControl>
+        {/* Dimensões adicionais para prancha */}
+        {(licenseType === 'flatbed') && (
+          <>
+            <FormField
+              control={form.control}
+              name="width"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-base font-medium">Largura (metros)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="text" 
+                      inputMode="decimal"
+                      pattern="[0-9]*[.,]?[0-9]*"
+                      placeholder="Ex.: 2,60" 
+                      {...field}
+                      className="mobile-input h-10"
+                      value={
+                        typeof field.value === 'number' 
+                          ? field.value.toString().replace('.', ',') 
+                          : field.value || ''
+                      }
+                      onFocus={(e) => {
+                        document.body.classList.add('keyboard-active');
+                        window.scrollTo(0, 0);
+                        setTimeout(() => {
+                          e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 300);
+                      }}
+                      onBlur={(e) => {
+                        document.body.classList.remove('keyboard-active');
+                        
+                        if (e.target.value) {
+                          const formattedValue = formatFinalValue(e.target.value);
+                          e.target.value = formattedValue;
+                          
+                          const parts = formattedValue.split(',');
+                          const intPart = parseInt(parts[0]);
+                          const decimalPart = parts[1] || "00";
+                          
+                          const numericValue = (intPart * 100 + parseInt(decimalPart.padEnd(2, "0").substring(0, 2))) / 100;
+                          
+                          if (!isNaN(numericValue)) {
+                            field.onChange(numericValue);
+                          }
+                        }
+                      }}
+                      onChange={(e) => {
+                        // Usar a função específica para largura
+                        const { displayValue, numericValue } = formatWidthInput(
+                          e.target.value,
+                          licenseType,
+                          form.watch('cargoType')
+                        );
+                        
+                        // Atualizar campo visual
+                        e.target.value = displayValue;
+                        
+                        // Atualizar valor numérico no form se válido
+                        if (numericValue !== undefined) {
+                          field.onChange(numericValue);
+                        }
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {form.watch('cargoType') === 'oversized' ? (
+                      "Para carga SUPERDIMENSIONADA, não há limite pré-definido de largura."
+                    ) : (
+                      "Para prancha, a largura máxima é de 3,20 metros."
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="height"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-base font-medium">Altura (metros)</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="text" 
+                      inputMode="decimal"
+                      pattern="[0-9]*[.,]?[0-9]*"
+                      placeholder="Ex.: 4,40" 
+                      {...field}
+                      className="mobile-input h-10"
+                      value={
+                        typeof field.value === 'number' 
+                          ? field.value.toString().replace('.', ',') 
+                          : field.value || ''
+                      }
+                      onFocus={(e) => {
+                        document.body.classList.add('keyboard-active');
+                        window.scrollTo(0, 0);
+                        setTimeout(() => {
+                          e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 300);
+                      }}
+                      onBlur={(e) => {
+                        document.body.classList.remove('keyboard-active');
+                        
+                        if (e.target.value) {
+                          const formattedValue = formatFinalValue(e.target.value);
+                          e.target.value = formattedValue;
+                          
+                          const parts = formattedValue.split(',');
+                          const intPart = parseInt(parts[0]);
+                          const decimalPart = parts[1] || "00";
+                          
+                          const numericValue = (intPart * 100 + parseInt(decimalPart.padEnd(2, "0").substring(0, 2))) / 100;
+                          
+                          if (!isNaN(numericValue)) {
+                            field.onChange(numericValue);
+                          }
+                        }
+                      }}
+                      onChange={(e) => {
+                        // Usar a função específica para altura
+                        const { displayValue, numericValue } = formatHeightInput(
+                          e.target.value,
+                          licenseType,
+                          form.watch('cargoType')
+                        );
+                        
+                        // Atualizar campo visual
+                        e.target.value = displayValue;
+                        
+                        // Atualizar valor numérico no form se válido
+                        if (numericValue !== undefined) {
+                          field.onChange(numericValue);
+                        }
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {form.watch('cargoType') === 'oversized' ? (
+                      "Para carga SUPERDIMENSIONADA, não há limite pré-definido de altura."
+                    ) : (
+                      "Para prancha, a altura máxima é de 4,95 metros."
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
+
+        <FormField
+          control={form.control}
+          name="states"
+          render={() => (
+            <FormItem>
+              <div className="mb-4">
+                <FormLabel>Estados</FormLabel>
                 <FormDescription>
-                  Inclua quaisquer informações adicionais importantes para a análise desta solicitação
+                  Selecione os estados para os quais a licença será solicitada
                 </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                {Object.entries(brazilianStates).map(([state, label]) => (
+                  <FormField
+                    key={state}
+                    control={form.control}
+                    name="states"
+                    render={({ field }) => {
+                      return (
+                        <FormItem
+                          key={state}
+                          className="flex flex-row items-start space-x-3 space-y-0 p-2 border rounded-md"
+                        >
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value?.includes(state)}
+                              onCheckedChange={(checked) => {
+                                return checked
+                                  ? field.onChange([...field.value, state])
+                                  : field.onChange(
+                                      field.value?.filter(
+                                        (value) => value !== state
+                                      )
+                                    );
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            {typeof label === 'string' ? label : state}
+                          </FormLabel>
+                        </FormItem>
+                      );
+                    }}
+                  />
+                ))}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-        <div className="border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h3 className="font-semibold text-gray-800 text-lg mb-4 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-              <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
-              <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
-              <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
-              <line x1="12" y1="20" x2="12" y2="20"/>
-            </svg>
-            Estados Solicitados
-          </h3>
+        <FormField
+          control={form.control}
+          name="comments"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Observações</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Insira aqui quaisquer observações relevantes para esta solicitação"
+                  className="resize-y"
+                  {...field}
+                  value={field.value || ''}
+                />
+              </FormControl>
+              <FormDescription>
+                Informações adicionais para o órgão que irá analisar sua solicitação
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-          <FormField
-            control={form.control}
-            name="states"
-            render={() => (
-              <FormItem>
-                <div className="mb-2">
-                  <div className="flex justify-between items-center">
-                    <FormLabel className="text-base font-medium">Selecione os estados para emissão de licença</FormLabel>
-                    <FormField
-                      control={form.control}
-                      name="states"
-                      render={({ field }) => {
-                        const allSelected = brazilianStates.length === (field.value || []).length;
-                        return (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-xs flex gap-1 items-center"
-                            onClick={() => {
-                              if (allSelected) {
-                                // Desselecionar todos
-                                field.onChange([]);
-                              } else {
-                                // Selecionar todos
-                                field.onChange(brazilianStates.map(state => state.code));
-                              }
-                            }}
-                          >
-                            {allSelected ? (
-                              <>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                </svg>
-                                Desmarcar Todos
-                              </>
-                            ) : (
-                              <>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="9 11 12 14 22 4"></polyline>
-                                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-                                </svg>
-                                Selecionar Todos
-                              </>
-                            )}
-                          </Button>
-                        );
-                      }}
-                    />
-                  </div>
-                  <div className="text-sm text-muted-foreground mt-1 mb-3">
-                    Escolha um ou mais estados onde a licença será utilizada
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                  {brazilianStates.map((state) => (
-                    <FormField
-                      key={state.code}
-                      control={form.control}
-                      name="states"
-                      render={({ field }) => {
-                        const isSelected = (field.value || []).includes(state.code);
-                        return (
-                          <FormItem
-                            key={state.code}
-                            className="m-0 p-0"
-                          >
-                            <FormControl>
-                              <div 
-                                className={`cursor-pointer flex flex-col items-center justify-center p-2 rounded-md border ${
-                                  isSelected 
-                                    ? 'bg-blue-50 border-blue-300 text-blue-700 font-medium' 
-                                    : 'border-gray-200 hover:bg-gray-50'
-                                }`}
-                                onClick={() => {
-                                  if (isSelected) {
-                                    field.onChange((field.value || []).filter((value) => value !== state.code));
-                                  } else {
-                                    field.onChange([...(field.value || []), state.code]);
-                                  }
-                                }}
-                              >
-                                <span className="text-base font-medium">{state.code}</span>
-                                <span className="text-xs mt-1 text-center hidden md:block text-gray-500">{state.name}</span>
-                              </div>
-                            </FormControl>
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  ))}
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="flex flex-col sm:flex-row justify-end gap-4 sm:space-x-4 pt-4">
-          <Button 
-            type="button" 
-            variant="outline" 
+        <div className="flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0 sm:space-x-2 pt-4">
+          <Button
+            type="button"
+            variant="outline"
             onClick={onCancel}
+            disabled={isProcessing}
             className="w-full sm:w-auto order-3 sm:order-1"
           >
             Cancelar
@@ -1603,7 +1439,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             variant="outline"
             onClick={handleSaveDraft}
             disabled={isProcessing}
-            className="w-full sm:w-auto order-2"
+            className="border-yellow-500 text-yellow-500 hover:text-yellow-700 hover:bg-yellow-50 w-full sm:w-auto order-2"
           >
             {saveAsDraftMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
             Salvar Rascunho
