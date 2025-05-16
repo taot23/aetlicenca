@@ -236,8 +236,8 @@ export function DimensionField({
       <FormDescription className="text-xs text-muted-foreground mt-1">
         {description}
       </FormDescription>
-      {/* Não exibimos mensagens de validação para pranchas relacionadas ao comprimento mínimo */}
-      {fieldType === "comprimento" && licenseType === "flatbed" ? (
+      {/* Não exibimos mensagens de validação para pranchas em nenhum campo de dimensão */}
+      {licenseType === "flatbed" ? (
         <div className="hidden"><FormMessage /></div>
       ) : (
         <FormMessage />
