@@ -1338,10 +1338,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Validação em metros
           if (dimensionType === 'length') {
             if (licenseType === 'flatbed') {
-              if (cargoType === 'oversized') return value <= 100; // Sem limite rígido para superdimensionada
-              return value <= 25; // Limite para pranchas normais
+              if (cargoType === 'oversized') return true; // Sem limite rígido para superdimensionada
+              return value > 0 && value <= 25; // Limite para pranchas normais (sem mínimo obrigatório)
             }
-            return value >= 19.8 && value <= 30; // Limite para outros tipos
+            return value > 0 && value <= 30; // Limite para outros tipos (sem mínimo obrigatório)
           } else if (dimensionType === 'width') {
             if (licenseType === 'flatbed') {
               if (cargoType === 'oversized') return true; // Sem limite rígido para superdimensionada
