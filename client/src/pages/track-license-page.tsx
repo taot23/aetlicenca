@@ -180,10 +180,14 @@ export default function TrackLicensePage() {
         license.requestNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         license.mainVehiclePlate.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Modo compatibilidade: filtrar pelo status geral ou status específico do estado
-      const matchesStatus = !statusFilter || statusFilter === "all_status" || 
-        license.status === statusFilter || 
-        license.specificStateStatus === statusFilter;
+      // Filtragem específica por status (geral ou estado específico)
+      let matchesStatus = !statusFilter || statusFilter === "all_status";
+      
+      if (statusFilter && statusFilter !== "all_status") {
+        // Verificar status específico do estado primeiro, depois o status geral
+        matchesStatus = (license.specificStateStatus === statusFilter) || 
+                        (license.status === statusFilter);
+      }
       
       const matchesDate = !dateFilter || (
         license.createdAt && 
