@@ -727,20 +727,31 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     console.log(`Validando altura:`, height, `tipo:`, typeof height);
     console.log(`Altura em metros:`, height, `Está em centímetros:`, height > 100);
     
+    // Caso especial: se for prancha com carga superdimensionada, retornar imediatamente
+    // sem aplicar validações de dimensão
+    if (licenseType === 'flatbed' && cargoType === 'oversized') {
+      console.log("Licença do tipo prancha com carga SUPERDIMENSIONADA - ignorando validações de dimensão");
+      
+      // Remover quaisquer erros que possam existir
+      form.clearErrors('length');
+      form.clearErrors('width');
+      form.clearErrors('height');
+      
+      // Para carga SUPERDIMENSIONADA, não há limites
+      return true;
+    }
+    
     // Determinar quais limites usar com base no tipo
     let limits;
     
     if (licenseType === 'flatbed') {
       // Para pranchas, usar limite específico
       limits = DIMENSION_LIMITS.flatbed;
+      console.log("Usando limites para prancha:", limits);
     } else {
       // Para outros tipos, usar limite padrão
       limits = DIMENSION_LIMITS.default;
-    }
-    
-    // Para carga SUPERDIMENSIONADA, não há limites
-    if (cargoType === 'oversized') {
-      limits = DIMENSION_LIMITS.oversized;
+      console.log("Usando limites padrão:", limits);
     }
     
     // Ajustar os valores no formulário se necessário (conversão de cm para m)
