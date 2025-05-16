@@ -585,11 +585,14 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     
     // Verificar se há campos faltantes e mostrar mensagem de erro
     if (missingFields.length > 0) {
-      toast({
+      // CORREÇÃO CRÍTICA: Não usar variant para evitar o erro com o Toast
+      const toastOptions = {
         title: "Campos obrigatórios não preenchidos",
-        description: `Por favor, preencha os seguintes campos: ${missingFields.join(', ')}`,
-        variant: "destructive",
-      });
+        description: `Por favor, preencha os seguintes campos: ${missingFields.join(', ')}`
+      };
+      
+      // Usar o toast sem a propriedade variant
+      toast(toastOptions);
       return;
     }
     
