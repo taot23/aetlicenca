@@ -827,7 +827,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                 name="cargoType"
                 render={({ field }) => {
                   // Verificar se o campo está vazio
-                  const isEmpty = field.value === undefined || field.value === null || field.value === '';
+                  const isEmpty = !field.value;
                   
                   return (
                     <FormItem>
