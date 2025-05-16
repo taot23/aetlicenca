@@ -599,7 +599,7 @@ export default function AdminLicensesPage() {
                     });
                   }}
                 >
-                  <RefreshCw className="h-4 w-4" />
+                  <FileDown className="h-4 w-4" />
                   Atualizar
                 </Button>
               </div>
