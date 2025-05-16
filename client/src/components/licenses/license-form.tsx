@@ -586,8 +586,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       return;
     }
     
-    // Validar dimensões
-    validateDimensions(values);
+    // Validar dimensões (exceto para prancha)
+    if (values.type !== 'flatbed') {
+      validateDimensions(values);
+    } else {
+      console.log("Pulando validação de dimensões para pedido de prancha");
+    }
     
     // Atualizar o valor isDraft para false e submeter
     form.setValue("isDraft", false);
