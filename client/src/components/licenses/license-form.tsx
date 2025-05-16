@@ -383,9 +383,10 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       return await res.json();
     },
     onSuccess: () => {
+      // Corrigido: Remover variante para evitar erro de toast
       toast({
         title: "Solicitação enviada",
-        description: "A solicitação de licença foi enviada com sucesso",
+        description: "A solicitação de licença foi enviada com sucesso"
       });
       onComplete();
     },
@@ -618,20 +619,20 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     try {
       await submitDraftDirectly(draft.id);
       
+      // Remover a variante para evitar erros
       toast({
         title: "Rascunho enviado com sucesso",
-        description: "O pedido de licença foi enviado para análise",
-        variant: "success" // Adicionar a variante de sucesso que já está definida no Toast
+        description: "O pedido de licença foi enviado para análise"
       });
       
       // Chamar onComplete para fechar o modal e atualizar a lista
       onComplete();
     } catch (error) {
       console.error("Erro ao submeter rascunho:", error);
+      // Removido variant para evitar erro
       toast({
         title: "Erro ao enviar rascunho",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar o rascunho",
-        variant: "destructive",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar o rascunho"
       });
     }
   };
