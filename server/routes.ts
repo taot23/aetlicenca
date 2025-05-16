@@ -1327,110 +1327,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "A placa principal é obrigatória" });
         }
         
-        // Verifica se os valores estão em metros (valores decimais pequenos) ou centímetros (valores inteiros grandes)
-        // e faz a conversão necessária
+        // Funcão simples para converter metros para centímetros
+        const metersToCentimeters = (value: number) => Math.round(value * 100);
         
-        // Verifica dimensões com base no tipo de licença
-        const isValidDimension = (dimensionType: string, value: number, licenseType?: string, cargoType?: string): boolean => {
-          // Se já estiver em centímetros, é considerado válido
-          if (value > 100) return true;
-          
-          // Validação em metros
-          if (dimensionType === 'length') {
-            if (licenseType === 'flatbed') {
-              if (cargoType === 'oversized') return true; // Sem limite rígido para superdimensionada
-              return value > 0 && value <= 25; // Limite para pranchas normais (sem mínimo obrigatório)
-            }
-            return value > 0 && value <= 30; // Limite para outros tipos (sem mínimo obrigatório)
-          } else if (dimensionType === 'width') {
-            if (licenseType === 'flatbed') {
-              if (cargoType === 'oversized') return true; // Sem limite rígido para superdimensionada
-              return value <= 3.2; // Limite para pranchas normais
-            }
-            return value <= 2.6; // Limite para outros tipos
-          } else if (dimensionType === 'height') {
-            if (licenseType === 'flatbed') {
-              if (cargoType === 'oversized') return true; // Sem limite rígido para superdimensionada
-              return value <= 4.95; // Limite para pranchas normais
-            }
-            return value <= 4.4; // Limite para outros tipos
-          }
-          return true;
-        };
+        // Converter todas as dimensões de metros para centímetros
+        // Sem validação adicional - confiar nas validações do frontend para cada tipo
         
-        const inCentimeters = (value: number) => value > 100; // Heurística para detectar centímetros vs metros
-        
-        // Verifica e converte comprimento se necessário
+        // Converter comprimento
         if (licenseData.length !== undefined) {
           console.log("Comprimento recebido:", licenseData.length, "tipo:", typeof licenseData.length);
           
-          // Validar dimensão antes de converter
-          const isLengthValid = isValidDimension('length', licenseData.length, licenseData.type, licenseData.cargoType);
-          console.log("Comprimento válido para o tipo de conjunto:", isLengthValid);
-          
-          if (!isLengthValid) {
-            return res.status(400).json({ 
-              message: `Comprimento inválido para o tipo de conjunto ${licenseData.type} e carga ${licenseData.cargoType || 'não especificada'}`
-            });
-          }
-          
-          // Já está em centímetros?
-          const isLengthInCm = inCentimeters(licenseData.length);
-          console.log("Comprimento está em centímetros:", isLengthInCm);
-          
-          // Se estiver em metros, converte para centímetros
-          if (!isLengthInCm) {
-            licenseData.length = Math.round(licenseData.length * 100);
+          // Converter valor em metros para centímetros se necessário
+          if (licenseData.length < 100) {
+            licenseData.length = metersToCentimeters(licenseData.length);
             console.log("Comprimento convertido para centímetros:", licenseData.length);
           }
         }
         
-        // Verifica e converte largura se necessário
+        // Converter largura
         if (licenseData.width !== undefined) {
           console.log("Largura recebida:", licenseData.width, "tipo:", typeof licenseData.width);
           
-          // Validar dimensão antes de converter
-          const isWidthValid = isValidDimension('width', licenseData.width, licenseData.type, licenseData.cargoType);
-          console.log("Largura válida para o tipo de conjunto:", isWidthValid);
-          
-          if (!isWidthValid) {
-            return res.status(400).json({ 
-              message: `Largura inválida para o tipo de conjunto ${licenseData.type} e carga ${licenseData.cargoType || 'não especificada'}`
-            });
-          }
-          
-          // Já está em centímetros?
-          const isWidthInCm = inCentimeters(licenseData.width);
-          console.log("Largura está em centímetros:", isWidthInCm);
-          
-          // Se estiver em metros, converte para centímetros
-          if (!isWidthInCm) {
-            licenseData.width = Math.round(licenseData.width * 100);
+          // Converter valor em metros para centímetros se necessário
+          if (licenseData.width < 100) {
+            licenseData.width = metersToCentimeters(licenseData.width);
             console.log("Largura convertida para centímetros:", licenseData.width);
           }
         }
         
-        // Verifica e converte altura se necessário
+        // Converter altura
         if (licenseData.height !== undefined) {
           console.log("Altura recebida:", licenseData.height, "tipo:", typeof licenseData.height);
           
-          // Validar dimensão antes de converter
-          const isHeightValid = isValidDimension('height', licenseData.height, licenseData.type, licenseData.cargoType);
-          console.log("Altura válida para o tipo de conjunto:", isHeightValid);
-          
-          if (!isHeightValid) {
-            return res.status(400).json({ 
-              message: `Altura inválida para o tipo de conjunto ${licenseData.type} e carga ${licenseData.cargoType || 'não especificada'}`
-            });
-          }
-          
-          // Já está em centímetros?
-          const isHeightInCm = inCentimeters(licenseData.height);
-          console.log("Altura está em centímetros:", isHeightInCm);
-          
-          // Se estiver em metros, converte para centímetros
-          if (!isHeightInCm) {
-            licenseData.height = Math.round(licenseData.height * 100);
+          // Converter valor em metros para centímetros se necessário
+          if (licenseData.height < 100) {
+            licenseData.height = metersToCentimeters(licenseData.height);
             console.log("Altura convertida para centímetros:", licenseData.height);
           }
         }
