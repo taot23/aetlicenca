@@ -765,77 +765,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/licenses/drafts', requireAuth, async (req, res) => {
     try {
       const user = req.user!;
-      let allDrafts;
+      let allDrafts = [];
       
       // Se for usuário administrativo, buscar todos os rascunhos
       if (isAdminUser(user)) {
         console.log(`Usuário ${user.email} (${user.role}) tem acesso administrativo. Buscando todos os rascunhos.`);
-        allDrafts = await storage.getLicenseDraftsByUserId(0); // 0 = todos os rascunhos
+        
+        // Consulta simples direta no banco
+        const query = await db.execute(sql`
+          SELECT * FROM license_requests WHERE is_draft = true
+        `);
+        
+        // Mapear resultados da consulta SQL direta para o formato esperado
+        allDrafts = query.rows.map(row => {
+          // Converter campos tipo array
+          let states = row.states;
+          if (typeof states === 'string' && states.startsWith('{') && states.endsWith('}')) {
+            states = states.substring(1, states.length - 1).split(',');
+          }
+          
+          return {
+            ...row,
+            id: Number(row.id),
+            userId: Number(row.user_id),
+            transporterId: Number(row.transporter_id),
+            isDraft: row.is_draft === true,
+            tractorUnitId: row.tractor_unit_id ? Number(row.tractor_unit_id) : null,
+            firstTrailerId: row.first_trailer_id ? Number(row.first_trailer_id) : null,
+            secondTrailerId: row.second_trailer_id ? Number(row.second_trailer_id) : null,
+            dollyId: row.dolly_id ? Number(row.dolly_id) : null,
+            flatbedId: row.flatbed_id ? Number(row.flatbed_id) : null,
+            requestNumber: row.request_number,
+            status: row.status,
+            states: states,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+            comments: row.comments,
+          }
+        });
       } else {
         console.log(`Usuário ${user.email} (${user.role}) tem acesso comum. Buscando apenas seus rascunhos.`);
         
-        // Primeiro, obter os transportadores associados ao usuário
-        const userTransporters = await db.select()
-          .from(transporters)
-          .where(eq(transporters.userId, user.id));
-          
-        const transporterIds = userTransporters.map(t => t.id);
+        // Buscar rascunhos por userId
+        const userDraftsQuery = await db.execute(sql`
+          SELECT * FROM license_requests WHERE is_draft = true AND user_id = ${user.id}
+        `);
+        
+        // Buscar transportadores do usuário individualmente
+        const transportersQuery = await db.execute(sql`
+          SELECT id FROM transporters WHERE user_id = ${user.id}
+        `);
+        
+        const transporterIds = transportersQuery.rows.map(t => Number(t.id));
         console.log(`[DEBUG RASCUNHOS] Transportadores associados ao usuário ${user.id}: ${transporterIds.join(', ')}`);
         
-        // Buscar licenças onde o usuário é o dono OU o transportador está associado ao usuário
-        let rascunhosNoBanco = [];
+        // Mapear resultados do usuário para o formato de objeto
+        const userDrafts = userDraftsQuery.rows.map(row => {
+          // Converter campos tipo array
+          let states = row.states;
+          if (typeof states === 'string' && states.startsWith('{') && states.endsWith('}')) {
+            states = states.substring(1, states.length - 1).split(',');
+          }
+          
+          return {
+            ...row,
+            id: Number(row.id),
+            userId: Number(row.user_id),
+            transporterId: Number(row.transporter_id),
+            isDraft: row.is_draft === true,
+            tractorUnitId: row.tractor_unit_id ? Number(row.tractor_unit_id) : null,
+            firstTrailerId: row.first_trailer_id ? Number(row.first_trailer_id) : null,
+            secondTrailerId: row.second_trailer_id ? Number(row.second_trailer_id) : null,
+            dollyId: row.dolly_id ? Number(row.dolly_id) : null,
+            flatbedId: row.flatbed_id ? Number(row.flatbed_id) : null,
+            requestNumber: row.request_number,
+            status: row.status,
+            states: states,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+            comments: row.comments,
+          }
+        });
         
-        // Se houver transportadores associados, buscar rascunhos por transporterId também
-        if (transporterIds.length > 0) {
-          // Para evitar problemas com parâmetros de array, vamos buscar por transporterId individualmente
-          try {
-            // Primeiro, obter os rascunhos do próprio usuário
-            const userDrafts = await db.select()
-              .from(licenseRequests)
-              .where(eq(licenseRequests.isDraft, true))
-              .where(eq(licenseRequests.userId, user.id));
-            
-            console.log(`[DEBUG RASCUNHOS] Encontrados ${userDrafts.length} rascunhos para usuário ${user.id}`);
-            
-            // Depois, vamos buscar para cada transportador individualmente e combinar
-            let transporterDrafts: typeof userDrafts = [];
-            
-            // Para cada transportador, fazer uma consulta separada
-            for (const transporterId of transporterIds) {
-              const drafts = await db.select()
-                .from(licenseRequests)
-                .where(eq(licenseRequests.isDraft, true))
-                .where(eq(licenseRequests.transporterId, transporterId));
-              
-              console.log(`[DEBUG RASCUNHOS] Encontrados ${drafts.length} rascunhos para transportador ${transporterId}`);
-              transporterDrafts = [...transporterDrafts, ...drafts];
+        allDrafts = [...userDrafts];
+        
+        // Se houver transportadores associados, buscar rascunhos por cada transportador
+        for (const transporterId of transporterIds) {
+          const transporterDraftsQuery = await db.execute(sql`
+            SELECT * FROM license_requests WHERE is_draft = true AND transporter_id = ${transporterId}
+          `);
+          
+          const transporterDrafts = transporterDraftsQuery.rows.map(row => {
+            // Converter campos tipo array
+            let states = row.states;
+            if (typeof states === 'string' && states.startsWith('{') && states.endsWith('}')) {
+              states = states.substring(1, states.length - 1).split(',');
             }
             
-            // Combinar e remover duplicatas por ID
-            const combinedDrafts = [...userDrafts, ...transporterDrafts];
-            const uniqueDrafts = Array.from(
-              new Map(combinedDrafts.map(draft => [draft.id, draft])).values()
-            );
-            
-            rascunhosNoBanco = uniqueDrafts;
-            console.log(`[DEBUG RASCUNHOS] Total após combinação e remoção de duplicatas: ${rascunhosNoBanco.length}`);
-          } catch (error) {
-            console.error('Erro ao consultar rascunhos:', error);
-            rascunhosNoBanco = [];
-          }
-            
-          console.log(`[DEBUG RASCUNHOS] Encontrados ${rascunhosNoBanco.length} rascunhos para usuário ${user.id} ou transportadores ${transporterIds.join(', ')}`);
-        } else {
-          // Se não houver transportadores, buscar apenas por userId
-          rascunhosNoBanco = await db.select()
-            .from(licenseRequests)
-            .where(eq(licenseRequests.isDraft, true))
-            .where(eq(licenseRequests.userId, user.id));
-            
-          console.log(`[DEBUG RASCUNHOS] Encontrados ${rascunhosNoBanco.length} rascunhos para usuário ${user.id} sem transportadores associados`);
+            return {
+              ...row,
+              id: Number(row.id),
+              userId: Number(row.user_id),
+              transporterId: Number(row.transporter_id),
+              isDraft: row.is_draft === true,
+              tractorUnitId: row.tractor_unit_id ? Number(row.tractor_unit_id) : null,
+              firstTrailerId: row.first_trailer_id ? Number(row.first_trailer_id) : null,
+              secondTrailerId: row.second_trailer_id ? Number(row.second_trailer_id) : null,
+              dollyId: row.dolly_id ? Number(row.dolly_id) : null,
+              flatbedId: row.flatbed_id ? Number(row.flatbed_id) : null,
+              requestNumber: row.request_number,
+              status: row.status,
+              states: states,
+              createdAt: row.created_at,
+              updatedAt: row.updated_at,
+              comments: row.comments,
+            }
+          });
+          
+          console.log(`[DEBUG RASCUNHOS] Encontrados ${transporterDrafts.length} rascunhos para transportador ${transporterId}`);
+          allDrafts = [...allDrafts, ...transporterDrafts];
         }
         
-        allDrafts = rascunhosNoBanco;
+        // Remover duplicatas por ID
+        const uniqueMap = new Map();
+        allDrafts.forEach(draft => {
+          if (!uniqueMap.has(draft.id)) {
+            uniqueMap.set(draft.id, draft);
+          }
+        });
+        
+        allDrafts = Array.from(uniqueMap.values());
       }
       
       // Verificar se deve incluir rascunhos de renovação
@@ -851,21 +910,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Total de rascunhos: ${allDrafts.length}, filtrados: ${drafts.length}, incluindo renovação: ${shouldIncludeRenewalDrafts}`);
       
-      // Verificar quais licenças estão sendo retornadas
+      // Log detalhado dos rascunhos
       console.log(`[DEBUG DETALHES] Retornando ${drafts.length} licenças com os seguintes IDs:`);
       drafts.forEach(d => {
-        console.log(`- ID: ${d.id}, isDraft: ${d.isDraft}, status: ${d.status}, transporterId: ${d.transporterId}`);
+        console.log(`- ID: ${d.id}, isDraft: ${d.isDraft}, status: ${d.status}, transporterId: ${d.transporterId}, comments: ${d.comments?.substring(0, 30)}`);
       });
       
-      // Fazer uma verificação final para garantir que apenas isDraft=true seja retornado
-      const realDrafts = drafts.filter(draft => draft.isDraft === true);
-      
-      console.log(`[CORREÇÃO] Após filtro adicional para garantir isDraft=true: ${realDrafts.length} rascunhos`);
-      realDrafts.forEach(d => {
-        console.log(`- ID: ${d.id}, isDraft: ${d.isDraft}, status: ${d.status}`);
-      });
-      
-      res.json(realDrafts);
+      res.json(drafts);
     } catch (error) {
       console.error('Error fetching license drafts:', error);
       res.status(500).json({ message: 'Erro ao buscar rascunhos de licenças' });
