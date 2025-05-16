@@ -787,18 +787,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Se houver transportadores associados, buscar rascunhos por transporterId também
         if (transporterIds.length > 0) {
-          // Realizamos consultas direto pelo Drizzle ORM para evitar problemas com os parâmetros
-          
-          // Ainda mantém a consulta original pelo Drizzle ORM
-          rascunhosNoBanco = await db.select()
-            .from(licenseRequests)
-            .where(eq(licenseRequests.isDraft, true))
-            .where(
-              or(
-                eq(licenseRequests.userId, user.id),
-                inArray(licenseRequests.transporterId, transporterIds)
-              )
+          // Para evitar problemas com parâmetros de array, vamos buscar por transporterId individualmente
+          try {
+            // Primeiro, obter os rascunhos do próprio usuário
+            const userDrafts = await db.select()
+              .from(licenseRequests)
+              .where(eq(licenseRequests.isDraft, true))
+              .where(eq(licenseRequests.userId, user.id));
+            
+            console.log(`[DEBUG RASCUNHOS] Encontrados ${userDrafts.length} rascunhos para usuário ${user.id}`);
+            
+            // Depois, vamos buscar para cada transportador individualmente e combinar
+            let transporterDrafts: typeof userDrafts = [];
+            
+            // Para cada transportador, fazer uma consulta separada
+            for (const transporterId of transporterIds) {
+              const drafts = await db.select()
+                .from(licenseRequests)
+                .where(eq(licenseRequests.isDraft, true))
+                .where(eq(licenseRequests.transporterId, transporterId));
+              
+              console.log(`[DEBUG RASCUNHOS] Encontrados ${drafts.length} rascunhos para transportador ${transporterId}`);
+              transporterDrafts = [...transporterDrafts, ...drafts];
+            }
+            
+            // Combinar e remover duplicatas por ID
+            const combinedDrafts = [...userDrafts, ...transporterDrafts];
+            const uniqueDrafts = Array.from(
+              new Map(combinedDrafts.map(draft => [draft.id, draft])).values()
             );
+            
+            rascunhosNoBanco = uniqueDrafts;
+            console.log(`[DEBUG RASCUNHOS] Total após combinação e remoção de duplicatas: ${rascunhosNoBanco.length}`);
+          } catch (error) {
+            console.error('Erro ao consultar rascunhos:', error);
+            rascunhosNoBanco = [];
+          }
             
           console.log(`[DEBUG RASCUNHOS] Encontrados ${rascunhosNoBanco.length} rascunhos para usuário ${user.id} ou transportadores ${transporterIds.join(', ')}`);
         } else {
