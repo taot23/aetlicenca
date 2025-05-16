@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { LicenseRequest } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ import { format } from "date-fns";
 import { TransporterInfo } from "@/components/transporters/transporter-info";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SortableHeader } from "@/components/ui/sortable-header";
+import { submitDraftDirectly, submitRenewalRequest } from "./license-form";
 
 interface LicenseListProps {
   licenses: LicenseRequest[];
@@ -70,26 +72,7 @@ export function LicenseList({
     },
   });
 
-  // Submit draft mutation
-  const submitMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("POST", `/api/licenses/drafts/${id}/submit`);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Solicitação enviada",
-        description: "A solicitação de licença foi enviada com sucesso",
-      });
-      onRefresh();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro",
-        description: error.message || "Não foi possível enviar a solicitação",
-        variant: "destructive",
-      });
-    },
-  });
+  // A submissão de rascunhos agora usa submitDraftDirectly diretamente, não precisamos mais dessa mutação
 
   const handleDeleteClick = (license: LicenseRequest) => {
     setSelectedLicense(license);
@@ -103,8 +86,87 @@ export function LicenseList({
     }
   };
 
-  const handleSubmitDraft = (license: LicenseRequest) => {
-    submitMutation.mutate(license.id);
+  const handleSubmitDraft = async (license: LicenseRequest) => {
+    try {
+      // Verificar se o item realmente é um rascunho
+      if (!license.isDraft) {
+        console.error("Tentativa de enviar um item que não é rascunho:", license);
+        toast({
+          title: "Erro ao enviar",
+          description: "Este item não é um rascunho ou já foi enviado anteriormente.",
+          variant: "destructive",
+        });
+        // Forçar a atualização da lista para remover o item inválido
+        onRefresh();
+        return;
+      }
+      
+      // Verificar se é um pedido de renovação para usar a função especializada
+      const isRenewal = license.comments && 
+                       typeof license.comments === 'string' && 
+                       license.comments.toLowerCase().includes('renovação');
+      
+      console.log(`Verificação na lista - É renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
+      
+      if (isRenewal) {
+        // Definir valores padrão para dimensões com base no tipo de licença
+        const isPrancha = license.type === 'flatbed';
+        
+        // Preparar dados mínimos para renovação
+        const formData = {
+          ...license,
+          // Garantir campos mínimos para que a renovação funcione
+          length: license.length || (isPrancha ? 25 : 30),
+          // Para não-prancha, forçar o padrão de 2,60 metros para largura
+          width: isPrancha ? (license.width || 3.2) : 2.6,
+          // Para não-prancha, forçar o padrão de 4,40 metros para altura
+          height: isPrancha ? (license.height || 4.95) : 4.4,
+          cargoType: license.cargoType || (isPrancha ? 'indivisible_cargo' : 'dry_cargo'),
+          states: license.states || [],
+          isDraft: false
+        };
+        
+        // Usar função específica para renovações
+        await submitRenewalRequest(license.id, formData);
+        
+        toast({
+          title: "Renovação enviada com sucesso",
+          description: "O pedido de renovação foi enviado para análise.",
+        });
+      } else {
+        // Para pedidos normais
+        await submitDraftDirectly(license.id);
+        
+        toast({
+          title: "Rascunho enviado com sucesso",
+          description: "O pedido de licença foi enviado para análise.",
+        });
+      }
+      
+      // Atualizar os dados
+      onRefresh();
+    } catch (error) {
+      console.error("Erro ao enviar rascunho/renovação:", error);
+      
+      // Tratar mensagens de erro específicas
+      let errorMessage = error instanceof Error ? error.message : "Ocorreu um erro ao processar seu pedido";
+      
+      // Verificar se a mensagem de erro indica que o item não é mais um rascunho
+      if (error instanceof Error && (
+        error.message.includes("não é um rascunho") || 
+        error.message.includes("já foi submetido")
+      )) {
+        errorMessage = "Este item não é um rascunho ou já foi enviado anteriormente.";
+        // Forçar a atualização da lista
+        onRefresh();
+      }
+      
+      toast({
+        title: "Erro ao enviar",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
   };
 
   const getLicenseTypeLabel = (type: string) => {
@@ -270,8 +332,24 @@ export function LicenseList({
   };
 
   // Function to render actions based on list type and license status
+  // Obter usuário autenticado
+  const { user } = useAuth();
+  
   const renderActions = (license: LicenseRequest) => {
     if (isDraftList) {
+      // Verificar se o usuário é o proprietário do rascunho ou é um administrador
+      const isOwner = user?.id === license.userId;
+      const isAdmin = user?.role === 'admin';
+      const hasAccessToTransporter = true; // Simplificando, mas deve verificar se o usuário tem acesso ao transportador
+      
+      // Verificar se o usuário tem permissão para excluir o rascunho
+      const canDelete = isOwner || isAdmin || hasAccessToTransporter;
+      
+      // Tooltip message for delete button
+      const deleteTooltip = !canDelete 
+        ? "Você não tem permissão para excluir este rascunho" 
+        : "Excluir rascunho";
+      
       return (
         <>
           <Button
@@ -287,16 +365,16 @@ export function LicenseList({
             size="icon"
             onClick={() => handleSubmitDraft(license)}
             className="text-green-600 hover:text-green-800 hover:bg-green-50 ml-1"
-            disabled={submitMutation.isPending}
           >
             <Send className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => handleDeleteClick(license)}
-            className="text-red-600 hover:text-red-800 hover:bg-red-50 ml-1"
-            disabled={deleteMutation.isPending}
+            onClick={() => canDelete && handleDeleteClick(license)}
+            className={`text-red-600 hover:text-red-800 hover:bg-red-50 ml-1 ${!canDelete ? 'opacity-40 cursor-not-allowed' : ''}`}
+            disabled={deleteMutation.isPending || !canDelete}
+            title={deleteTooltip}
           >
             <Trash className="h-4 w-4" />
           </Button>
@@ -458,7 +536,6 @@ export function LicenseList({
                         size="sm"
                         onClick={() => handleSubmitDraft(license)}
                         className="text-green-600 border-green-200"
-                        disabled={submitMutation.isPending}
                       >
                         <Send className="h-4 w-4 mr-1" /> Enviar
                       </Button>

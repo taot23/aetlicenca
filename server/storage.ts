@@ -58,6 +58,7 @@ export interface IStorage {
   
   // Vehicle methods
   getVehicleById(id: number): Promise<Vehicle | undefined>;
+  getVehicleByPlate(plate: string): Promise<Vehicle | undefined>;
   getVehiclesByUserId(userId: number): Promise<Vehicle[]>;
   getAllVehicles(): Promise<Vehicle[]>;
   createVehicle(userId: number, vehicle: InsertVehicle & { crlvUrl?: string | null }): Promise<Vehicle>;
@@ -363,6 +364,15 @@ export class MemStorage implements IStorage {
   // Vehicle methods
   async getVehicleById(id: number): Promise<Vehicle | undefined> {
     return this.vehicles.get(id);
+  }
+  
+  async getVehicleByPlate(plate: string): Promise<Vehicle | undefined> {
+    // Garante que estamos trabalhando com a placa em letras maiúsculas
+    const plateUpper = plate.toUpperCase();
+    
+    return Array.from(this.vehicles.values()).find(
+      (vehicle) => vehicle.plate.toUpperCase() === plateUpper
+    );
   }
 
   async getVehiclesByUserId(userId: number): Promise<Vehicle[]> {
@@ -998,6 +1008,11 @@ export class DatabaseStorage implements IStorage {
     const results = await db.select().from(vehicles).where(eq(vehicles.id, id));
     return results[0];
   }
+  
+  async getVehicleByPlate(plate: string): Promise<Vehicle | undefined> {
+    const results = await db.select().from(vehicles).where(eq(vehicles.plate, plate));
+    return results[0];
+  }
 
   async getVehiclesByUserId(userId: number): Promise<Vehicle[]> {
     // Retorna todos os veículos quando userId=0 (caso especial para admin)
@@ -1327,21 +1342,42 @@ export class DatabaseStorage implements IStorage {
     // Sanitizar campos de dimensões e tipo de carga com valores padrão baseados no tipo de licença
     let width = currentDraft.width;
     let height = currentDraft.height;
+    let length = currentDraft.length;
     let cargoType = currentDraft.cargoType;
     
-    // Se a largura não estiver definida, usar valor padrão com base no tipo de licença
-    if (width === undefined || width === null) {
+    console.log("Valores antes da sanitização:", { 
+      width, 
+      height, 
+      length, 
+      cargoType, 
+      type: currentDraft.type 
+    });
+    
+    // Se a largura não estiver definida ou for inválida, usar valor padrão com base no tipo de licença
+    if (width === undefined || width === null || isNaN(Number(width))) {
       width = currentDraft.type === "flatbed" ? 320 : 260; // 3.20m ou 2.60m
+      console.log("Corrigindo largura para valor padrão:", width);
     }
     
-    // Se a altura não estiver definida, usar valor padrão com base no tipo de licença
-    if (height === undefined || height === null) {
+    // Se a altura não estiver definida ou for inválida, usar valor padrão com base no tipo de licença
+    if (height === undefined || height === null || isNaN(Number(height))) {
       height = currentDraft.type === "flatbed" ? 495 : 440; // 4.95m ou 4.40m
+      console.log("Corrigindo altura para valor padrão:", height);
+    }
+    
+    // Se o comprimento não estiver definido ou for inválido, usar valor padrão com base no tipo de licença
+    if (length === undefined || length === null || isNaN(Number(length))) {
+      length = currentDraft.type === "flatbed" ? 25 : 25; // 25m é um valor médio razoável
+      console.log("Corrigindo comprimento para valor padrão:", length);
     }
     
     // Se o tipo de carga não estiver definido, usar valor padrão com base no tipo de licença
-    if (cargoType === undefined || cargoType === null || cargoType === "") {
+    // Verificação mais ampla para casos de renovação onde o cargoType pode ser inválido
+    if (cargoType === undefined || cargoType === null || cargoType === "" || typeof cargoType !== 'string') {
+      console.log("cargoType inválido, usando valor padrão. Tipo atual:", typeof cargoType, "Valor atual:", cargoType);
       cargoType = currentDraft.type === "flatbed" ? "indivisible_cargo" : "dry_cargo";
+    } else {
+      console.log("cargoType válido:", cargoType);
     }
     
     // Sanitizar os dados importantes antes da submissão
@@ -1353,6 +1389,7 @@ export class DatabaseStorage implements IStorage {
       // Garantir que os campos de dimensão e tipo de carga estão corretos
       width: Number(width),
       height: Number(height),
+      length: Number(length),
       cargoType
     };
     

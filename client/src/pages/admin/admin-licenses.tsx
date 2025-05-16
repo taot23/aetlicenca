@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useWebSocketContext } from "@/hooks/use-websocket-context";
 import { AdminLayout } from "@/components/layout/admin-layout";
@@ -130,8 +130,9 @@ export default function AdminLicensesPage() {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [transporterFilter, setTransporterFilter] = useState("");
+  const [transporterFilter, setTransporterFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
+  const [stateFilter, setStateFilter] = useState("all");
   const [selectedLicense, setSelectedLicense] = useState<LicenseRequest | null>(null);
   const [licenseDetailsOpen, setLicenseDetailsOpen] = useState(false);
   const [stateStatusDialogOpen, setStateStatusDialogOpen] = useState(false);
@@ -243,6 +244,24 @@ export default function AdminLicensesPage() {
       });
     },
   });
+  
+  // Buscar lista única de transportadores a partir das licenças carregadas
+  const uniqueTransporters = useMemo(() => {
+    const transporters = new Map<number, string>();
+    
+    // Primeiro identificar os IDs únicos de transportadores
+    licenses.forEach(license => {
+      if (license.transporterId) {
+        transporters.set(license.transporterId, `Transportador ID: ${license.transporterId}`);
+      }
+    });
+    
+    // Converter para array para uso no select
+    return Array.from(transporters.entries()).map(([id, name]) => ({
+      id,
+      name
+    }));
+  }, [licenses]);
 
   // Mutação para atualização de status geral foi removida - agora só usamos atualização por estado
   
@@ -360,8 +379,13 @@ export default function AdminLicensesPage() {
       const matchesStatus = !statusFilter || statusFilter === "all" || license.status === statusFilter;
       
       // Filtro de transportador
-      const matchesTransporter = !transporterFilter || transporterFilter === "all" || (
+      const matchesTransporter = transporterFilter === "all" || (
         license.transporterId != null && license.transporterId.toString() === transporterFilter
+      );
+      
+      // Filtro de estado
+      const matchesState = stateFilter === "all" || (
+        license.states && license.states.includes(stateFilter)
       );
       
       // Filtro de data
@@ -381,7 +405,7 @@ export default function AdminLicensesPage() {
         }
       }
       
-      return matchesSearch && matchesStatus && matchesTransporter && matchesDate;
+      return matchesSearch && matchesStatus && matchesTransporter && matchesState && matchesDate;
     })
     // Aplicar ordenação
     .sort((a, b) => {
@@ -579,13 +603,27 @@ export default function AdminLicensesPage() {
               Gerencie todas as licenças no sistema.
             </p>
           </div>
+          <Button 
+            onClick={() => refetch()} 
+            variant="outline" 
+            className="w-full mt-2 md:mt-0 md:w-auto"
+            title="Atualizar lista de licenças"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+              <path d="M21 3v5h-5"></path>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+              <path d="M8 16H3v5"></path>
+            </svg>
+            Atualizar
+          </Button>
         </div>
 
         <div className="flex flex-col space-y-4">
           <Card>
             <CardContent className="pt-4 px-3 md:pt-6 md:px-6">
               {/* Novo layout de pesquisa conforme mockup, similar ao da página "Acompanhar Licença" */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-5">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4 mb-5">
                 <div>
                   <div className="flex flex-col space-y-1">
                     <Label htmlFor="license-search" className="text-sm">Pesquisar</Label>
@@ -623,6 +661,25 @@ export default function AdminLicensesPage() {
                 
                 <div>
                   <div className="flex flex-col space-y-1">
+                    <Label htmlFor="state-filter" className="text-sm">Estado</Label>
+                    <Select value={stateFilter} onValueChange={setStateFilter}>
+                      <SelectTrigger id="state-filter" className="h-9 text-sm">
+                        <SelectValue placeholder="Todos os estados" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os estados</SelectItem>
+                        {brazilianStates.map((state) => (
+                          <SelectItem key={state} value={state}>
+                            {state}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="flex flex-col space-y-1">
                     <Label htmlFor="date-filter" className="text-sm">Data</Label>
                     <Input
                       id="date-filter"
@@ -634,7 +691,7 @@ export default function AdminLicensesPage() {
                   </div>
                 </div>
                 
-                <div className="md:col-span-3">
+                <div className="md:col-span-4">
                   <div className="flex flex-col space-y-1">
                     <Label htmlFor="transporter-filter" className="text-sm">Transportador</Label>
                     <Select value={transporterFilter} onValueChange={setTransporterFilter}>
@@ -643,11 +700,16 @@ export default function AdminLicensesPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos os transportadores</SelectItem>
-                        {/* Aqui seria ideal ter uma lista de transportadores para selecionar */}
-                        {/* Como é um exemplo, adicionamos alguns valores genéricos */}
-                        <SelectItem value="1">Transportadora ABC Ltda</SelectItem>
-                        <SelectItem value="2">Transportes XYZ S.A.</SelectItem>
-                        <SelectItem value="3">Logística Express Ltda</SelectItem>
+                        {uniqueTransporters.map((transporter) => (
+                          <SelectItem key={transporter.id} value={transporter.id.toString()}>
+                            <div className="flex items-center">
+                              <TransporterInfo 
+                                transporterId={transporter.id} 
+                                compact={true}
+                              />
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
