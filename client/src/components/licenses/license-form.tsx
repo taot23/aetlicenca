@@ -286,10 +286,15 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           
           // Validar altura se estiver definida
           if (currentHeight !== undefined) {
-            if (currentHeight > limits.maxHeight) {
+            // Verificar se os limites estão atualizados com o tipo correto
+            const heightLimit = currentType === 'flatbed' ? 
+              (currentCargoType === 'oversized' ? 999.99 : 4.95) : 
+              4.40;
+              
+            if (currentHeight > heightLimit) {
               form.setError('height', { 
                 type: 'manual', 
-                message: `A altura máxima para este tipo de conjunto é ${limits.maxHeight.toFixed(2).replace('.', ',')} metros` 
+                message: `A altura máxima para este tipo de conjunto é ${heightLimit.toFixed(2).replace('.', ',')} metros` 
               });
             } else {
               form.clearErrors('height');
@@ -918,24 +923,21 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             <FormField
               control={form.control}
               name="height"
-              render={({ field }) => {
-                // Forçar atualização do texto baseado nos tipos selecionados
-                const description = licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
-                  ? 'Informe a altura total do conjunto em metros (sem limite para carga superdimensionada)'
-                  : licenseType === 'flatbed'
-                    ? 'Informe a altura total do conjunto em metros (max: 4,95)'
-                    : 'Informe a altura total do conjunto em metros (max: 4,40)';
-                
-                return (
-                  <DimensionField
-                    field={field}
-                    fieldType="altura"
-                    label="Altura do Conjunto (metros)"
-                    placeholder="Ex.: 4,40"
-                    description={description}
-                  />
-                );
-              }}
+              render={({ field }) => (
+                <DimensionField
+                  field={field}
+                  fieldType="altura"
+                  label="Altura do Conjunto (metros)"
+                  placeholder="Ex.: 4,40"
+                  description={
+                    licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
+                      ? 'Informe a altura total do conjunto em metros (sem limite para carga superdimensionada)'
+                      : licenseType === 'flatbed'
+                        ? 'Informe a altura total do conjunto em metros (max: 4,95)'
+                        : 'Informe a altura total do conjunto em metros (max: 4,40)'
+                  }
+                />
+              )}
             />
           </div>
         </div>
