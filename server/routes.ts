@@ -3,7 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, hashPassword } from "./auth";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { v4 as uuidv4 } from "uuid";
 import { 
   insertUserSchema, 
@@ -787,6 +787,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Se houver transportadores associados, buscar rascunhos por transporterId também
         if (transporterIds.length > 0) {
+          // Vamos realizar uma consulta alternativa para entender o que está acontecendo
+          // Não vamos usar os resultados desta consulta, apenas para log
+          const directQuery = await db.execute(sql`
+            SELECT id, user_id, transporter_id, is_draft, status
+            FROM license_requests
+            WHERE is_draft = true AND (user_id = ${user.id} OR transporter_id = ANY(${transporterIds}))
+          `);
+          
+          console.log(`[DEBUG SQL] Consulta direta SQL retornou:`, directQuery.rows);
+          
+          // Vamos verificar também todas as licenças para debug
+          const allLicensesQuery = await db.execute(sql`
+            SELECT id, user_id, transporter_id, is_draft, status
+            FROM license_requests
+            WHERE (user_id = ${user.id} OR transporter_id = ANY(${transporterIds}))
+            ORDER BY id DESC
+            LIMIT 10
+          `);
+          
+          console.log(`[DEBUG SQL] Consulta para todas licenças (limitada a 10):`, allLicensesQuery.rows);
+          
+          // Ainda mantém a consulta original pelo Drizzle ORM
           rascunhosNoBanco = await db.select()
             .from(licenseRequests)
             .where(eq(licenseRequests.isDraft, true))
@@ -824,7 +846,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Total de rascunhos: ${allDrafts.length}, filtrados: ${drafts.length}, incluindo renovação: ${shouldIncludeRenewalDrafts}`);
       
-      res.json(drafts);
+      // Verificar quais licenças estão sendo retornadas
+      console.log(`[DEBUG DETALHES] Retornando ${drafts.length} licenças com os seguintes IDs:`);
+      drafts.forEach(d => {
+        console.log(`- ID: ${d.id}, isDraft: ${d.isDraft}, status: ${d.status}, transporterId: ${d.transporterId}`);
+      });
+      
+      // Fazer uma verificação final para garantir que apenas isDraft=true seja retornado
+      const realDrafts = drafts.filter(draft => draft.isDraft === true);
+      
+      console.log(`[CORREÇÃO] Após filtro adicional para garantir isDraft=true: ${realDrafts.length} rascunhos`);
+      realDrafts.forEach(d => {
+        console.log(`- ID: ${d.id}, isDraft: ${d.isDraft}, status: ${d.status}`);
+      });
+      
+      res.json(realDrafts);
     } catch (error) {
       console.error('Error fetching license drafts:', error);
       res.status(500).json({ message: 'Erro ao buscar rascunhos de licenças' });

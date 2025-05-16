@@ -53,7 +53,19 @@ export default function RequestLicensePage() {
       if (!res.ok) {
         throw new Error("Erro ao buscar rascunhos de licenças");
       }
-      return res.json();
+      const data = await res.json();
+      
+      // Log para verificar o que realmente está vindo do servidor
+      console.log("[DEBUG CLIENT] Recebidos do servidor:", data.length, "rascunhos");
+      data.forEach((draft: any) => {
+        console.log(`- ID: ${draft.id}, isDraft: ${draft.isDraft}, status: ${draft.status}, transporterId: ${draft.transporterId}`);
+      });
+      
+      // Filtrar apenas os verdadeiros rascunhos (isDraft=true)
+      const realDrafts = data.filter((draft: any) => draft.isDraft === true);
+      console.log("[DEBUG CLIENT] Após filtro de isDraft=true:", realDrafts.length, "rascunhos");
+      
+      return data;
     }
   });
 
