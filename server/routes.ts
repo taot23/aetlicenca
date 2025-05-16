@@ -202,15 +202,6 @@ const broadcastMessage = (message: WSMessage) => {
   });
 };
 
-// Função para verificar se é um tipo bitrem, rodotrem ou romeu e julieta
-function isBitremRodotrainRomeuType(type: string): boolean {
-  return type === 'bitrain_9_axles' || 
-         type === 'bitrain_7_axles' || 
-         type === 'bitrain_6_axles' || 
-         type === 'road_train' || 
-         type === 'romeu_e_julieta';
-}
-
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
@@ -852,33 +843,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Verificar width (largura)
       if (draftData.width === undefined || draftData.width === null || draftData.width === "") {
-        draftData.width = isPrancha ? 320 : 2.60; // 3.20m para prancha (inteiro), 2.60m para outros (float)
+        draftData.width = isPrancha ? 320 : 260; // 3.20m para prancha, 2.60m para outros
         console.log(`Aplicando valor padrão para largura: ${draftData.width}`);
       } else {
         // Garantir que é um número
         draftData.width = Number(draftData.width);
-        
-        // Se não for prancha, manter como float de duas casas decimais
-        if (!isPrancha && (draftData.width === 260 || draftData.width >= 250 && draftData.width <= 270)) {
-          draftData.width = 2.60;
-        }
-        
         console.log(`Convertendo largura para número: ${draftData.width}`);
       }
       
       // Verificar height (altura)
       if (draftData.height === undefined || draftData.height === null || draftData.height === "") {
-        draftData.height = isPrancha ? 495 : 4.40; // 4.95m para prancha (inteiro), 4.40m para outros (float)
+        draftData.height = isPrancha ? 495 : 440; // 4.95m para prancha, 4.40m para outros
         console.log(`Aplicando valor padrão para altura: ${draftData.height}`);
       } else {
         // Garantir que é um número
         draftData.height = Number(draftData.height);
-        
-        // Se não for prancha, manter como float de duas casas decimais
-        if (!isPrancha && (draftData.height === 440 || draftData.height >= 430 && draftData.height <= 450)) {
-          draftData.height = 4.40;
-        }
-        
         console.log(`Convertendo altura para número: ${draftData.height}`);
       }
       
@@ -1007,28 +986,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verificar acesso - usuários staff (admin, operacional, supervisor) podem excluir qualquer rascunho
       const isStaff = isAdminUser(user) || user.role === 'operational' || user.role === 'supervisor';
       
-      // Verificar se o usuário é dono direto do rascunho
-      const isOwner = existingDraft.userId === user.id;
-      
-      // Verificar se o usuário tem acesso ao transportador associado ao rascunho
-      let hasTransporterAccess = false;
-      
-      if (!isOwner && !isStaff && existingDraft.transporterId) {
-        // Verificar se o usuário tem acesso ao transportador
-        const userTransporters = await db.select()
-          .from(transporters)
-          .where(eq(transporters.userId, user.id));
-          
-        const transporterIds = userTransporters.map(t => t.id);
-        hasTransporterAccess = transporterIds.includes(existingDraft.transporterId);
-        
-        console.log(`Usuário ${user.id} tem acesso aos transportadores: ${transporterIds.join(', ')}`);
-        console.log(`Rascunho pertence ao transportador: ${existingDraft.transporterId}`);
-        console.log(`Usuário tem acesso ao transportador? ${hasTransporterAccess ? 'SIM' : 'NÃO'}`);
-      }
-      
-      // Permitir excluir se o usuário é staff, dono do rascunho ou tem acesso ao transportador
-      if (!isStaff && !isOwner && !hasTransporterAccess) {
+      if (!isStaff && existingDraft.userId !== user.id) {
         console.log(`Usuário ${user.id} (${user.role}) tentou excluir rascunho ${draftId} do usuário ${existingDraft.userId}`);
         return res.status(403).json({ message: 'Acesso negado' });
       }
@@ -1292,39 +1250,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (licenseData.width !== undefined) {
             licenseData.width = Number(licenseData.width);
-            // Para não-pranchas, se o valor estiver no formato antigo (260), converter para decimal (2.60)
-            const isPranchaType = licenseData.type === "flatbed";
-            if (!isPranchaType && licenseData.width > 10) {
-              licenseData.width = Number((licenseData.width / 100).toFixed(2));
-              console.log(`Convertendo largura de cm para metros: ${licenseData.width}`);
-            }
-            // Para não-pranchas, se o valor estiver no formato antigo (440), converter para decimal (4.40)
-            if (!isPranchaType && licenseData.height > 10) {
-              licenseData.height = Number((licenseData.height / 100).toFixed(2));
-              console.log(`Convertendo altura de cm para metros: ${licenseData.height}`);
-            }
-            
-            // Forçar valor padrão para rodotrem, bitrem e romeu e julieta
-            if (isBitremRodotrainRomeuType(licenseData.type)) {
-              licenseData.height = 4.40;
-              console.log(`Forçando valor 4.40m para altura de ${licenseData.type}: ${licenseData.height}`);
-            } 
-            // Forçar valor padrão para outros tipos não-prancha
-            else if (!isPranchaType) {
-              licenseData.height = 4.40;
-              console.log(`Forçando valor padrão para altura não-prancha: ${licenseData.height}`);
-            }
-            
-            // Forçar valor padrão para rodotrem, bitrem e romeu e julieta
-            if (isBitremRodotrainRomeuType(licenseData.type)) {
-              licenseData.width = 2.60;
-              console.log(`Forçando valor 2.60m para largura de ${licenseData.type}: ${licenseData.width}`);
-            } 
-            // Forçar valor padrão para outros tipos não-prancha
-            else if (!isPranchaType) {
-              licenseData.width = 2.60;
-              console.log(`Forçando valor padrão para largura não-prancha: ${licenseData.width}`);
-            }
             console.log("Largura normalizada:", licenseData.width);
           }
           
@@ -1481,26 +1406,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Sanitizar campos de dimensões e tipo de carga
         if (licenseData.width === undefined || licenseData.width === null) {
           // Valores padrão com base no tipo de licença
-          if (licenseData.type === "flatbed") {
-            licenseData.width = 320; // 3.20m para prancha
-          } else if (isBitremRodotrainRomeuType(licenseData.type)) {
-            licenseData.width = 2.60; // 2.60m para bitrem/rodotrem/romeu e julieta
-            console.log(`Forçando valor 2.60m para largura de ${licenseData.type}: ${licenseData.width}`);
-          } else {
-            licenseData.width = 2.60; // 2.60m para outros
-          }
+          licenseData.width = licenseData.type === "flatbed" ? 320 : 260; // 3.20m ou 2.60m
         }
         
         if (licenseData.height === undefined || licenseData.height === null) {
           // Valores padrão com base no tipo de licença
-          if (licenseData.type === "flatbed") {
-            licenseData.height = 495; // 4.95m para prancha
-          } else if (isBitremRodotrainRomeuType(licenseData.type)) {
-            licenseData.height = 4.40; // 4.40m para bitrem/rodotrem/romeu e julieta
-            console.log(`Forçando valor 4.40m para altura de ${licenseData.type}: ${licenseData.height}`);
-          } else {
-            licenseData.height = 4.40; // 4.40m para outros
-          }
+          licenseData.height = licenseData.type === "flatbed" ? 495 : 440; // 4.95m ou 4.40m
         }
         
         if (licenseData.cargoType === undefined || licenseData.cargoType === null || licenseData.cargoType === "") {
@@ -1522,20 +1433,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log("Nova licença criada com sucesso:", licenseRequest.id);
-        
-        // Verificar se há um rascunho para excluir (usado em renovações)
-        if (licenseData.draftToDeleteId) {
-          const draftId = Number(licenseData.draftToDeleteId);
-          console.log(`Excluindo rascunho original após criação bem-sucedida: ${draftId}`);
-          try {
-            await storage.deleteLicenseRequest(draftId);
-            console.log(`Rascunho ${draftId} excluído com sucesso após renovação`);
-          } catch (deleteError) {
-            console.error(`Erro ao excluir rascunho ${draftId} após renovação:`, deleteError);
-            // Não interromper o fluxo por erro na exclusão, apenas logar
-          }
-        }
-        
         return res.json(licenseRequest);
       }
     } catch (error) {
@@ -1622,34 +1519,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Dados de licença recebidos:", JSON.stringify(licenseData, null, 2));
       
-      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes
-      const isPrancha = licenseData.type === "flatbed";
-      
-      // Verificar se é um tipo especial (bitrem, rodotrem, romeu e julieta)
-      const isBitremType = isBitremRodotrainRomeuType(licenseData.type);
-      
       // Verificar se é um pedido de renovação com rascunho que deve ser excluído
-      // Declarar a variável aqui para que ela tenha escopo em toda a função
-      let draftToDeleteId: number | null = null;
-      
-      if (licenseData.draftToDeleteId) {
-        draftToDeleteId = Number(licenseData.draftToDeleteId);
+      const draftToDeleteId = licenseData.draftToDeleteId;
+      if (draftToDeleteId) {
         console.log(`Pedido de renovação detectado. Rascunho ${draftToDeleteId} será excluído após sucesso.`);
         // Remover este campo para não interferir na validação
         delete licenseData.draftToDeleteId;
       }
       
       // Verificar se é uma renovação através dos comentários
-      const isRenewal = (licenseData.comments && 
+      const isRenewal = licenseData.comments && 
                        typeof licenseData.comments === 'string' && 
-                       licenseData.comments.toLowerCase().includes('renovação')) ||
-                       licenseData.isRenewal === true;
-      
-      // Verificar flag para pular validação de dimensões
-      const skipDimensionValidation = isRenewal || licenseData.skipDimensionValidation === true;
-      
+                       licenseData.comments.toLowerCase().includes('renovação');
+                       
       if (isRenewal) {
-        console.log('[RENOVAÇÃO SERVER] Renovação detectada. Skip validação dimensões:', skipDimensionValidation);
         console.log("Detectada renovação de licença com base nos comentários.");
       }
       
@@ -1663,77 +1546,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sanitização mais rigorosa dos campos de dimensões com valores padrão
       console.log("Sanitizando dados para tipo " + licenseData.type);
       
-      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes já definidos anteriormente
+      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes
+      const isPrancha = licenseData.type === "flatbed";
       
-      // Se for renovação com skip de validação, preservar os valores originais
-      if (skipDimensionValidation) {
-        console.log(`[RENOVAÇÃO SERVER] Preservando valores originais de dimensão:`);
-        console.log(`[RENOVAÇÃO SERVER] - Largura: ${licenseData.width}`);
-        console.log(`[RENOVAÇÃO SERVER] - Altura: ${licenseData.height}`);
-        
-        // Apenas garantir que os valores são números
-        if (licenseData.width !== undefined && licenseData.width !== null) {
-          licenseData.width = Number(licenseData.width);
-        }
-        if (licenseData.height !== undefined && licenseData.height !== null) {
-          licenseData.height = Number(licenseData.height);
-        }
+      // Verificar width (largura)
+      if (licenseData.width === undefined || licenseData.width === null || licenseData.width === "") {
+        licenseData.width = isPrancha ? 320 : 260; // 3.20m para prancha, 2.60m para outros
+        console.log(`Aplicando valor padrão para largura: ${licenseData.width}`);
       } else {
-        // Verificar width (largura)
-        if (licenseData.width === undefined || licenseData.width === null || licenseData.width === "") {
-          licenseData.width = isPrancha ? 320 : 2.60; // 3.20m para prancha, 2.60m para outros
-          console.log(`Aplicando valor padrão para largura: ${licenseData.width}`);
-        } else {
-          // Garantir que é um número
-          licenseData.width = Number(licenseData.width);
-          
-          // Para não-pranchas, se o valor estiver no formato antigo (260), converter para decimal (2.60)
-          if (!isPrancha && licenseData.width > 10) {
-            licenseData.width = Number((licenseData.width / 100).toFixed(2));
-            console.log(`Convertendo largura de cm para metros: ${licenseData.width}`);
-          }
-          
-          // Forçar valor padrão para rodotrem, bitrem e romeu e julieta
-          if (isBitremRodotrainRomeuType(licenseData.type)) {
-            licenseData.width = 2.60;
-            console.log(`Forçando valor 2.60m para largura de ${licenseData.type}: ${licenseData.width}`);
-          }
-          // Forçar valor padrão para outros tipos não-prancha
-          else if (!isPrancha) {
-            licenseData.width = 2.60;
-            console.log(`Forçando valor padrão para largura não-prancha: ${licenseData.width}`);
-          }
-          
-          console.log(`Convertendo largura para número: ${licenseData.width}`);
-        }
-        
-        // Verificar height (altura)
-        if (licenseData.height === undefined || licenseData.height === null || licenseData.height === "") {
-          licenseData.height = isPrancha ? 495 : 4.40; // 4.95m para prancha, 4.40m para outros
-          console.log(`Aplicando valor padrão para altura: ${licenseData.height}`);
-        } else {
-          // Garantir que é um número
-          licenseData.height = Number(licenseData.height);
-          
-          // Para não-pranchas, se o valor estiver no formato antigo (440), converter para decimal (4.40)
-          if (!isPrancha && licenseData.height > 10) {
-            licenseData.height = Number((licenseData.height / 100).toFixed(2));
-            console.log(`Convertendo altura de cm para metros: ${licenseData.height}`);
-          }
-          
-          // Forçar valor padrão para rodotrem, bitrem e romeu e julieta
-          if (isBitremRodotrainRomeuType(licenseData.type)) {
-            licenseData.height = 4.40;
-            console.log(`Forçando valor 4.40m para altura de ${licenseData.type}: ${licenseData.height}`);
-          } 
-          // Forçar valor padrão para outros tipos não-prancha
-          else if (!isPrancha) {
-            licenseData.height = 4.40;
-            console.log(`Forçando valor padrão para altura não-prancha: ${licenseData.height}`);
-          }
-          
-          console.log(`Convertendo altura para número: ${licenseData.height}`);
-        }
+        // Garantir que é um número
+        licenseData.width = Number(licenseData.width);
+        console.log(`Convertendo largura para número: ${licenseData.width}`);
+      }
+      
+      // Verificar height (altura)
+      if (licenseData.height === undefined || licenseData.height === null || licenseData.height === "") {
+        licenseData.height = isPrancha ? 495 : 440; // 4.95m para prancha, 4.40m para outros
+        console.log(`Aplicando valor padrão para altura: ${licenseData.height}`);
+      } else {
+        // Garantir que é um número
+        licenseData.height = Number(licenseData.height);
+        console.log(`Convertendo altura para número: ${licenseData.height}`);
       }
       
       // Verificar cargoType (tipo de carga)
@@ -1771,68 +1604,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "O comprimento deve ser positivo" });
         }
         
-        // Verificar se é uma renovação ou tem a flag para pular validação de dimensões
-        const isRenewal = (licenseData.comments && 
-                         typeof licenseData.comments === 'string' && 
-                         licenseData.comments.toLowerCase().includes('renovação')) ||
-                         licenseData.isRenewal === true;
-        
-        const skipDimensionValidation = isRenewal || licenseData.skipDimensionValidation === true;
-
-        // Se for renovação, pular validação de dimensões
-        if (skipDimensionValidation) {
-          console.log("[RENOVAÇÃO SERVER] Pulando validação de dimensões para renovação");
-        } 
-        // Caso contrário, aplicar as regras normais de validação
-        else {
-          // Ajustar o comprimento com base no tipo de licença
-          if (licenseData.type === 'flatbed') {
-            console.log("Este é um tipo prancha, aplicando regras específicas");
-            if (licenseData.cargoType === 'oversized') {
-              console.log("Carga superdimensionada: sem limite de dimensões");
-              // Não precisa fazer nenhuma validação
-            } else {
-              console.log("Prancha normal: máximo 25m, largura máxima 3.20m, altura máxima 4.95m");
-              
-              // Verificar se os valores estão em metros ou centímetros
-              const lengthInMeters = licenseData.length > 100 ? licenseData.length / 100 : licenseData.length;
-              const widthInMeters = licenseData.width > 100 ? licenseData.width / 100 : licenseData.width;
-              const heightInMeters = licenseData.height > 100 ? licenseData.height / 100 : licenseData.height;
-              
-              console.log(`Validando dimensões em metros: comprimento=${lengthInMeters}, largura=${widthInMeters}, altura=${heightInMeters}`);
-              
-              if (lengthInMeters > 25.0) {
-                return res.status(400).json({ message: "O comprimento máximo para prancha é de 25,00 metros" });
-              }
-              if (widthInMeters > 3.20) {
-                return res.status(400).json({ message: "A largura máxima para prancha é de 3,20 metros" });
-              }
-              if (heightInMeters > 4.95) {
-                return res.status(400).json({ message: "A altura máxima para prancha é de 4,95 metros" });
-              }
-            }
+        // Ajustar o comprimento com base no tipo de licença
+        if (licenseData.type === 'flatbed') {
+          console.log("Este é um tipo prancha, aplicando regras específicas");
+          if (licenseData.cargoType === 'oversized') {
+            console.log("Carga superdimensionada: sem limite de dimensões");
+            // Não precisa fazer nenhuma validação
           } else {
-            console.log("Não é prancha: min 19.8m, max 30m");
-            
-            // Verificar se os valores estão em metros ou centímetros
-            const lengthInMeters = licenseData.length > 100 ? licenseData.length / 100 : licenseData.length;
-            const widthInMeters = licenseData.width > 100 ? licenseData.width / 100 : licenseData.width;
-            const heightInMeters = licenseData.height > 100 ? licenseData.height / 100 : licenseData.height;
-            
-            console.log(`Validando dimensões em metros para não-prancha: comprimento=${lengthInMeters}, largura=${widthInMeters}, altura=${heightInMeters}`);
-            
-            if (lengthInMeters < 19.80) {
-              return res.status(400).json({ message: "O comprimento mínimo é de 19,80 metros para este tipo de conjunto" });
+            console.log("Prancha normal: máximo 25m, sem mínimo");
+            if (licenseData.length > 2500) { // centímetros
+              return res.status(400).json({ message: "O comprimento máximo para prancha é de 25,00 metros" });
             }
-            if (lengthInMeters > 30.00) {
-              return res.status(400).json({ message: "O comprimento máximo é de 30,00 metros para este tipo de conjunto" });
-            }
-            if (widthInMeters > 2.60) {
-              return res.status(400).json({ message: "A largura máxima é de 2,60 metros para este tipo de conjunto" });
-            }
-            if (heightInMeters > 4.40) {
-              return res.status(400).json({ message: "A altura máxima é de 4,40 metros para este tipo de conjunto" });
-            }
+          }
+        } else {
+          console.log("Não é prancha: min 19.8m, max 30m");
+          if (licenseData.length < 1980) { // centímetros
+            return res.status(400).json({ message: "O comprimento mínimo é de 19,80 metros para este tipo de conjunto" });
+          }
+          if (licenseData.length > 3000) { // centímetros
+            return res.status(400).json({ message: "O comprimento máximo é de 30,00 metros para este tipo de conjunto" });
           }
         }
       } catch (error: any) {
@@ -1845,60 +1635,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Garantir que os campos obrigatórios sejam enviados corretamente para o banco de dados
       // Conversão explícita de tipos para evitar problemas de nulos
-      // Para largura e altura, garantir que os valores sejam armazenados como inteiros em centímetros
-      let widthValue = licenseData.width;
-      let heightValue = licenseData.height;
-      
-      // Para pranchas, manter os valores originais conforme informados pelo usuário
-      // Apenas converter para centímetros se necessário
-      if (licenseData.type === 'flatbed') {
-        // Para pranchas, apenas converter de metros para centímetros quando necessário
-        if (typeof widthValue === 'number' && widthValue < 10) {
-          // Se está em formato decimal (ex: 2.60), converter para inteiro em centímetros (260)
-          widthValue = widthValue * 100;
-          console.log(`Convertendo largura de metros para centímetros: ${widthValue}cm`);
-        }
-        
-        if (typeof heightValue === 'number' && heightValue < 10) {
-          // Se está em formato decimal (ex: 4.40), converter para inteiro em centímetros (440)
-          heightValue = heightValue * 100;
-          console.log(`Convertendo altura de metros para centímetros: ${heightValue}cm`);
-        }
-      }
-      // Se for um tipo de veículo especial (rodotrem, bitrem, romeu e julieta), garantir valores fixos
-      else if (isBitremRodotrainRomeuType(licenseData.type)) {
-        // Se está em formato decimal (2.60), converter para inteiro em centímetros (260)
-        if (typeof widthValue === 'number' && widthValue < 10) {
-          widthValue = 260; // 2.60 metros em centímetros
-          console.log(`Convertendo largura para combinação especial: ${widthValue}cm (2.60m)`);
-        }
-        
-        if (typeof heightValue === 'number' && heightValue < 10) {
-          heightValue = 440; // 4.40 metros em centímetros
-          console.log(`Convertendo altura para combinação especial: ${heightValue}cm (4.40m)`);
-        }
-      }
-      
-      // Criar objeto sanitizado com os valores convertidos
       const sanitizedData = {
         ...licenseData,
-        width: widthValue !== undefined ? Number(widthValue) : null,
-        height: heightValue !== undefined ? Number(heightValue) : null,
+        width: licenseData.width !== undefined ? Number(licenseData.width) : null,
+        height: licenseData.height !== undefined ? Number(licenseData.height) : null,
         cargoType: licenseData.cargoType || null,
         requestNumber,
         isDraft: false,
       };
-      
-      console.log("CreateLicenseRequest - dados originais:", { 
-        width: licenseData.width, 
-        height: licenseData.height, 
-        cargoType: licenseData.cargoType 
-      });
-      console.log("CreateLicenseRequest - dados sanitizados:", { 
-        width: sanitizedData.width, 
-        height: sanitizedData.height, 
-        cargoType: sanitizedData.cargoType 
-      });
       
       console.log("Dados sanitizados para envio ao banco:", sanitizedData);
       
@@ -1988,40 +1732,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!licenseData.mainVehiclePlate) {
           return res.status(400).json({ message: "A placa principal é obrigatória" });
         }
-        // Verificar se é uma renovação com flag de skip validação
-        const isRenewal = (licenseData.comments && 
-                          typeof licenseData.comments === 'string' && 
-                          licenseData.comments.toLowerCase().includes('renovação')) ||
-                          licenseData.isRenewal === true;
-        
-        const skipDimensionValidation = isRenewal || licenseData.skipDimensionValidation === true;
-        
-        if (skipDimensionValidation) {
-          console.log(`[RENOVAÇÃO SERVER] Preservando valores originais de dimensão na validação:`);
-          console.log(`[RENOVAÇÃO SERVER] - Largura: ${licenseData.width}`);
-          
-          // Apenas garantir que o valor é número
-          if (licenseData.width !== undefined && licenseData.width !== null) {
-            licenseData.width = Number(licenseData.width);
-          }
-        } else {
-          // Para não-pranchas, se o valor estiver no formato antigo (260), converter para decimal (2.60)
-          if (!isPrancha && licenseData.width > 10) {
-            licenseData.width = Number((licenseData.width / 100).toFixed(2));
-            console.log(`Convertendo largura de cm para metros: ${licenseData.width}`);
-          }
-          
-          // Forçar valor padrão para rodotrem, bitrem e romeu e julieta
-          if (isBitremRodotrainRomeuType(licenseData.type)) {
-            licenseData.width = 2.60;
-            console.log(`Forçando valor 2.60m para largura de ${licenseData.type}: ${licenseData.width}`);
-          } 
-          // Forçar valor padrão para outros tipos não-prancha
-          else if (!isPrancha) {
-            licenseData.width = 2.60;
-            console.log(`Forçando valor padrão para largura não-prancha: ${licenseData.width}`);
-          }
-        }
         
         if (!licenseData.length || licenseData.length <= 0) {
           return res.status(400).json({ message: "O comprimento deve ser positivo" });
@@ -2032,47 +1742,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Sanitização mais rigorosa dos campos de dimensões com valores padrão
-        // Verificar se é uma renovação com flag de skip validação
-        const isRenewal = (licenseData.comments && 
-                          typeof licenseData.comments === 'string' && 
-                          licenseData.comments.toLowerCase().includes('renovação')) ||
-                          licenseData.isRenewal === true;
-        
-        const skipDimensionValidation = isRenewal || licenseData.skipDimensionValidation === true;
-        
-        if (skipDimensionValidation) {
-          console.log(`[RENOVAÇÃO SERVER] Preservando valores originais de altura na validação:`);
-          console.log(`[RENOVAÇÃO SERVER] - Altura: ${licenseData.height}`);
-          
-          // Apenas garantir que o valor é número
-          if (licenseData.height !== undefined && licenseData.height !== null) {
-            licenseData.height = Number(licenseData.height);
-          }
-        } else {
-          // Para não-pranchas, se o valor estiver no formato antigo (440), converter para decimal (4.40)
-          if (!isPrancha && licenseData.height > 10) {
-            licenseData.height = Number((licenseData.height / 100).toFixed(2));
-            console.log(`Convertendo altura de cm para metros: ${licenseData.height}`);
-          }
-          
-          // Forçar valor padrão para rodotrem, bitrem e romeu e julieta
-          if (isBitremRodotrainRomeuType(licenseData.type)) {
-            licenseData.height = 4.40;
-            console.log(`Forçando valor 4.40m para altura de ${licenseData.type}: ${licenseData.height}`);
-          } 
-          // Forçar valor padrão para outros tipos não-prancha
-          else if (!isPrancha) {
-            licenseData.height = 4.40;
-            console.log(`Forçando valor padrão para altura não-prancha: ${licenseData.height}`);
-          }
-        }
       console.log("Sanitizando dados para tipo " + licenseData.type);
       
-      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes (já definido anteriormente)
+      // Valores padrão baseados no tipo de licença - prancha tem limites diferentes
+      const isPrancha = licenseData.type === "flatbed";
       
       // Verificar width (largura)
       if (licenseData.width === undefined || licenseData.width === null || licenseData.width === "") {
-        licenseData.width = isPrancha ? 320 : 2.60; // 3.20m para prancha, 2.60m para outros
+        licenseData.width = isPrancha ? 320 : 260; // 3.20m para prancha, 2.60m para outros
         console.log(`Aplicando valor padrão para largura: ${licenseData.width}`);
       } else {
         // Garantir que é um número
@@ -2082,7 +1759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Verificar height (altura)
       if (licenseData.height === undefined || licenseData.height === null || licenseData.height === "") {
-        licenseData.height = isPrancha ? 495 : 4.40; // 4.95m para prancha, 4.40m para outros
+        licenseData.height = isPrancha ? 495 : 440; // 4.95m para prancha, 4.40m para outros
         console.log(`Aplicando valor padrão para altura: ${licenseData.height}`);
       } else {
         // Garantir que é um número
@@ -2113,32 +1790,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log('License request saved to database:', JSON.stringify(licenseRequest, null, 2));
       
-      // Excluir o rascunho original de renovação, se existir um ID para excluir
-      if (draftToDeleteId) {
-        try {
-          // Converter explicitamente para número e garantir que existe
-          const draftId = Number(draftToDeleteId);
-          if (!isNaN(draftId)) {
-            console.log(`[RENOVAÇÃO] Excluindo rascunho original com ID ${draftId} após criar licença com sucesso`);
-            
-            // Verificar se o rascunho existe antes de tentar excluir
-            const draft = await storage.getLicenseRequestById(draftId);
-            if (draft) {
-              await storage.deleteLicenseRequest(draftId);
-              console.log(`[RENOVAÇÃO] Rascunho ${draftId} excluído com sucesso`);
-            } else {
-              console.log(`[RENOVAÇÃO] Rascunho ${draftId} não encontrado, não foi excluído`);
-            }
-          } else {
-            console.error(`[RENOVAÇÃO] ID de rascunho inválido: ${draftToDeleteId}`);
-          }
-        } catch (deleteError) {
-          // Não falhar a operação principal se a exclusão do rascunho falhar
-          console.error(`[RENOVAÇÃO] Erro ao excluir rascunho ${draftToDeleteId}:`, deleteError);
-          console.log('[RENOVAÇÃO] Continuando operação principal apesar do erro na exclusão do rascunho');
-        }
-      }
-      
       res.json(licenseRequest);
     } catch (error) {
       console.error('Error submitting license request:', error);
@@ -2163,12 +1814,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Pedido de licença não encontrado' });
       }
       
-      // Verificar se o usuário é o dono da licença, está associado ao transportador, ou tem papel administrativo
-      const userTransporters = await storage.getTransportersByUserId(userId);
-      const userTransporterIds = userTransporters.map(t => t.id);
-      const isAssociatedWithTransporter = userTransporterIds.includes(originalLicense.transporterId);
-      
-      if (originalLicense.userId !== userId && !isAssociatedWithTransporter && !isAdminUser(req.user!)) {
+      // Verificar se o usuário é o dono da licença ou tem papel administrativo
+      if (originalLicense.userId !== userId && !isAdminUser(req.user!)) {
         return res.status(403).json({ message: 'Você não tem permissão para renovar esta licença' });
       }
       
@@ -2182,36 +1829,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Criar um novo rascunho baseado na licença original, mas apenas com o estado escolhido
       // Aqui, precisamos garantir que os campos opcionais sejam tratados corretamente
-      
-      // Verificar se é uma prancha ou não para determinar como tratar as dimensões
-      const isPrancha = originalLicense.type === "flatbed";
-      
-      // Usar os valores originais da licença ou valores padrão em centímetros
-      let lengthValue = originalLicense.length || (isPrancha ? 2500 : 3000);
-      let widthValue = originalLicense.width || (isPrancha ? 320 : 260);
-      let heightValue = originalLicense.height || (isPrancha ? 495 : 440);
-      
-      // Para não-prancha, se largura for inteira (ex: 260), converter para formato decimal (ex: 2.6)
-      if (!isPrancha && widthValue >= 100) {
-        console.log(`[RENOVAÇÃO] Convertendo largura de ${widthValue}cm para formato decimal: ${(widthValue / 100).toFixed(2)}m`);
-        // Manter em centímetros para o banco de dados
-      }
-      
-      // Para não-prancha, se altura for inteira (ex: 440), converter para formato decimal (ex: 4.4)
-      if (!isPrancha && heightValue >= 100) {
-        console.log(`[RENOVAÇÃO] Convertendo altura de ${heightValue}cm para formato decimal: ${(heightValue / 100).toFixed(2)}m`);
-        // Manter em centímetros para o banco de dados
-      }
-      
       const draftData: any = {
         transporterId: originalLicense.transporterId || null,
         mainVehiclePlate: originalLicense.mainVehiclePlate,
-        length: lengthValue,
+        length: originalLicense.length || 0,
         type: originalLicense.type,
-        // Sempre usar os valores em centímetros para o banco
-        width: widthValue,
-        height: heightValue,
-        cargoType: originalLicense.cargoType || (isPrancha ? "indivisible_cargo" : "dry_cargo"),
+        // Valores padrão para campos opcionais
+        width: originalLicense.width || (originalLicense.type === "flatbed" ? 320 : 260),
+        height: originalLicense.height || (originalLicense.type === "flatbed" ? 495 : 440),
+        cargoType: originalLicense.cargoType || (originalLicense.type === "flatbed" ? "indivisible_cargo" : "dry_cargo"),
         // Incluir apenas o estado específico sendo renovado
         states: [state],
         requestNumber,

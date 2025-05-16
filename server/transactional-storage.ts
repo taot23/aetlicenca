@@ -30,13 +30,10 @@ export class TransactionalStorage implements IStorage {
   sessionStore: any;
 
   constructor() {
-    // Manter a implementação original com PostgreSQL
     this.sessionStore = new PostgresSessionStore({
       pool,
-      createTableIfMissing: true,
-      tableName: 'session' // garantir nome da tabela explícito
+      createTableIfMissing: true
     });
-    console.log("[INFO] Usando armazenamento de sessão PostgreSQL");
   }
   
   // Métodos relacionados a Usuários
@@ -407,10 +404,10 @@ export class TransactionalStorage implements IStorage {
         dollyId: licenseData.dollyId,
         secondTrailerId: licenseData.secondTrailerId,
         flatbedId: licenseData.flatbedId,
-        length: licenseData.length ? Math.round(Number(licenseData.length)) : null,
-        // Usar os valores sanitizados e arredondados para inteiros
-        width: width ? Math.round(Number(width)) : null,
-        height: height ? Math.round(Number(height)) : null,
+        length: licenseData.length,
+        // Usar os valores sanitizados
+        width: Number(width),
+        height: Number(height),
         cargoType,
         additionalPlates: licenseData.additionalPlates || [],
         additionalPlatesDocuments: licenseData.additionalPlatesDocuments || [],
@@ -884,52 +881,13 @@ export class TransactionalStorage implements IStorage {
   }
   
   async deleteLicenseRequest(id: number): Promise<void> {
-    // Primeiro, verificar se a licença existe
-    const license = await db
-      .select()
-      .from(licenseRequests)
+    const result = await db
+      .delete(licenseRequests)
       .where(eq(licenseRequests.id, id))
-      .limit(1);
-      
-    if (!license.length) {
-      throw new Error("Pedido de licença não encontrado");
-    }
+      .returning();
     
-    // Se for um rascunho, posso excluir diretamente, se não, preciso excluir histórico primeiro
-    if (license[0].isDraft) {
-      // Excluir diretamente, pois rascunhos não devem ter histórico
-      const result = await db
-        .delete(licenseRequests)
-        .where(eq(licenseRequests.id, id))
-        .returning();
-      
-      if (!result.length) {
-        throw new Error("Falha ao excluir rascunho");
-      }
-    } else {
-      // Primeiro excluir quaisquer registros de histórico de status
-      try {
-        // Tentar excluir usando transação
-        return await withTransaction(async (tx) => {
-          // 1. Excluir registros de histórico de status
-          await tx
-            .delete(statusHistories)
-            .where(eq(statusHistories.licenseId, id));
-            
-          // 2. Excluir a licença
-          const result = await tx
-            .delete(licenseRequests)
-            .where(eq(licenseRequests.id, id))
-            .returning();
-            
-          if (!result.length) {
-            throw new Error("Falha ao excluir licença");
-          }
-        });
-      } catch (error) {
-        console.error("Erro ao excluir licença com histórico:", error);
-        throw error;
-      }
+    if (!result.length) {
+      throw new Error("Pedido de licença não encontrado");
     }
   }
   

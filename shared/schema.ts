@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, index, uniqueIndex, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -266,8 +266,8 @@ export const licenseRequests = pgTable("license_requests", {
   secondTrailerId: integer("second_trailer_id").references(() => vehicles.id),
   flatbedId: integer("flatbed_id").references(() => vehicles.id),
   length: integer("length").notNull(), // total length in cm
-  width: doublePrecision("width"), // width in meters with decimal points
-  height: doublePrecision("height"), // height in meters with decimal points
+  width: integer("width"), // width in cm
+  height: integer("height"), // height in cm
   cargoType: text("cargo_type"), // tipo de carga (union de nonFlatbedCargoType e flatbedCargoType)
   additionalPlates: text("additional_plates").array(), // Lista de placas adicionais 
   additionalPlatesDocuments: text("additional_plates_documents").array(), // URLs dos documentos das placas adicionais
@@ -335,13 +335,11 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         
         // Se for tipo prancha, diferentes regras se aplicam
         if (licenseType === "flatbed") {
-          // Se for APENAS carga superdimensionada, não tem limite
+          // Se for carga superdimensionada, não tem limite
           if (cargoType === "oversized") {
-            return; // Válido sem restrições
+            return; // Válido
           }
-          
-          // Para todos os outros tipos de prancha (incluindo carga indivisível e máquinas agrícolas)
-          // máximo de 25m sem mínimo
+          // Para prancha normal, máximo de 25m sem mínimo
           if (valueInMeters > 25.0) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
@@ -388,13 +386,11 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         
         // Se for tipo prancha, diferentes regras se aplicam
         if (licenseType === "flatbed") {
-          // Se for APENAS carga superdimensionada, não tem limite
+          // Se for carga superdimensionada, não tem limite
           if (cargoType === "oversized") {
-            return; // Válido sem restrições
+            return; // Válido
           }
-          
-          // Para todos os outros tipos de prancha (incluindo carga indivisível e máquinas agrícolas)
-          // máximo de 3.20m
+          // Para prancha normal, máximo de 3.20m
           if (valueInMeters > 3.20) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
@@ -436,13 +432,11 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         
         // Se for tipo prancha, diferentes regras se aplicam
         if (licenseType === "flatbed") {
-          // Se for APENAS carga superdimensionada, não tem limite
+          // Se for carga superdimensionada, não tem limite
           if (cargoType === "oversized") {
-            return; // Válido sem restrições
+            return; // Válido
           }
-          
-          // Para todos os outros tipos de prancha (incluindo carga indivisível e máquinas agrícolas)
-          // máximo de 4.95m
+          // Para prancha normal, máximo de 4.95m
           if (valueInMeters > 4.95) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
@@ -523,6 +517,7 @@ export const brazilianStates = [
   { code: "PA", name: "Pará" },
   { code: "SC", name: "Santa Catarina" },
   { code: "DF", name: "Distrito Federal" },
+  { code: "MA", name: "Maranhão" },
   { code: "GO", name: "Goiás" },
   { code: "RJ", name: "Rio de Janeiro" },
   { code: "CE", name: "Ceará" },

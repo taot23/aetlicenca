@@ -14,7 +14,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { submitRenewalRequest } from "./license-form";
 
 interface LicenseDetailsCardProps {
   license: LicenseRequest;
@@ -76,21 +75,12 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
   }, [lastMessage, license.id]);
   
   // Garantir valores padrão para dimensões e tipo de carga
-  // Verificar e ajustar valores para o tipo correto antes de passar para o formatDimension
   const licenseData = {
     ...license,
     width: license.width || getDefaultWidth(license.type),
     height: license.height || getDefaultHeight(license.type),
     cargoType: license.cargoType || getDefaultCargoType(license.type)
   };
-  
-  // Log para debug dos valores
-  console.log("Valores originais:", {
-    type: license.type,
-    width: license.width,
-    height: license.height,
-    length: license.length
-  });
   
   // Estados para armazenar dados dos veículos e controlar modais
   const [vehicles, setVehicles] = useState<{[key: string]: Vehicle}>({});
@@ -99,7 +89,6 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEditVehicleModalOpen, setIsEditVehicleModalOpen] = useState(false);
-  const [isSubmittingRenewal, setIsSubmittingRenewal] = useState(false);
   
   // Estado para o formulário de edição
   const [editForm, setEditForm] = useState({
@@ -117,60 +106,6 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
   // Toast para feedback
   const { toast } = useToast();
   
-  // Função para enviar renovação diretamente
-  const handleSubmitRenewal = async () => {
-    try {
-      setIsSubmittingRenewal(true);
-      
-      // Definir valores padrão para dimensões com base no tipo de licença
-      const isPrancha = license.type === 'flatbed';
-      
-      // Preparar dados para renovação, incluindo comentário que identifica como renovação
-      const formData = {
-        ...license,
-        // Garantir campos mínimos para que a renovação funcione
-        length: license.length || (isPrancha ? 25 : 30),
-        // Para não-prancha, forçar o padrão de 2,60 metros para largura
-        width: isPrancha ? (license.width || 3.2) : 2.6,
-        // Para não-prancha, forçar o padrão de 4,40 metros para altura
-        height: isPrancha ? (license.height || 4.95) : 4.4,
-        cargoType: license.cargoType || (isPrancha ? 'indivisible_cargo' : 'dry_cargo'),
-        states: license.states || [],
-        isDraft: false,
-        // Garantir que o comentário inclua a palavra "renovação"
-        comments: license.comments?.includes('Renovação')
-          ? license.comments
-          : `Renovação da licença ${license.requestNumber || ''} ${license.states?.join(',') || ''}`
-      };
-      
-      // Usar a função especializada para renovações
-      await submitRenewalRequest(license.id, formData);
-      
-      toast({
-        title: "Renovação enviada com sucesso",
-        description: "O pedido de renovação foi enviado para análise.",
-      });
-      
-      // Fechar o modal
-      setIsViewModalOpen(false);
-      
-      // Invalidar consultas para atualizar a interface
-      queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/licenses/${license.id}`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/licenses/issued'] });
-      
-    } catch (error) {
-      console.error("Erro ao enviar renovação:", error);
-      toast({
-        title: "Erro ao enviar renovação",
-        description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar a renovação",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmittingRenewal(false);
-    }
-  };
-
   // Mutation para atualizar o veículo
   const updateVehicleMutation = useMutation({
     mutationFn: async (data: Partial<Vehicle> & { id: number }) => {
@@ -434,35 +369,14 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
     }
   }, [isEditVehicleModalOpen]);
   
-  // Função para verificar se é um tipo bitrem, rodotrem ou romeu e julieta
-  function isBitremRodotrainRomeuType(type: string): boolean {
-    return type === 'bitrain_9_axles' || 
-           type === 'bitrain_7_axles' || 
-           type === 'bitrain_6_axles' || 
-           type === 'road_train' || 
-           type === 'romeu_e_julieta';
-  }
-  
   // Função para obter largura padrão baseada no tipo de licença
   function getDefaultWidth(type: string): number {
-    if (type === "flatbed") {
-      return 320; // 3.20m para prancha
-    } else if (isBitremRodotrainRomeuType(type)) {
-      return 2.60; // 2.60m para bitrem/rodotrem/romeu e julieta
-    } else {
-      return 2.60; // 2.60m para demais
-    }
+    return type === "flatbed" ? 320 : 260; // 3.20m para prancha, 2.60m para demais
   }
   
   // Função para obter altura padrão baseada no tipo de licença
   function getDefaultHeight(type: string): number {
-    if (type === "flatbed") {
-      return 495; // 4.95m para prancha
-    } else if (isBitremRodotrainRomeuType(type)) {
-      return 4.40; // 4.40m para bitrem/rodotrem/romeu e julieta
-    } else {
-      return 4.40; // 4.40m para demais
-    }
+    return type === "flatbed" ? 495 : 440; // 4.95m para prancha, 4.40m para demais
   }
   
   // Função para obter tipo de carga padrão baseado no tipo de licença
@@ -476,101 +390,12 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
       return '-';
     }
     
-    console.log(`Formatando dimensão: ${value}, tipo: ${typeof value}`);
+    // Verificar se o valor está em centímetros (>100) ou metros (<100)
+    const isInCentimeters = value > 100;
+    const valueInMeters = isInCentimeters ? value / 100 : value;
     
-    // Para largura e altura que já estão em metros (valores pequenos)
-    if (value <= 10) {
-      // Verificar se é tipo prancha
-      if (licenseData && licenseData.type === 'flatbed') {
-        // Largura padrão para prancha (3.20m)
-        if (Math.abs(value - 3.2) < 0.3) {
-          return '3.20'; 
-        }
-        // Altura padrão para prancha (4.95m)
-        if (Math.abs(value - 4.95) < 0.3) {
-          return '4.95'; 
-        }
-      }
-      // Valores específicos para bitrem, rodotrem ou romeu e julieta
-      else if (licenseData && isBitremRodotrainRomeuType(licenseData.type)) {
-        // Largura padrão fixa para combinações especiais (2.60m)
-        if (Math.abs(value - 2.6) < 0.2) {
-          return '2.60'; 
-        }
-        // Altura padrão fixa para combinações especiais (4.40m)
-        if (Math.abs(value - 4.4) < 0.2) {
-          return '4.40'; 
-        }
-      }
-      // Valores específicos para outros tipos não-prancha
-      else if (Math.abs(value - 2.6) < 0.2) {
-        return '2.60'; // Largura padrão para não-prancha
-      }
-      else if (Math.abs(value - 4.4) < 0.2) {
-        return '4.40'; // Altura padrão para não-prancha
-      }
-      
-      // Outros valores já em metros
-      return value.toFixed(2);
-    }
-    
-    // Se for comprimento (entre 1000 e 5000), assumimos que está armazenado em cm
-    // e exibimos em metros (ex: 2500 -> 25.00 m)
-    if (value >= 1000 && value <= 5000) {
-      return (value / 100).toFixed(2);
-    }
-    
-    // Casos especiais para largura e altura em valores em centímetros
-    
-    // Para pranchas: valores específicos
-    if (licenseData && licenseData.type === 'flatbed') {
-      // Largura padrão para prancha (320cm)
-      if (value === 320 || (value >= 310 && value <= 330)) {
-        return '3.20';
-      }
-      // Altura padrão para prancha (495cm)
-      if (value === 495 || (value >= 490 && value <= 500)) {
-        return '4.95';
-      }
-    }
-    
-    // Para outros tipos: valores padrão de conjuntos não-prancha
-    // Largura padrão para não-prancha (260cm)
-    if (value === 260 || (value >= 250 && value <= 270)) {
-      return '2.60';
-    }
-    // Altura padrão para não-prancha (440cm)
-    if (value === 440 || (value >= 430 && value <= 450)) {
-      return '4.40';
-    }
-    
-    // Verificação para valores inteiros arredondados
-    if (value === 3) {
-      // Se for prancha, considerar como 3.20
-      if (licenseData && licenseData.type === 'flatbed') {
-        return '3.20';
-      }
-      // Outros casos, é 2.60 arredondado
-      return '2.60';
-    }
-    
-    if (value === 4 || value === 5) {
-      // Se for prancha, considerar como 4.95
-      if (licenseData && licenseData.type === 'flatbed') {
-        return '4.95';
-      }
-      // Outros casos, é 4.40 arredondado
-      return '4.40';
-    }
-    
-    // Se for largura/altura e o valor for inteiro e maior que 100 (ex: 260, 440)
-    // assumimos que está em centímetros e convertemos para metros
-    if (value > 100) {
-      return (value / 100).toFixed(2);
-    }
-    
-    // Para outros valores
-    return value.toFixed(2);
+    // Formatar com 2 casas decimais
+    return valueInMeters.toFixed(2);
   };
   
   // Função para obter o label do status
@@ -1259,26 +1084,12 @@ export function LicenseDetailsCard({ license }: LicenseDetailsCardProps) {
               <X className="mr-2 h-4 w-4" />
               Fechar
             </Button>
-            
-            <div className="flex space-x-2">
-              {/* Botão para enviar renovação diretamente */}
-              <Button 
-                type="button" 
-                variant="default"
-                className="bg-green-600 hover:bg-green-700 gap-1"
-                onClick={handleSubmitRenewal}
-                disabled={isSubmittingRenewal}
-              >
-                <RefreshCw className={`h-4 w-4 ${isSubmittingRenewal ? 'animate-spin' : ''}`} />
-                {isSubmittingRenewal ? "Processando..." : "Enviar Renovação"}
-              </Button>
-              
-              {/* Botão de download */}
-              <Button type="button" className="gap-1">
-                <FileDown className="h-4 w-4" />
-                Baixar CRLV
-              </Button>
-            </div>
+            <Button type="button" className="gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              </svg>
+              Baixar CRLV
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   Loader2, Search, FileText, CheckCircle, XCircle, File, Clock, 
-  MapPin, X, UploadCloud, Pencil, AlertCircle, Eye, EyeOff, Trash2, Edit 
+  MapPin, X, UploadCloud, Pencil, AlertCircle, Eye, EyeOff, Trash2 
 } from "lucide-react";
 import {
   AlertDialog,
@@ -136,7 +136,6 @@ export default function AdminLicensesPage() {
   const [selectedLicense, setSelectedLicense] = useState<LicenseRequest | null>(null);
   const [licenseDetailsOpen, setLicenseDetailsOpen] = useState(false);
   const [stateStatusDialogOpen, setStateStatusDialogOpen] = useState(false);
-  const [generalStatusDialogOpen, setGeneralStatusDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedState, setSelectedState] = useState("");
   const [location] = useLocation();
@@ -207,15 +206,7 @@ export default function AdminLicensesPage() {
     }
   }, [lastMessage, selectedLicense]);
 
-  // Form para atualização de status geral
-  const generalStatusForm = useForm<z.infer<typeof updateStatusSchema>>({
-    resolver: zodResolver(updateStatusSchema),
-    defaultValues: {
-      status: "",
-      comments: "",
-      licenseFile: undefined,
-    },
-  });
+  // Form removido para atualização de status geral
   
   // Form para atualização de status por estado
   const stateStatusForm = useForm<z.infer<typeof updateStateStatusSchema>>({
@@ -272,60 +263,7 @@ export default function AdminLicensesPage() {
     }));
   }, [licenses]);
 
-  // Mutação para atualização de status geral
-  const updateGeneralStatusMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number, data: z.infer<typeof updateStatusSchema> }) => {
-      const formData = new FormData();
-      formData.append("status", data.status);
-      
-      if (data.comments) {
-        formData.append("comments", data.comments);
-      }
-      
-      if (data.licenseFile) {
-        formData.append("licenseFile", data.licenseFile);
-      }
-      
-      const response = await apiRequest("PATCH", `/api/admin/licenses/${id}/status`, formData);
-      return await response.json();
-    },
-    onSuccess: (updatedLicense) => {
-      toast({
-        title: "Status atualizado",
-        description: "Status geral da licença atualizado com sucesso!",
-      });
-      
-      setTimeout(() => {
-        // Limpar o formulário
-        generalStatusForm.reset({
-          status: "",
-          comments: "",
-          licenseFile: undefined,
-        });
-        
-        // Fechar o diálogo
-        setGeneralStatusDialogOpen(false);
-      }, 100);
-      
-      // Invalidar queries
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: [apiEndpoint] });
-        queryClient.invalidateQueries({ queryKey: [`${apiEndpoint}/${updatedLicense.id}`] });
-        queryClient.invalidateQueries({ queryKey: ['/api/licenses/issued'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
-        
-        // Forçar uma nova busca dos dados
-        refetch();
-      }, 300);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Erro ao atualizar status",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  // Mutação para atualização de status geral foi removida - agora só usamos atualização por estado
   
   // Atualizar status por estado da licença
   const updateStateStatusMutation = useMutation({
@@ -505,28 +443,7 @@ export default function AdminLicensesPage() {
       }
     });
 
-  // Função para lidar com a edição do status geral
-  const handleEditGeneralStatus = () => {
-    if (!selectedLicense) return;
-    
-    generalStatusForm.reset({
-      status: selectedLicense.status || "pending_registration",
-      comments: "",
-      licenseFile: undefined,
-    });
-    
-    setGeneralStatusDialogOpen(true);
-  };
-  
-  // Função para lidar com o envio do formulário de status geral
-  const onSubmitGeneralStatus = (data: z.infer<typeof updateStatusSchema>) => {
-    if (!selectedLicense) return;
-    
-    updateGeneralStatusMutation.mutate({
-      id: selectedLicense.id,
-      data,
-    });
-  };
+  // Função removida pois o status agora só será editado por estado individual
 
   const handleViewDetails = (license: LicenseRequest) => {
     console.log("Detalhes da licença:", license);
@@ -686,20 +603,6 @@ export default function AdminLicensesPage() {
               Gerencie todas as licenças no sistema.
             </p>
           </div>
-          <Button 
-            onClick={() => refetch()} 
-            variant="outline" 
-            className="w-full mt-2 md:mt-0 md:w-auto"
-            title="Atualizar lista de licenças"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4">
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-              <path d="M21 3v5h-5"></path>
-              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-              <path d="M8 16H3v5"></path>
-            </svg>
-            Atualizar
-          </Button>
         </div>
 
         <div className="flex flex-col space-y-4">
@@ -1095,121 +998,7 @@ export default function AdminLicensesPage() {
         </div>
       </div>
 
-      {/* Diálogo para atualizar status geral */}
-      <Dialog open={generalStatusDialogOpen} onOpenChange={setGeneralStatusDialogOpen}>
-        <DialogContent className="w-full max-w-md mx-auto overflow-y-auto max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>Editar Status Geral da Licença</DialogTitle>
-            <DialogDescription>
-              Atualize o status geral da licença
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
-            <h4 className="font-medium text-sm mb-2">Guia de Fluxo de Status:</h4>
-            <ul className="text-sm space-y-1">
-              <li><span className="font-semibold">Pedido em Cadastramento:</span> Status inicial do pedido</li>
-              <li><span className="font-semibold">Cadastro em Andamento:</span> Em fase de edição pelo usuário</li>
-              <li><span className="font-semibold">Reprovado:</span> Com justificativa de pendências</li>
-              <li><span className="font-semibold">Análise do Órgão:</span> Em avaliação oficial</li>
-              <li><span className="font-semibold">Pendente Liberação:</span> Aguardando aprovação final</li>
-              <li><span className="font-semibold">Liberada:</span> Licença aprovada com documento disponível</li>
-              <li><span className="font-semibold">Cancelado:</span> Licença cancelada pelo cliente ou pelo sistema</li>
-            </ul>
-          </div>
-          <Form {...generalStatusForm}>
-            <form onSubmit={generalStatusForm.handleSubmit(onSubmitGeneralStatus)} className="space-y-6">
-              <FormField
-                control={generalStatusForm.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione um status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="pending_registration">Pedido em Cadastramento</SelectItem>
-                        <SelectItem value="registration_in_progress">Cadastro em Andamento</SelectItem>
-                        <SelectItem value="rejected">Reprovado</SelectItem>
-                        <SelectItem value="under_review">Análise do Órgão</SelectItem>
-                        <SelectItem value="pending_approval">Pendente Liberação</SelectItem>
-                        <SelectItem value="approved">Liberada</SelectItem>
-                        <SelectItem value="canceled">Cancelado</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={generalStatusForm.control}
-                name="comments"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Comentários</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Adicione comentários sobre a mudança de status"
-                        className="min-h-[80px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={generalStatusForm.control}
-                name="licenseFile"
-                render={({ field: { value, onChange, ...field } }) => (
-                  <FormItem>
-                    <FormLabel>Arquivo da Licença (PDF)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="file"
-                        accept=".pdf"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) onChange(file);
-                        }}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Envie um arquivo PDF com a licença.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="flex justify-end space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setGeneralStatusDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={updateGeneralStatusMutation.isPending}
-                >
-                  {updateGeneralStatusMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Salvar
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      {/* O diálogo para atualizar status foi removido pois o status agora só é editado por estado individual */}
 
       {/* Diálogo para atualizar status por estado */}
       <Dialog open={stateStatusDialogOpen} onOpenChange={setStateStatusDialogOpen}>
@@ -1553,18 +1342,7 @@ export default function AdminLicensesPage() {
                 <h4 className="font-medium text-sm mb-2">Fluxo de Progresso da Licença:</h4>
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-sm font-medium text-gray-500">Status atual:</div>
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={selectedLicense.status} licenseId={selectedLicense.id} />
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-7 px-2 text-xs"
-                      onClick={handleEditGeneralStatus}
-                    >
-                      <Edit className="h-3 w-3 mr-1" />
-                      Alterar Status Geral
-                    </Button>
-                  </div>
+                  <StatusBadge status={selectedLicense.status} licenseId={selectedLicense.id} />
                 </div>
                 <ProgressFlow 
                   currentStatus={selectedLicense.status} 

@@ -3,7 +3,6 @@ import { useMutation } from "@tanstack/react-query";
 import { LicenseRequest } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import {
@@ -109,19 +108,14 @@ export function LicenseList({
       console.log(`Verificação na lista - É renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
       
       if (isRenewal) {
-        // Definir valores padrão para dimensões com base no tipo de licença
-        const isPrancha = license.type === 'flatbed';
-        
         // Preparar dados mínimos para renovação
         const formData = {
           ...license,
           // Garantir campos mínimos para que a renovação funcione
-          length: license.length || (isPrancha ? 25 : 30),
-          // Para não-prancha, forçar o padrão de 2,60 metros para largura
-          width: isPrancha ? (license.width || 3.2) : 2.6,
-          // Para não-prancha, forçar o padrão de 4,40 metros para altura
-          height: isPrancha ? (license.height || 4.95) : 4.4,
-          cargoType: license.cargoType || (isPrancha ? 'indivisible_cargo' : 'dry_cargo'),
+          length: license.length || 25,
+          width: license.width || 2.6, 
+          height: license.height || 4.4,
+          cargoType: license.cargoType || (license.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo'),
           states: license.states || [],
           isDraft: false
         };
@@ -332,24 +326,8 @@ export function LicenseList({
   };
 
   // Function to render actions based on list type and license status
-  // Obter usuário autenticado
-  const { user } = useAuth();
-  
   const renderActions = (license: LicenseRequest) => {
     if (isDraftList) {
-      // Verificar se o usuário é o proprietário do rascunho ou é um administrador
-      const isOwner = user?.id === license.userId;
-      const isAdmin = user?.role === 'admin';
-      const hasAccessToTransporter = true; // Simplificando, mas deve verificar se o usuário tem acesso ao transportador
-      
-      // Verificar se o usuário tem permissão para excluir o rascunho
-      const canDelete = isOwner || isAdmin || hasAccessToTransporter;
-      
-      // Tooltip message for delete button
-      const deleteTooltip = !canDelete 
-        ? "Você não tem permissão para excluir este rascunho" 
-        : "Excluir rascunho";
-      
       return (
         <>
           <Button
@@ -371,10 +349,9 @@ export function LicenseList({
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => canDelete && handleDeleteClick(license)}
-            className={`text-red-600 hover:text-red-800 hover:bg-red-50 ml-1 ${!canDelete ? 'opacity-40 cursor-not-allowed' : ''}`}
-            disabled={deleteMutation.isPending || !canDelete}
-            title={deleteTooltip}
+            onClick={() => handleDeleteClick(license)}
+            className="text-red-600 hover:text-red-800 hover:bg-red-50 ml-1"
+            disabled={deleteMutation.isPending}
           >
             <Trash className="h-4 w-4" />
           </Button>

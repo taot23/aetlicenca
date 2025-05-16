@@ -3,27 +3,19 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
 
-// Configurar o WebSocket para o Neon
 neonConfig.webSocketConstructor = ws;
 
-// Verificar se a URL do banco de dados está definida
 if (!process.env.DATABASE_URL) {
   throw new Error(
     "DATABASE_URL must be set. Did you forget to provision a database?",
   );
 }
 
-// Configurações ajustadas para melhor lidar com problemas de conexão
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 10, // Reduzido para evitar muitas conexões simultâneas
-  idleTimeoutMillis: 30000, 
-  connectionTimeoutMillis: 10000 // Aumentado para dar mais tempo para conectar
-});
-
-// Manipulador de erro para o pool
-pool.on('error', (err) => {
-  console.error('Erro inesperado no pool de conexão do Postgres:', err);
+  max: 20, // Máximo de conexões no pool
+  idleTimeoutMillis: 30000, // Tempo máximo que uma conexão pode ficar inativa
+  connectionTimeoutMillis: 5000 // Tempo limite para estabelecer uma conexão
 });
 
 export const db = drizzle({ client: pool, schema });
@@ -34,14 +26,13 @@ export const db = drizzle({ client: pool, schema });
  * @returns Resultado da execução do callback
  */
 export async function withTransaction<T>(
-  callback: (tx: any) => Promise<T>
+  callback: (tx: typeof db) => Promise<T>
 ): Promise<T> {
   const client = await pool.connect();
   
   try {
     await client.query('BEGIN');
-    // Usando any para evitar erros de tipos com PoolClient vs Pool
-    const tx = drizzle({ client, schema } as any);
+    const tx = drizzle({ client, schema });
     const result = await callback(tx);
     await client.query('COMMIT');
     return result;
