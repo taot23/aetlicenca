@@ -230,31 +230,15 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             : DIMENSION_LIMITS.flatbed;
         }
         
-        // Aplicar validações de comprimento específicas
+        // Aplicar validações de dimensões com base no tipo de conjunto
         if (currentType === 'flatbed') {
-          // Para pranchas: limpar TODAS as validações de comprimento mínimo
+          // Para pranchas: REMOVER TODAS as validações de dimensões
           form.clearErrors('length');
+          form.clearErrors('width');
+          form.clearErrors('height');
           
-          // Se for carga superdimensionada, também limpar validações de altura e largura
-          if (currentCargoType === 'oversized') {
-            form.clearErrors('width');
-            form.clearErrors('height');
-          } else {
-            // Para prancha normal: validar apenas comprimento máximo, largura e altura
-            const currentLength = form.getValues('length');
-            const currentWidth = form.getValues('width');
-            const currentHeight = form.getValues('height');
-            
-            // Validar APENAS comprimento máximo se estiver definido
-            if (currentLength !== undefined && currentLength > limits.maxLength) {
-              form.setError('length', { 
-                type: 'manual', 
-                message: `O comprimento máximo para este tipo de conjunto é ${limits.maxLength.toFixed(2).replace('.', ',')} metros` 
-              });
-            }
-            
-            // Continuar com validação de largura e altura...
-          }
+          // Não aplicar nenhuma validação de dimensão para pranchas
+          // Independente do tipo de carga
         } else {
           // Para outros tipos que NÃO são prancha
           // Verificar e validar dimensões atuais
@@ -895,11 +879,9 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   licenseType={licenseType}
                   cargoType={form.watch('cargoType')}
                   description={
-                    licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
-                      ? 'Digite o comprimento em metros (sem limite para carga superdimensionada)'
-                      : licenseType === 'flatbed'
-                        ? 'Digite o comprimento em metros (max: 25,00)'
-                        : 'Digite o comprimento em metros (min: 19,80 - max: 30,00)'
+                    licenseType === 'flatbed' 
+                      ? 'Digite o comprimento em metros' 
+                      : 'Digite o comprimento em metros (min: 19,80 - max: 30,00)'
                   }
                 />
               )}
@@ -917,11 +899,9 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   licenseType={licenseType}
                   cargoType={form.watch('cargoType')}
                   description={
-                    licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
-                      ? 'Informe a largura total do conjunto em metros (sem limite para carga superdimensionada)'
-                      : licenseType === 'flatbed'
-                        ? 'Informe a largura total do conjunto em metros (max: 3,20)'
-                        : 'Informe a largura total do conjunto em metros (max: 2,60)'
+                    licenseType === 'flatbed'
+                      ? 'Informe a largura total do conjunto em metros'
+                      : 'Informe a largura total do conjunto em metros (max: 2,60)'
                   }
                 />
               )}
@@ -939,11 +919,9 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   licenseType={licenseType}
                   cargoType={form.watch('cargoType')}
                   description={
-                    licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
-                      ? 'Informe a altura total do conjunto em metros (sem limite para carga superdimensionada)'
-                      : licenseType === 'flatbed'
-                        ? 'Informe a altura total do conjunto em metros (max: 4,95)'
-                        : 'Informe a altura total do conjunto em metros (max: 4,40)'
+                    licenseType === 'flatbed'
+                      ? 'Informe a altura total do conjunto em metros'
+                      : 'Informe a altura total do conjunto em metros (max: 4,40)'
                   }
                 />
               )}
