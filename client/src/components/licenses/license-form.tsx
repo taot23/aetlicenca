@@ -49,7 +49,8 @@ import {
   Building2, 
   Link as LinkIcon,
   FileUp,
-  Check
+  Check,
+  Send
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "wouter";
@@ -108,6 +109,35 @@ interface LicenseFormProps {
   preSelectedTransporterId?: number | null;
 }
 
+// Função para submeter um rascunho diretamente (pode ser chamada de fora do componente)
+export async function submitDraftDirectly(draftId: number) {
+  try {
+    const url = `/api/licenses/drafts/${draftId}/submit`;
+    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}${url}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Erro ao enviar rascunho: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Invalidar cache
+    queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
+    
+    return data;
+  } catch (error) {
+    console.error("Erro ao submeter rascunho diretamente:", error);
+    throw error;
+  }
+}
+
 export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporterId }: LicenseFormProps) {
   const { toast } = useToast();
   const [licenseType, setLicenseType] = useState<string>(draft?.type || "");
@@ -158,7 +188,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       states: draft.states,
       isDraft: draft.isDraft,
       comments: draft.comments || undefined,
-      cargoType: undefined, // Adicionado para support ao tipo de carga
+      cargoType: draft.cargoType as any || undefined, // Usar o tipo de carga do rascunho ou undefined (usando 'as any' para evitar erro de tipo)
     } : {
       type: "",
       transporterId: preSelectedTransporterId || undefined, // Usar o transportador pré-selecionado
@@ -176,7 +206,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       additionalPlatesDocuments: [],
       isDraft: true,
       comments: "",
-      cargoType: undefined, // Adicionado para support ao tipo de carga
+      cargoType: undefined as any, // Inicializar como undefined para validação de formulário
     },
   });
 
@@ -383,19 +413,89 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     } else {
       // Remove isDraft from payload when submitting a license request
       const { isDraft, ...requestData } = dataToSubmit;
-      submitRequestMutation.mutate(requestData as any);
+      // Log para depuração
+      console.log('Enviando requisição:', requestData);
+      
+      // Garantir que o campo cargoType é válido antes de enviar
+      if (!requestData.cargoType) {
+        console.error('Erro: cargoType não definido no envio final');
+        toast({
+          title: "Erro de validação",
+          description: "Por favor, selecione um tipo de carga para continuar",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Verificar se é um pedido de renovação
+      const isRenewal = requestData.comments && 
+                      typeof requestData.comments === 'string' && 
+                      requestData.comments.toLowerCase().includes('renovação');
+                      
+      console.log(`Verificação de renovação: ${isRenewal ? 'É renovação' : 'Não é renovação'}`);
+                      
+      // Abordagem especial para renovações para evitar problemas
+      if (isRenewal && draft?.id) {
+        console.log("Usando abordagem direta para renovação de licença");
+        
+        // Garantir que temos valores válidos para campos obrigatórios
+        if (!requestData.cargoType) {
+          requestData.cargoType = requestData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
+        }
+        
+        if (!requestData.length) requestData.length = 2500; // 25 metros em centímetros
+        if (!requestData.width) requestData.width = 260;    // 2.6 metros em centímetros
+        if (!requestData.height) requestData.height = 440;  // 4.4 metros em centímetros
+        
+        // Criar uma nova licença (não usando o endpoint de submit do rascunho)
+        const url = '/api/licenses';
+        const method = "POST";
+        
+        // Incluir o ID do rascunho a ser excluído após sucesso
+        const payload = {
+          ...requestData,
+          draftToDeleteId: draft.id // Campo adicional para que o backend remova o rascunho após criar a licença
+        };
+        
+        console.log("Enviando renovação com payload modificado:", payload);
+        
+        // Enviar usando o apiRequest em vez de fetch direto (evita uso de await no escopo do componente)
+        apiRequest(method, url, payload)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`Erro ao processar renovação: ${response.status} ${response.statusText}`);
+            }
+            return response.json();
+          })
+          .then(data => {
+            // Notificar sucesso
+            toast({
+              title: "Renovação enviada",
+              description: "A solicitação de renovação de licença foi enviada com sucesso",
+            });
+            
+            // Invalidar cache e completar
+            queryClient.invalidateQueries({ queryKey: ['/api/licenses'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/licenses/drafts'] });
+            onComplete();
+          })
+          .catch(error => {
+            console.error("Erro ao processar renovação:", error);
+            toast({
+              title: "Erro na renovação",
+              description: error instanceof Error ? error.message : "Erro ao processar renovação",
+              variant: "destructive",
+            });
+          });
+      } else {
+        // Para solicitações normais, usar o fluxo padrão
+        console.log("Usando fluxo padrão para envio de solicitação");
+        submitRequestMutation.mutate(requestData as any);
+      }
     }
   };
 
-  // Função para verificar se os campos obrigatórios estão preenchidos
-  const checkRequiredFields = () => {
-    const values = form.getValues();
-    const isWidthEmpty = values.width === undefined || values.width === null;
-    const isHeightEmpty = values.height === undefined || values.height === null;
-    const isCargoTypeEmpty = values.cargoType === undefined || values.cargoType === null || values.cargoType === '';
-    
-    return isWidthEmpty || isHeightEmpty || isCargoTypeEmpty;
-  };
+  // Função de validação do formulário integrada diretamente ao handleSubmitRequest
 
   const handleSaveDraft = () => {
     form.setValue("isDraft", true);
@@ -403,19 +503,188 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
   };
 
   const handleSubmitRequest = () => {
-    // Verificar se os campos obrigatórios estão preenchidos
-    if (checkRequiredFields()) {
-      // Mostrar aviso e não prosseguir com a submissão
+    // Obter valores do formulário para verificação
+    const values = form.getValues();
+    const missingFields: string[] = [];
+    
+    // Verificar se é um pedido de renovação
+    const isRenewal = values.comments && 
+                     typeof values.comments === 'string' && 
+                     values.comments.toLowerCase().includes('renovação');
+    
+    console.log(`É pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
+    
+    // Se for renovação, adicionar campos adicionais para garantir validade
+    if (isRenewal) {
+      // Garantir que dimensões e tipo de carga estão preenchidos
+      if (!values.length) values.length = 25; // 25m
+      if (!values.width) values.width = 2.6;  // 2.6m
+      if (!values.height) values.height = 4.4; // 4.4m
+      if (!values.cargoType) values.cargoType = values.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
+      
+      console.log('Valores ajustados para renovação:', {
+        length: values.length,
+        width: values.width,
+        height: values.height,
+        cargoType: values.cargoType
+      });
+      
+      // Atualizar o formulário com os valores ajustados
+      form.setValue('length', values.length);
+      form.setValue('width', values.width);
+      form.setValue('height', values.height);
+      form.setValue('cargoType', values.cargoType as any);
+    }
+    
+    // Verificar campos obrigatórios básicos
+    if (!values.type) missingFields.push('Tipo de Conjunto');
+    if (!values.transporterId) missingFields.push('Transportador');
+    if (!values.mainVehiclePlate) missingFields.push('Placa do Veículo Principal');
+    if (!values.states || values.states.length === 0) missingFields.push('Estados');
+    
+    // Verificar campos específicos baseado no tipo de licença
+    if (values.type === 'bitrain_9_axles' || values.type === 'bitrain_7_axles' || values.type === 'bitrain_6_axles') {
+      if (!values.tractorUnitId) missingFields.push('Cavalo Mecânico');
+      if (!values.firstTrailerId) missingFields.push('1ª Carreta');
+      if (!values.secondTrailerId) missingFields.push('2ª Carreta');
+    } else if (values.type === 'roadtrain') {
+      if (!values.tractorUnitId) missingFields.push('Cavalo Mecânico');
+      if (!values.firstTrailerId) missingFields.push('1ª Carreta');
+      if (!values.secondTrailerId) missingFields.push('2ª Carreta');
+      if (!values.dollyId) missingFields.push('Dolly');
+    } else if (values.type === 'flatbed') {
+      if (!values.tractorUnitId) missingFields.push('Cavalo Mecânico');
+      if (!values.firstTrailerId) missingFields.push('Prancha');
+    } else if (values.type === 'romeo_and_juliet') {
+      if (!values.tractorUnitId) missingFields.push('Caminhão');
+      if (!values.firstTrailerId) missingFields.push('Reboque');
+    }
+    
+    // Verificar cargoType obrigatório
+    if (!values.cargoType) missingFields.push('Tipo de Carga');
+    
+    // Verificar se há campos faltantes e mostrar mensagem de erro
+    if (missingFields.length > 0) {
+      toast({
+        title: "Campos obrigatórios não preenchidos",
+        description: `Por favor, preencha os seguintes campos: ${missingFields.join(', ')}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validar dimensões
+    validateDimensions(values);
+    
+    // Atualizar o valor isDraft para false e submeter
+    form.setValue("isDraft", false);
+    form.handleSubmit(onSubmit)();
+  };
+  
+  // Função para submeter um rascunho existente diretamente
+  const handleSubmitDraftDirectly = async () => {
+    if (!draft || !draft.id) {
+      toast({
+        title: "Erro",
+        description: "Não é possível enviar um rascunho que ainda não foi salvo",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await submitDraftDirectly(draft.id);
+      
+      toast({
+        title: "Rascunho enviado com sucesso",
+        description: "O pedido de licença foi enviado para análise",
+        variant: "success",
+      });
+      
+      // Chamar onComplete para fechar o modal e atualizar a lista
+      onComplete();
+    } catch (error) {
+      console.error("Erro ao submeter rascunho:", error);
+      toast({
+        title: "Erro ao enviar rascunho",
+        description: error instanceof Error ? error.message : "Ocorreu um erro ao enviar o rascunho",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Verificar campos básicos no handleSubmitRequest
+  const validateFields = () => {
+    const values = form.getValues();
+    const missingFields = [];
+    
+    if (!values.type) missingFields.push("Tipo de Conjunto");
+    if (!values.transporterId) missingFields.push("Transportador");
+    
+    // Verificação especial para o tipo de carga
+    if (!values.cargoType) {
+      missingFields.push("Tipo de Carga");
+      
+      // Definir o campo como erro no formulário
+      form.setError('cargoType', { 
+        type: 'manual', 
+        message: 'Selecione um tipo de carga para continuar' 
+      });
+      
+      // Se o tipo de licença estiver definido, fazer foco na seção de carga
+      if (values.type) {
+        // Destacar visualmente a seção de carga
+        const cargoTypeSection = document.getElementById('cargo-type-section');
+        if (cargoTypeSection) {
+          cargoTypeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Adicionar classe para destacar o campo com erro
+          cargoTypeSection.classList.add('border-red-300', 'bg-red-50');
+          setTimeout(() => {
+            cargoTypeSection.classList.remove('border-red-300', 'bg-red-50');
+          }, 3000);
+        }
+      }
+    }
+    
+    if (!values.length) missingFields.push("Comprimento");
+    if (!values.width) missingFields.push("Largura");
+    if (!values.height) missingFields.push("Altura");
+    if (!values.states || values.states.length === 0) missingFields.push("Estados");
+    
+    // Verificar veículos com base no tipo
+    if (values.type === 'bitrain_9_axles' || values.type === 'bitrain_7_axles' || values.type === 'bitrain_6_axles') {
+      if (!values.tractorUnitId) missingFields.push("Unidade Tratora");
+      if (!values.firstTrailerId) missingFields.push("1ª Carreta");
+      if (!values.secondTrailerId) missingFields.push("2ª Carreta");
+    } else if (values.type === 'flatbed') {
+      if (!values.flatbedId) missingFields.push("Prancha");
+    } else if (values.type === 'romeo_and_juliet') {
+      if (!values.tractorUnitId) missingFields.push("Caminhão");
+      if (!values.firstTrailerId) missingFields.push("Reboque");
+    }
+    
+    // Se encontrou campos faltando
+    if (missingFields.length > 0) {
+      // Mostrar aviso 
       setShowRequiredFieldsWarning(true);
       
       // Rolar para o topo para garantir que o usuário veja o aviso
       window.scrollTo({ top: 0, behavior: 'smooth' });
       
-      // Notificar o usuário através de toast
+      // Construir mensagem com os campos faltantes
+      const fieldsText = missingFields.join(", ");
+      
+      // Notificar o usuário através de toast com detalhamento
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios para enviar sua solicitação",
+        title: "Campos obrigatórios não preenchidos",
+        description: `Por favor, preencha os seguintes campos: ${fieldsText}`,
         variant: "destructive",
+      });
+      
+      // Registrar os valores atuais no console para debug
+      console.log('Formulário incompleto:', { 
+        camposFaltantes: missingFields,
+        valores: values 
       });
       
       return;
@@ -423,8 +692,107 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     
     // Se tudo estiver preenchido, continuar com a submissão
     setShowRequiredFieldsWarning(false);
+    
+    // Antes de enviar, garantir que o cargoType esteja definido corretamente
+    // Se ainda não tiver valor, tentar usar o estado local
+    if (!values.cargoType && cargoType) {
+      form.setValue("cargoType", cargoType as any);
+    }
+    
+    // Registrar para debug o valor final que será enviado
+    console.log('Valores finais antes de enviar:', form.getValues());
+    
     form.setValue("isDraft", false);
     form.handleSubmit(onSubmit)();
+  };
+
+  // Função para validar dimensões com base no tipo de licença e carga
+  const validateDimensions = (values: any) => {
+    // Obter o tipo de conjunto e de carga
+    const licenseType = values.type || 'default';
+    const cargoType = values.cargoType;
+    
+    // Verificar e converter valores de dimensão se necessário
+    // Se os valores estiverem em centímetros (acima de 100), converter para metros
+    const length = Number(values.length);
+    const width = Number(values.width);
+    const height = Number(values.height);
+    
+    console.log(`Validando comprimento:`, length, `tipo:`, typeof length);
+    console.log(`Valor em metros:`, length, `Está em centímetros:`, length > 100);
+    
+    console.log(`Validando largura:`, width, `tipo:`, typeof width);
+    console.log(`Largura em metros:`, width, `Está em centímetros:`, width > 100);
+    
+    console.log(`Validando altura:`, height, `tipo:`, typeof height);
+    console.log(`Altura em metros:`, height, `Está em centímetros:`, height > 100);
+    
+    // Determinar quais limites usar com base no tipo
+    let limits;
+    
+    if (licenseType === 'flatbed') {
+      // Para pranchas, usar limite específico
+      limits = DIMENSION_LIMITS.flatbed;
+    } else {
+      // Para outros tipos, usar limite padrão
+      limits = DIMENSION_LIMITS.default;
+    }
+    
+    // Para carga SUPERDIMENSIONADA, não há limites
+    if (cargoType === 'oversized') {
+      limits = DIMENSION_LIMITS.oversized;
+    }
+    
+    // Ajustar os valores no formulário se necessário (conversão de cm para m)
+    if (length > 100) {
+      const convertedLength = length / 100;
+      form.setValue('length', convertedLength);
+      console.log(`Convertendo comprimento de ${length}cm para ${convertedLength}m`);
+    }
+    
+    if (width > 100) {
+      const convertedWidth = width / 100;
+      form.setValue('width', convertedWidth);
+      console.log(`Convertendo largura de ${width}cm para ${convertedWidth}m`);
+    }
+    
+    if (height > 100) {
+      const convertedHeight = height / 100;
+      form.setValue('height', convertedHeight);
+      console.log(`Convertendo altura de ${height}cm para ${convertedHeight}m`);
+    }
+    
+    // Validação dos limites e mensagens de aviso
+    if (cargoType !== 'oversized') {
+      // Só validar limites para cargas que não são superdimensionadas
+      const updatedLength = Number(form.getValues('length'));
+      const updatedWidth = Number(form.getValues('width'));
+      const updatedHeight = Number(form.getValues('height'));
+      
+      if (updatedLength > limits.maxLength) {
+        toast({
+          title: "Aviso sobre dimensões",
+          description: `O comprimento (${updatedLength}m) excede o limite máximo de ${limits.maxLength}m para este tipo de conjunto. A licença pode ser recusada.`,
+          variant: "warning",
+        });
+      }
+      
+      if (updatedWidth > limits.maxWidth) {
+        toast({
+          title: "Aviso sobre dimensões",
+          description: `A largura (${updatedWidth}m) excede o limite máximo de ${limits.maxWidth}m para este tipo de conjunto. A licença pode ser recusada.`,
+          variant: "warning",
+        });
+      }
+      
+      if (updatedHeight > limits.maxHeight) {
+        toast({
+          title: "Aviso sobre dimensões",
+          description: `A altura (${updatedHeight}m) excede o limite máximo de ${limits.maxHeight}m para este tipo de conjunto. A licença pode ser recusada.`,
+          variant: "warning",
+        });
+      }
+    }
   };
 
   const isProcessing = saveAsDraftMutation.isPending || submitRequestMutation.isPending;
@@ -497,19 +865,107 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   <p>
                     Os seguintes campos são obrigatórios para enviar a solicitação:
                   </p>
-                  <ul className="list-disc pl-5 mt-1 space-y-1">
-                    {form.getValues('width') === undefined && (
-                      <li>Largura do conjunto</li>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pl-5 mt-2">
+                    {/* Campos básicos */}
+                    {!form.getValues('type') && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Tipo de Conjunto</span>
+                      </div>
                     )}
-                    {form.getValues('height') === undefined && (
-                      <li>Altura do conjunto</li>
+                    {!form.getValues('transporterId') && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Transportador</span>
+                      </div>
                     )}
-                    {(form.getValues('cargoType') === undefined || form.getValues('cargoType') === '') && (
-                      <li>Tipo de carga</li>
+                    {!form.getValues('cargoType') && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Tipo de Carga</span>
+                      </div>
                     )}
-                  </ul>
-                  <p className="mt-2">
-                    Por favor, preencha todos os campos marcados como <span className="text-yellow-600 font-medium">Obrigatório</span> antes de enviar.
+                    
+                    {/* Dimensões */}
+                    {!form.getValues('length') && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Comprimento</span>
+                      </div>
+                    )}
+                    {!form.getValues('width') && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Largura</span>
+                      </div>
+                    )}
+                    {!form.getValues('height') && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Altura</span>
+                      </div>
+                    )}
+                    
+                    {/* Estados */}
+                    {(!form.getValues('states') || form.getValues('states').length === 0) && (
+                      <div className="flex items-center">
+                        <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                        <span>Estados</span>
+                      </div>
+                    )}
+                    
+                    {/* Veículos dependendo do tipo */}
+                    {form.getValues('type') === 'bitrain_9_axles' || 
+                     form.getValues('type') === 'bitrain_7_axles' || 
+                     form.getValues('type') === 'bitrain_6_axles' ? (
+                      <>
+                        {!form.getValues('tractorUnitId') && (
+                          <div className="flex items-center">
+                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                            <span>Unidade Tratora</span>
+                          </div>
+                        )}
+                        {!form.getValues('firstTrailerId') && (
+                          <div className="flex items-center">
+                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                            <span>1ª Carreta</span>
+                          </div>
+                        )}
+                        {!form.getValues('secondTrailerId') && (
+                          <div className="flex items-center">
+                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                            <span>2ª Carreta</span>
+                          </div>
+                        )}
+                      </>
+                    ) : form.getValues('type') === 'flatbed' ? (
+                      <>
+                        {!form.getValues('flatbedId') && (
+                          <div className="flex items-center">
+                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                            <span>Prancha</span>
+                          </div>
+                        )}
+                      </>
+                    ) : form.getValues('type') === 'romeo_and_juliet' ? (
+                      <>
+                        {!form.getValues('tractorUnitId') && (
+                          <div className="flex items-center">
+                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                            <span>Caminhão</span>
+                          </div>
+                        )}
+                        {!form.getValues('firstTrailerId') && (
+                          <div className="flex items-center">
+                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
+                            <span>Reboque</span>
+                          </div>
+                        )}
+                      </>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 text-sm">
+                    <span className="font-medium">Dica:</span> Preencha todos os campos acima indicados para poder enviar sua solicitação.
                   </p>
                 </div>
               </div>
@@ -762,7 +1218,18 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-base font-medium">Tipo de Conjunto</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={(value) => {
+                    // Atualizar o tipo do conjunto
+                    field.onChange(value);
+                    
+                    // Quando o tipo muda, resetar o valor do tipo de carga
+                    // para forçar o usuário a selecionar um tipo compatível
+                    if (value !== field.value) {
+                      setLicenseType(value);
+                      form.setValue("cargoType", undefined as any);
+                      setCargoType("");
+                    }
+                  }} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger className="h-10">
                         <SelectValue placeholder="Selecione um tipo" />
@@ -819,10 +1286,10 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                 name="cargoType"
                 render={({ field }) => {
                   // Verificar se o campo está vazio
-                  const isEmpty = field.value === undefined || field.value === null || field.value === '';
+                  const isEmpty = !field.value; // Simplificação para checar se é falsy
                   
                   return (
-                    <FormItem>
+                    <FormItem id="cargo-type-section">
                       <FormLabel className="text-base font-medium flex items-center">
                         Tipo de Carga
                         {isEmpty && (
@@ -832,8 +1299,16 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                         )}
                       </FormLabel>
                       <Select 
-                        onValueChange={field.onChange} 
+                        onValueChange={(value) => {
+                          // Garantir que o tipo de carga seja salvo no formulário
+                          field.onChange(value);
+                          // Atualizar o estado local para referência também
+                          setCargoType(value);
+                          // Remover erros relacionados a este campo
+                          form.clearErrors('cargoType');
+                        }} 
                         defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger className={`h-10 ${isEmpty ? 'border-amber-500 ring-1 ring-amber-500' : ''}`}>
@@ -1999,7 +2474,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             type="button" 
             variant="outline" 
             onClick={onCancel}
-            className="w-full sm:w-auto order-3 sm:order-1"
+            className="w-full sm:w-auto order-4 sm:order-1"
           >
             Cancelar
           </Button>
@@ -2008,19 +2483,31 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             variant="outline"
             onClick={handleSaveDraft}
             disabled={isProcessing}
-            className="w-full sm:w-auto order-2"
+            className="w-full sm:w-auto order-3 sm:order-2"
           >
             {saveAsDraftMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
             Salvar Rascunho
           </Button>
+          {/* Botão para envio direto de rascunho, mostrado apenas quando estamos editando um rascunho existente */}
+          {draft && draft.id && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSubmitDraftDirectly}
+              className="w-full sm:w-auto order-2 sm:order-3 bg-green-50 border-green-300 text-green-700 hover:bg-green-100"
+            >
+              <Send className="mr-2 h-4 w-4" />
+              Enviar Rascunho
+            </Button>
+          )}
           <Button
             type="button"
             onClick={handleSubmitRequest}
             disabled={isProcessing}
-            className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto order-1 sm:order-3"
+            className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto order-1 sm:order-4"
           >
             {submitRequestMutation.isPending && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
-            Enviar Pedido
+            Enviar Novo Pedido
           </Button>
         </div>
       </form>

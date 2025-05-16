@@ -1108,14 +1108,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Generate a real request number
         const requestNumber = `AET-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`;
         
-        // Update the draft with the new data
-        await storage.updateLicenseDraft(draftId, {
-          ...licenseData,
-          isDraft: false,
-        });
+        // Identificar se é um pedido de renovação
+        const isRenewal = licenseData.comments && 
+                          typeof licenseData.comments === 'string' && 
+                          licenseData.comments.toLowerCase().includes('renovação');
+
+        console.log(`É pedido de renovação? ${isRenewal ? 'SIM' : 'NÃO'}`);
         
-        // Submit the updated draft as a real license request
-        const licenseRequest = await storage.submitLicenseDraft(draftId, requestNumber);
+        // Sanitizar dados para renovação
+        if (isRenewal) {
+          console.log("Sanitizando dados para renovação");
+          // Garantir que as dimensões são números
+          if (licenseData.length !== undefined) {
+            licenseData.length = Number(licenseData.length);
+            console.log("Comprimento normalizado:", licenseData.length);
+          }
+          
+          if (licenseData.width !== undefined) {
+            licenseData.width = Number(licenseData.width);
+            console.log("Largura normalizada:", licenseData.width);
+          }
+          
+          if (licenseData.height !== undefined) {
+            licenseData.height = Number(licenseData.height);
+            console.log("Altura normalizada:", licenseData.height);
+          }
+          
+          // Garantir que o cargoType seja válido
+          if (!licenseData.cargoType || typeof licenseData.cargoType !== 'string') {
+            licenseData.cargoType = licenseData.type === 'flatbed' ? 'indivisible_cargo' : 'dry_cargo';
+            console.log("Tipo de carga normalizado:", licenseData.cargoType);
+          }
+        }
+        
+        // Em vez de atualizar o rascunho e depois submetê-lo, vamos usar um método direto e mais confiável
+        console.log("=== RENOVAÇÃO DE LICENÇA - MÉTODO MANUAL ===");
+        
+        // Obter o rascunho mais atualizado
+        const draftRequest = await storage.getLicenseRequestById(draftId);
+        if (!draftRequest) {
+          return res.status(404).json({ message: 'Rascunho não encontrado após atualização' });
+        }
+        
+        // Preparar dados para criar uma nova licença a partir do rascunho
+        const newLicenseData = {
+          transporterId: Number(licenseData.transporterId),
+          type: licenseData.type,
+          mainVehiclePlate: licenseData.mainVehiclePlate,
+          tractorUnitId: licenseData.tractorUnitId ? Number(licenseData.tractorUnitId) : null,
+          firstTrailerId: licenseData.firstTrailerId ? Number(licenseData.firstTrailerId) : null,
+          secondTrailerId: licenseData.secondTrailerId ? Number(licenseData.secondTrailerId) : null,
+          dollyId: licenseData.dollyId ? Number(licenseData.dollyId) : null,
+          flatbedId: licenseData.flatbedId ? Number(licenseData.flatbedId) : null,
+          length: Number(licenseData.length || 2500), // 25m default
+          width: Number(licenseData.width || 260),    // 2.60m default
+          height: Number(licenseData.height || 440),  // 4.40m default
+          cargoType: licenseData.cargoType || 'dry_cargo',
+          additionalPlates: licenseData.additionalPlates || [],
+          additionalPlatesDocuments: licenseData.additionalPlatesDocuments || [],
+          states: licenseData.states || [],
+          requestNumber,
+          status: "pending_registration",
+          isDraft: false,
+          comments: licenseData.comments || "",
+        };
+        
+        console.log("Dados finais da licença renovada:", newLicenseData);
+        
+        // Criar a nova licença
+        const licenseRequest = await storage.createLicenseRequest(user.id, newLicenseData);
+        
+        // Remover o rascunho original
+        await storage.deleteLicenseRequest(draftId);
         
         console.log("Licença submetida com sucesso:", licenseRequest.id);
         return res.json(licenseRequest);
@@ -1266,12 +1330,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const licenseData = { ...req.body };
       
       console.log("Dados de licença recebidos:", JSON.stringify(licenseData, null, 2));
+      
+      // Verificar se é um pedido de renovação com rascunho que deve ser excluído
+      const draftToDeleteId = licenseData.draftToDeleteId;
+      if (draftToDeleteId) {
+        console.log(`Pedido de renovação detectado. Rascunho ${draftToDeleteId} será excluído após sucesso.`);
+        // Remover este campo para não interferir na validação
+        delete licenseData.draftToDeleteId;
+      }
+      
+      // Verificar se é uma renovação através dos comentários
+      const isRenewal = licenseData.comments && 
+                       typeof licenseData.comments === 'string' && 
+                       licenseData.comments.toLowerCase().includes('renovação');
+                       
+      if (isRenewal) {
+        console.log("Detectada renovação de licença com base nos comentários.");
+      }
+      
       console.log("Tipo de licença:", licenseData.type);
       console.log("Tipo de carga:", licenseData.cargoType);
       console.log("Comprimento:", licenseData.length);
       console.log("Largura:", licenseData.width);
       console.log("Altura:", licenseData.height);
-      console.log("Comprimento da licença:", licenseData.length);
       console.log("Tipo do valor do comprimento:", typeof licenseData.length);
       
       // Sanitização mais rigorosa dos campos de dimensões com valores padrão
