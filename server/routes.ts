@@ -1793,23 +1793,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Não precisa fazer nenhuma validação
             } else {
               console.log("Prancha normal: máximo 25m, largura máxima 3.20m, altura máxima 4.95m");
-              if (licenseData.length > 2500) { // centímetros
+              
+              // Verificar se os valores estão em metros ou centímetros
+              const lengthInMeters = licenseData.length > 100 ? licenseData.length / 100 : licenseData.length;
+              const widthInMeters = licenseData.width > 100 ? licenseData.width / 100 : licenseData.width;
+              const heightInMeters = licenseData.height > 100 ? licenseData.height / 100 : licenseData.height;
+              
+              console.log(`Validando dimensões em metros: comprimento=${lengthInMeters}, largura=${widthInMeters}, altura=${heightInMeters}`);
+              
+              if (lengthInMeters > 25.0) {
                 return res.status(400).json({ message: "O comprimento máximo para prancha é de 25,00 metros" });
               }
-              if (licenseData.width > 320) { // centímetros
+              if (widthInMeters > 3.20) {
                 return res.status(400).json({ message: "A largura máxima para prancha é de 3,20 metros" });
               }
-              if (licenseData.height > 495) { // centímetros
+              if (heightInMeters > 4.95) {
                 return res.status(400).json({ message: "A altura máxima para prancha é de 4,95 metros" });
               }
             }
           } else {
             console.log("Não é prancha: min 19.8m, max 30m");
-            if (licenseData.length < 1980) { // centímetros
+            
+            // Verificar se os valores estão em metros ou centímetros
+            const lengthInMeters = licenseData.length > 100 ? licenseData.length / 100 : licenseData.length;
+            const widthInMeters = licenseData.width > 100 ? licenseData.width / 100 : licenseData.width;
+            const heightInMeters = licenseData.height > 100 ? licenseData.height / 100 : licenseData.height;
+            
+            console.log(`Validando dimensões em metros para não-prancha: comprimento=${lengthInMeters}, largura=${widthInMeters}, altura=${heightInMeters}`);
+            
+            if (lengthInMeters < 19.80) {
               return res.status(400).json({ message: "O comprimento mínimo é de 19,80 metros para este tipo de conjunto" });
             }
-            if (licenseData.length > 3000) { // centímetros
+            if (lengthInMeters > 30.00) {
               return res.status(400).json({ message: "O comprimento máximo é de 30,00 metros para este tipo de conjunto" });
+            }
+            if (widthInMeters > 2.60) {
+              return res.status(400).json({ message: "A largura máxima é de 2,60 metros para este tipo de conjunto" });
+            }
+            if (heightInMeters > 4.40) {
+              return res.status(400).json({ message: "A altura máxima é de 4,40 metros para este tipo de conjunto" });
             }
           }
         }
