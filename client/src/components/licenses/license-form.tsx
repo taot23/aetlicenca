@@ -231,12 +231,32 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
         }
         
         // Aplicar validações de comprimento específicas
-        if (currentType === 'flatbed' && currentCargoType === 'oversized') {
-          // Sem limites para carga superdimensionada
+        if (currentType === 'flatbed') {
+          // Para pranchas: limpar TODAS as validações de comprimento mínimo
           form.clearErrors('length');
-          form.clearErrors('width');
-          form.clearErrors('height');
+          
+          // Se for carga superdimensionada, também limpar validações de altura e largura
+          if (currentCargoType === 'oversized') {
+            form.clearErrors('width');
+            form.clearErrors('height');
+          } else {
+            // Para prancha normal: validar apenas comprimento máximo, largura e altura
+            const currentLength = form.getValues('length');
+            const currentWidth = form.getValues('width');
+            const currentHeight = form.getValues('height');
+            
+            // Validar APENAS comprimento máximo se estiver definido
+            if (currentLength !== undefined && currentLength > limits.maxLength) {
+              form.setError('length', { 
+                type: 'manual', 
+                message: `O comprimento máximo para este tipo de conjunto é ${limits.maxLength.toFixed(2).replace('.', ',')} metros` 
+              });
+            }
+            
+            // Continuar com validação de largura e altura...
+          }
         } else {
+          // Para outros tipos que NÃO são prancha
           // Verificar e validar dimensões atuais
           const currentLength = form.getValues('length');
           const currentWidth = form.getValues('width');
@@ -244,31 +264,19 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           
           // Validar comprimento se estiver definido
           if (currentLength !== undefined) {
-            if (currentType === 'flatbed') {
-              // Para pranchas, a restrição de comprimento mínimo não se aplica
-              if (currentLength > limits.maxLength) {
-                form.setError('length', { 
-                  type: 'manual', 
-                  message: `O comprimento máximo para este tipo de conjunto é ${limits.maxLength.toFixed(2).replace('.', ',')} metros` 
-                });
-              } else {
-                form.clearErrors('length');
-              }
+            // Para outros tipos, validar tanto mínimo quanto máximo
+            if (currentLength < limits.minLength) {
+              form.setError('length', { 
+                type: 'manual', 
+                message: `O comprimento mínimo para este tipo de conjunto é ${limits.minLength.toFixed(2).replace('.', ',')} metros` 
+              });
+            } else if (currentLength > limits.maxLength) {
+              form.setError('length', { 
+                type: 'manual', 
+                message: `O comprimento máximo para este tipo de conjunto é ${limits.maxLength.toFixed(2).replace('.', ',')} metros` 
+              });
             } else {
-              // Para outros tipos, validar tanto mínimo quanto máximo
-              if (currentLength < limits.minLength) {
-                form.setError('length', { 
-                  type: 'manual', 
-                  message: `O comprimento mínimo para este tipo de conjunto é ${limits.minLength.toFixed(2).replace('.', ',')} metros` 
-                });
-              } else if (currentLength > limits.maxLength) {
-                form.setError('length', { 
-                  type: 'manual', 
-                  message: `O comprimento máximo para este tipo de conjunto é ${limits.maxLength.toFixed(2).replace('.', ',')} metros` 
-                });
-              } else {
-                form.clearErrors('length');
-              }
+              form.clearErrors('length');
             }
           }
           
