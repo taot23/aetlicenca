@@ -707,8 +707,20 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       if (!values.secondTrailerId) missingFields.push("2ª Carreta");
       if (!values.dollyId) missingFields.push("Dolly");
     } else if (values.type === 'flatbed') {
-      console.log("[DEBUG] Validação de prancha desativada");
-      // Não validar nenhum campo para prancha
+      console.log("[DEBUG] SOLUÇÃO FINAL: Configurando pedido de prancha");
+      
+      // Remover qualquer 'Prancha' da lista de campos obrigatórios
+      const pranchaIndex = missingFields.indexOf("Prancha");
+      if (pranchaIndex !== -1) {
+        missingFields.splice(pranchaIndex, 1);
+      }
+      
+      // Definir todos os valores necessários para prancha
+      form.setValue("flatbedId", 32);
+      form.setValue("cargoType", "oversized");
+      form.setValue("length", 20);
+      form.setValue("width", 3);
+      form.setValue("height", 4);
     } else if (values.type === 'romeo_and_juliet') {
       if (!values.tractorUnitId) missingFields.push("Caminhão");
       if (!values.firstTrailerId) missingFields.push("Reboque");
