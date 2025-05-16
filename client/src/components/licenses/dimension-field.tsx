@@ -10,6 +10,8 @@ interface DimensionFieldProps {
   placeholder: string;
   description: string;
   fieldType?: "comprimento" | "largura" | "altura"; // Tipo de campo para comportamento específico
+  licenseType?: string; // Tipo de conjunto/licença: flatbed (prancha) ou outros
+  cargoType?: string; // Tipo de carga para regras específicas
 }
 
 export function DimensionField({ 
@@ -17,7 +19,9 @@ export function DimensionField({
   label, 
   placeholder, 
   description, 
-  fieldType = "comprimento" 
+  fieldType = "comprimento",
+  licenseType,
+  cargoType
 }: DimensionFieldProps) {
   const [displayValue, setDisplayValue] = useState<string>('');
 
@@ -65,9 +69,18 @@ export function DimensionField({
     
     // Garante que um valor está definido quando o campo é obrigatório
     if (fieldType === "comprimento" && (!displayValue || displayValue === '')) {
-      // Se for comprimento e o campo estiver vazio, definir o valor mínimo
-      setDisplayValue('19,80');
-      updateFormValue('19,80');
+      // Se for comprimento e o campo estiver vazio
+      
+      // Para pranchas, não temos comprimento mínimo obrigatório
+      if (licenseType === 'flatbed') {
+        // Para pranchas, podemos deixar vazio ou definir um valor inicial razoável
+        setDisplayValue('15,00');
+        updateFormValue('15,00');
+      } else {
+        // Para outros tipos, aplicar o valor mínimo padrão
+        setDisplayValue('19,80');
+        updateFormValue('19,80');
+      }
       return;
     }
     

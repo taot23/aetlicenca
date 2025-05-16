@@ -884,6 +884,8 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   fieldType="comprimento"
                   label="Comprimento (metros)"
                   placeholder="Ex.: 19,80"
+                  licenseType={licenseType}
+                  cargoType={form.watch('cargoType')}
                   description={
                     licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
                       ? 'Digite o comprimento em metros (sem limite para carga superdimensionada)'
@@ -904,6 +906,8 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   fieldType="largura"
                   label="Largura do Conjunto (metros)"
                   placeholder="Ex.: 2,60"
+                  licenseType={licenseType}
+                  cargoType={form.watch('cargoType')}
                   description={
                     licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
                       ? 'Informe a largura total do conjunto em metros (sem limite para carga superdimensionada)'
@@ -924,6 +928,8 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   fieldType="altura"
                   label="Altura do Conjunto (metros)"
                   placeholder="Ex.: 4,40"
+                  licenseType={licenseType}
+                  cargoType={form.watch('cargoType')}
                   description={
                     licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
                       ? 'Informe a altura total do conjunto em metros (sem limite para carga superdimensionada)'
