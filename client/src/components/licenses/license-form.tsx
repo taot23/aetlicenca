@@ -986,13 +986,16 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       if (cargoType === 'oversized') {
         // Para carga SUPERDIMENSIONADA em prancha, não há limites
         limits = DIMENSION_LIMITS.oversized;
+        console.log(`PRANCHA com carga SUPERDIMENSIONADA: Sem limites de dimensão`);
       } else {
         // Para outros tipos de carga em prancha, usar limite específico de prancha
         limits = DIMENSION_LIMITS.flatbed;
+        console.log(`PRANCHA com carga normal: Largura máxima ${limits.maxWidth} metros`);
       }
     } else {
       // Para outros tipos de conjunto (não-prancha), usar limite padrão
       limits = DIMENSION_LIMITS.default;
+      console.log(`Conjunto NÃO-PRANCHA: Largura máxima ${limits.maxWidth} metros`);
     }
     
     // Ajustar os valores no formulário se necessário (conversão de cm para m)
