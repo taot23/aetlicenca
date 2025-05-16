@@ -954,12 +954,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                       </>
                     ) : form.getValues('type') === 'flatbed' ? (
                       <>
-                        {!form.getValues('flatbedId') && (
-                          <div className="flex items-center">
-                            <span className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></span>
-                            <span>Prancha</span>
-                          </div>
-                        )}
+                        {/* Desativado o aviso de Prancha para permitir envio */}
                       </>
                     ) : form.getValues('type') === 'romeo_and_juliet' ? (
                       <>
