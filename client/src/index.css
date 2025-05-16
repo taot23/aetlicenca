@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ocultar textos específicos de limite para tipos especiais de prancha */
+.hide-limits-special-flatbed .altura-limite,
+.hide-limits-special-flatbed .largura-limite {
+  display: none !important;
+}
+
 /* Ajustes específicos para dispositivos móveis */
 @media (max-width: 768px) {
   body.keyboard-active {

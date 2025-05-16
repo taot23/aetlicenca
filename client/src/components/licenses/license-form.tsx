@@ -1810,9 +1810,16 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   label="Largura do Conjunto (metros)"
                   placeholder="Ex.: 2,60"
                   disabled={licenseType !== 'flatbed'} // Desabilitar para conjuntos não-prancha
+                  hideAutoLimits={licenseType === 'flatbed' && 
+                                  (form.watch('cargoType') === 'oversized' || 
+                                   form.watch('cargoType') === 'indivisible_cargo' || 
+                                   form.watch('cargoType') === 'agricultural_machinery')}
                   description={
-                    licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
-                      ? 'Informe a largura total do conjunto em metros (sem limite para carga superdimensionada)'
+                    licenseType === 'flatbed' && 
+                    (form.watch('cargoType') === 'oversized' || 
+                     form.watch('cargoType') === 'indivisible_cargo' || 
+                     form.watch('cargoType') === 'agricultural_machinery')
+                      ? 'Informe a largura total do conjunto em metros'
                       : licenseType === 'flatbed'
                         ? 'Informe a largura total do conjunto em metros (max: 3,20)'
                         : 'Largura padrão de 2,60 metros para este tipo de conjunto (não editável)'
@@ -1831,9 +1838,16 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                   label="Altura do Conjunto (metros)"
                   placeholder="Ex.: 4,40"
                   disabled={licenseType !== 'flatbed'} // Desabilitar para conjuntos não-prancha
+                  hideAutoLimits={licenseType === 'flatbed' && 
+                                 (form.watch('cargoType') === 'oversized' || 
+                                  form.watch('cargoType') === 'indivisible_cargo' || 
+                                  form.watch('cargoType') === 'agricultural_machinery')}
                   description={
-                    licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
-                      ? 'Informe a altura total do conjunto em metros (sem limite para carga superdimensionada)'
+                    licenseType === 'flatbed' && 
+                    (form.watch('cargoType') === 'oversized' || 
+                     form.watch('cargoType') === 'indivisible_cargo' || 
+                     form.watch('cargoType') === 'agricultural_machinery')
+                      ? 'Informe a altura total do conjunto em metros'
                       : licenseType === 'flatbed'
                         ? 'Informe a altura total do conjunto em metros (max: 4,95)'
                         : 'Altura padrão de 4,40 metros para este tipo de conjunto (não editável)'

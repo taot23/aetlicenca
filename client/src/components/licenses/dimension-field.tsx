@@ -11,6 +11,7 @@ interface DimensionFieldProps {
   description: string;
   fieldType?: "comprimento" | "largura" | "altura"; // Tipo de campo para comportamento específico
   disabled?: boolean; // Adiciona propriedade para desabilitar o campo
+  hideAutoLimits?: boolean; // Para esconder os textos de limite automáticos
 }
 
 export function DimensionField({ 
@@ -19,7 +20,8 @@ export function DimensionField({
   placeholder, 
   description, 
   fieldType = "comprimento",
-  disabled = false 
+  disabled = false,
+  hideAutoLimits = false
 }: DimensionFieldProps) {
   const [displayValue, setDisplayValue] = useState<string>('');
 
@@ -179,8 +181,11 @@ export function DimensionField({
   // Verificar se o campo está vazio para mostrar alerta
   const isEmpty = field.value === undefined || field.value === null || field.value === '';
   
+  // Preparar classes CSS baseadas em flags
+  const formItemClasses = hideAutoLimits ? 'hide-limits-special-flatbed' : '';
+  
   return (
-    <FormItem>
+    <FormItem className={formItemClasses}>
       <FormLabel htmlFor={fieldId} className="text-base font-medium flex items-center">
         {label}
         {isEmpty && (
@@ -215,6 +220,16 @@ export function DimensionField({
       {isEmpty && (
         <div className="mt-1 text-sm text-amber-600 font-medium">
           Este campo é obrigatório. Por favor, preencha um valor.
+        </div>
+      )}
+      {fieldType === "largura" && !hideAutoLimits && (
+        <div className="mt-1 text-sm text-red-600 font-medium largura-limite">
+          A largura máxima permitida é {fieldType === "largura" && disabled ? '2,60' : '3,20'} metros
+        </div>
+      )}
+      {fieldType === "altura" && !hideAutoLimits && (
+        <div className="mt-1 text-sm text-red-600 font-medium altura-limite">
+          A altura máxima permitida é {fieldType === "altura" && disabled ? '4,40' : '4,95'} metros
         </div>
       )}
       <FormDescription className="text-xs text-muted-foreground mt-1">
