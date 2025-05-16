@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   Loader2, Search, FileText, CheckCircle, XCircle, File, Clock, 
-  MapPin, X, UploadCloud, Pencil, AlertCircle, Eye, EyeOff, Trash2 
+  MapPin, X, UploadCloud, Pencil, AlertCircle, Eye, EyeOff, Trash2,
+  FileDown
 } from "lucide-react";
 import {
   AlertDialog,
