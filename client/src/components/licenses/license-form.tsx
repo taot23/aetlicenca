@@ -1637,19 +1637,31 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
               control={form.control}
               name="width"
               render={({ field }) => (
-                <DimensionField
-                  field={field}
-                  fieldType="largura"
-                  label="Largura do Conjunto (metros)"
-                  placeholder="Ex.: 2,60"
-                  description={
-                    licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
-                      ? 'Informe a largura total do conjunto em metros (sem limite para carga superdimensionada)'
-                      : licenseType === 'flatbed'
-                        ? 'Informe a largura total do conjunto em metros (max: 3,20)'
-                        : 'Informe a largura total do conjunto em metros (max: 2,60)'
-                  }
-                />
+                <>
+                  <DimensionField
+                    field={field}
+                    fieldType="largura"
+                    label="Largura do Conjunto (metros)"
+                    placeholder="Ex.: 2,60"
+                    description={
+                      licenseType === 'flatbed' && form.watch('cargoType') === 'oversized'
+                        ? 'Informe a largura total do conjunto em metros (sem limite para carga superdimensionada)'
+                        : licenseType === 'flatbed'
+                          ? 'Informe a largura total do conjunto em metros (max: 3,20)'
+                          : 'Informe a largura total do conjunto em metros (max: 2,60)'
+                    }
+                  />
+                  
+                  {/* Mensagem de largura máxima dinâmica com base no tipo de conjunto */}
+                  <div className="text-xs text-red-500 font-medium mt-1">
+                    {licenseType === 'flatbed' && form.watch('cargoType') !== 'oversized' 
+                      ? 'A largura máxima permitida é 3,20 metros'
+                      : licenseType !== 'flatbed' 
+                        ? 'A largura máxima permitida é 2,60 metros'
+                        : null
+                    }
+                  </div>
+                </>
               )}
             />
             
