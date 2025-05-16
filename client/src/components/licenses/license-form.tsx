@@ -264,28 +264,35 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
             }
           }
           
-          // Validar largura se estiver definida
-          if (currentWidth !== undefined) {
-            if (currentWidth > limits.maxWidth) {
-              form.setError('width', { 
-                type: 'manual', 
-                message: `A largura máxima para este tipo de conjunto é ${limits.maxWidth.toFixed(2).replace('.', ',')} metros` 
-              });
-            } else {
-              form.clearErrors('width');
+          // REMOVENDO TODAS AS VALIDAÇÕES DE DIMENSÕES PARA TIPO "não prancha"
+          if (licenseType !== "flatbed") {
+            // Validar largura se estiver definida e NÃO for prancha
+            if (currentWidth !== undefined) {
+              if (currentWidth > limits.maxWidth) {
+                form.setError('width', { 
+                  type: 'manual', 
+                  message: `A largura máxima para este tipo de conjunto é ${limits.maxWidth.toFixed(2).replace('.', ',')} metros` 
+                });
+              } else {
+                form.clearErrors('width');
+              }
             }
-          }
-          
-          // Validar altura se estiver definida
-          if (currentHeight !== undefined) {
-            if (currentHeight > limits.maxHeight) {
-              form.setError('height', { 
-                type: 'manual', 
-                message: `A altura máxima para este tipo de conjunto é ${limits.maxHeight.toFixed(2).replace('.', ',')} metros` 
-              });
-            } else {
-              form.clearErrors('height');
+            
+            // Validar altura se estiver definida e NÃO for prancha
+            if (currentHeight !== undefined) {
+              if (currentHeight > limits.maxHeight) {
+                form.setError('height', { 
+                  type: 'manual', 
+                  message: `A altura máxima para este tipo de conjunto é ${limits.maxHeight.toFixed(2).replace('.', ',')} metros` 
+                });
+              } else {
+                form.clearErrors('height');
+              }
             }
+          } else {
+            // Para pranchas, remover TODAS as validações de dimensões
+            form.clearErrors('width');
+            form.clearErrors('height');
           }
         }
         
