@@ -207,18 +207,6 @@ export function Sidebar({ className }: SidebarProps) {
             )}
             
             {/* Botão de todos veículos para usuários operacionais removido */}
-
-            {/* Botão de atualizar página */}
-            <Button
-              variant="outline"
-              className="w-full justify-start bg-white text-gray-800 hover:bg-gray-100 mt-4"
-              onClick={() => {
-                window.location.reload();
-              }}
-            >
-              <RefreshCw className="mr-3 h-5 w-5" />
-              Atualizar Dados
-            </Button>
           </>
         )}
       </div>
