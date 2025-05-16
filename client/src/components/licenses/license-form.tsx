@@ -391,7 +391,16 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     const values = form.getValues();
     const isWidthEmpty = values.width === undefined || values.width === null;
     const isHeightEmpty = values.height === undefined || values.height === null;
-    const isCargoTypeEmpty = values.cargoType === undefined || values.cargoType === null || values.cargoType === '';
+    const isCargoTypeEmpty = !values.cargoType;
+    
+    // Adicionar log detalhado para debug
+    console.log("Valores do formulário:", {
+      licenseType: values.type,
+      cargoType: values.cargoType,
+      width: values.width,
+      height: values.height,
+      length: values.length
+    });
     
     return isWidthEmpty || isHeightEmpty || isCargoTypeEmpty;
   };
@@ -503,7 +512,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
                     {form.getValues('height') === undefined && (
                       <li>Altura do conjunto</li>
                     )}
-                    {(form.getValues('cargoType') === undefined || form.getValues('cargoType') === '') && (
+                    {!form.getValues('cargoType') && (
                       <li>Tipo de carga</li>
                     )}
                   </ul>
