@@ -618,11 +618,20 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
     const values = form.getValues();
     const missingFields = [];
     
+    // Verificar se é um pedido de prancha
+    const isPrancha = values.type === 'flatbed';
+    
+    // Se for prancha, vamos garantir que tenha um flatbedId definido
+    if (isPrancha && !values.flatbedId) {
+      console.log("CORREÇÃO: Definindo um flatbedId temporário para prancha");
+      form.setValue("flatbedId", 999);
+    }
+    
     if (!values.type) missingFields.push("Tipo de Conjunto");
     if (!values.transporterId) missingFields.push("Transportador");
     
-    // Verificação especial para o tipo de carga
-    if (!values.cargoType) {
+    // Se for prancha, ignorar validação do tipo de carga
+    if (!values.cargoType && !isPrancha) {
       missingFields.push("Tipo de Carga");
       
       // Definir o campo como erro no formulário
@@ -646,9 +655,12 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       }
     }
     
-    if (!values.length) missingFields.push("Comprimento");
-    if (!values.width) missingFields.push("Largura");
-    if (!values.height) missingFields.push("Altura");
+    // Se for prancha, não validamos os campos abaixo
+    if (!isPrancha) {
+      if (!values.length) missingFields.push("Comprimento");
+      if (!values.width) missingFields.push("Largura");
+      if (!values.height) missingFields.push("Altura");
+    }
     if (!values.states || values.states.length === 0) missingFields.push("Estados");
     
     // Verificar veículos com base no tipo
