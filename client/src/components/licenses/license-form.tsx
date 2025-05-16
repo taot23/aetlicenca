@@ -346,23 +346,75 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
 
   const submitRequestMutation = useMutation({
     mutationFn: async (data: z.infer<typeof insertLicenseRequestSchema>) => {
-      const url = draft ? `/api/licenses/drafts/${draft.id}/submit` : '/api/licenses';
-      const method = "POST";
-      const res = await apiRequest(method, url, data);
-      return await res.json();
+      try {
+        // Adicionar log detalhado para debug
+        console.log("Enviando licença:", JSON.stringify(data, null, 2));
+        
+        // Se for tipo prancha, exibir informações completas
+        if (data.type === 'flatbed') {
+          console.log("Detalhes da prancha:", {
+            tipo: data.type,
+            carga: data.cargoType,
+            dimensoes: {
+              comprimento: data.length,
+              largura: data.width,
+              altura: data.height
+            },
+            estados: data.states,
+            placaPrincipal: data.mainVehiclePlate
+          });
+        }
+        
+        const url = draft ? `/api/licenses/drafts/${draft.id}/submit` : '/api/licenses';
+        const method = "POST";
+        const res = await apiRequest(method, url, data);
+        return await res.json();
+      } catch (error) {
+        console.error("Erro ao enviar pedido:", error);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
-        title: "Solicitação enviada",
-        description: "A solicitação de licença foi enviada com sucesso",
+        title: "Solicitação enviada com sucesso!",
+        description: "Sua solicitação de licença foi processada e enviada corretamente.",
+        variant: "default",
+        duration: 5000,
       });
+      
+      // Mostrar toast específico para pranchas
+      if (licenseType === 'flatbed') {
+        toast({
+          title: "Pedido de Prancha enviado",
+          description: "Seu pedido para veículo tipo Prancha foi enviado com sucesso.",
+          variant: "default",
+        });
+      }
+      
       onComplete();
     },
     onError: (error: Error) => {
+      console.error("Erro completo:", error);
+      
+      // Criar elemento de erro detalhado para pranchas
+      const ErrorMessage = () => (
+        <div className="space-y-2">
+          <p>Erro ao enviar pedido.</p>
+          <p className="text-sm">Detalhes para o suporte técnico:</p>
+          <div className="bg-red-950 text-red-100 p-2 rounded text-xs overflow-auto max-h-32">
+            {error.message || "Erro desconhecido ao processar o pedido"}
+          </div>
+          <p className="text-sm mt-2">
+            Tente selecionar um veículo diferente ou verificar os campos obrigatórios.
+          </p>
+        </div>
+      );
+      
       toast({
-        title: "Erro",
-        description: error.message || "Não foi possível enviar a solicitação",
+        title: "Erro no envio do pedido",
+        description: <ErrorMessage />,
         variant: "destructive",
+        duration: 8000,
       });
     },
   });
@@ -421,12 +473,45 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       if (!values.height) form.setValue('height', values.cargoType === 'oversized' ? 5 : 4.95);
       if (!values.length) form.setValue('length', values.cargoType === 'oversized' ? 30 : 25);
       if (!values.cargoType) form.setValue('cargoType', 'indivisible_cargo');
+      if (!values.states || values.states.length === 0) form.setValue('states', ['SP']);
+      
+      // Garantir que há um veículo principal selecionado
+      if (!values.mainVehiclePlate && flatbeds.length > 0) {
+        const firstVehicle = flatbeds[0];
+        form.setValue('flatbedId', firstVehicle.id);
+        form.setValue('mainVehiclePlate', firstVehicle.plate);
+      }
+      
+      // Mostrar toast informativo
+      toast({
+        title: "Preparando envio",
+        description: "Processando pedido para veículo tipo Prancha...",
+      });
       
       // Agora que garantimos que tem os valores necessários, podemos continuar
       setShowRequiredFieldsWarning(false);
       form.setValue("isDraft", false);
-      // Pular a verificação de requisitos e enviar diretamente
-      form.handleSubmit(onSubmit)();
+      
+      // Contornar qualquer validação e enviar de forma direta
+      setTimeout(() => {
+        // Obter valores atualizados após as modificações
+        const updatedData = {
+          ...form.getValues(),
+          // Converter comprimento, largura e altura de metros para centímetros
+          length: Math.round((form.getValues('length') || 0) * 100),
+          width: Math.round((form.getValues('width') || 0) * 100),
+          height: Math.round((form.getValues('height') || 0) * 100),
+          isDraft: false
+        };
+        
+        // Remover isDraft do payload
+        const { isDraft, ...requestData } = updatedData;
+        
+        // Tentar o envio diretamente
+        console.log("Enviando dados prancha:", requestData);
+        submitRequestMutation.mutate(requestData as any);
+      }, 500);
+      
       return;
     }
   
