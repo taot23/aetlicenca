@@ -412,9 +412,17 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
           // Validar largura se estiver definida
           if (currentWidth !== undefined) {
             if (currentWidth > limits.maxWidth) {
+              // Personalizar a mensagem com base no tipo de conjunto
+              let errorMessage = '';
+              if (currentType === 'flatbed') {
+                errorMessage = `A largura máxima para prancha é ${limits.maxWidth.toFixed(2).replace('.', ',')} metros`;
+              } else {
+                errorMessage = `A largura máxima para este tipo de conjunto é ${limits.maxWidth.toFixed(2).replace('.', ',')} metros`;
+              }
+              
               form.setError('width', { 
                 type: 'manual', 
-                message: `A largura máxima para este tipo de conjunto é ${limits.maxWidth.toFixed(2).replace('.', ',')} metros` 
+                message: errorMessage
               });
             } else {
               form.clearErrors('width');
