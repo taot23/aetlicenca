@@ -429,7 +429,13 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       // Log para depuração
       console.log('Enviando requisição:', requestData);
       
-      // Garantir que o campo cargoType é válido antes de enviar
+      // Garantir que o tipo de licença e carga são válidos para prancha
+      if (requestData.type === 'flatbed' && !requestData.cargoType) {
+        // Para prancha, sempre definir cargoType como oversized se não estiver definido
+        requestData.cargoType = "oversized";
+      }
+      
+      // Garantir que o campo cargoType é válido antes de enviar (exceto prancha)
       if (!requestData.cargoType && requestData.type !== 'flatbed') {
         console.error('Erro: cargoType não definido no envio final');
         toast({
@@ -615,7 +621,7 @@ export function LicenseForm({ draft, onComplete, onCancel, preSelectedTransporte
       toast({
         title: "Rascunho enviado com sucesso",
         description: "O pedido de licença foi enviado para análise",
-        // Remover temporariamente a variante para evitar o erro de tipagem
+        variant: "success" // Adicionar a variante de sucesso que já está definida no Toast
       });
       
       // Chamar onComplete para fechar o modal e atualizar a lista
