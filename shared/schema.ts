@@ -323,11 +323,28 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         const isInCentimeters = val > 100;
         const valueInMeters = isInCentimeters ? val / 100 : val;
         
-        // REMOVENDO TODAS AS VALIDAÇÕES PARA PRANCHAS (tipo "flatbed")
+        // VALIDAÇÕES ESPECÍFICAS PARA PRANCHAS (tipo "flatbed")
         if (ctx.data && (ctx.data as any).type === "flatbed") {
-          // Para todos os tipos de pranchas (incluindo carga normal ou superdimensionada)
-          // Não aplicar nenhuma validação de dimensão
-          return; // Válido sem restrições de comprimento
+          const cargoType = (ctx.data as any).cargoType;
+          
+          // Para "SUPERDIMENSIONADA" não há limites
+          if (cargoType === "oversized") {
+            return; // Válido sem restrições de comprimento
+          }
+          
+          // Para "Máquinas Agrícolas" e "Carga Indivisível", limite de 25,00m
+          if (cargoType === "agricultural_machinery" || cargoType === "indivisible_cargo") {
+            if (valueInMeters > 25.00) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "O comprimento máximo permitido para este tipo de prancha é 25,00 metros",
+              });
+            }
+            return; // Sem restrição de comprimento mínimo
+          }
+          
+          // Para outros tipos de prancha (caso existam no futuro)
+          return; // Sem restrições
         } else {
           // Para outros tipos, entre 19.8m e 30m
           if (valueInMeters < 19.8) {
@@ -356,11 +373,28 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         const isInCentimeters = val > 100;
         const valueInMeters = isInCentimeters ? val / 100 : val;
         
-        // REMOVENDO TODAS AS VALIDAÇÕES PARA PRANCHAS (tipo "flatbed")
+        // VALIDAÇÕES ESPECÍFICAS PARA PRANCHAS (tipo "flatbed")
         if (ctx.data && (ctx.data as any).type === "flatbed") {
-          // Para todos os tipos de pranchas (incluindo carga normal ou superdimensionada)
-          // Não aplicar nenhuma validação de dimensão
-          return; // Válido sem restrições de largura
+          const cargoType = (ctx.data as any).cargoType;
+          
+          // Para "SUPERDIMENSIONADA" não há limites
+          if (cargoType === "oversized") {
+            return; // Válido sem restrições de largura
+          }
+          
+          // Para "Máquinas Agrícolas" e "Carga Indivisível", limite de 3,20m
+          if (cargoType === "agricultural_machinery" || cargoType === "indivisible_cargo") {
+            if (valueInMeters > 3.20) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "A largura máxima permitida para este tipo de prancha é 3,20 metros",
+              });
+            }
+            return;
+          }
+          
+          // Para outros tipos de prancha (caso existam no futuro)
+          return; // Sem restrições
         } else {
           // Para outros tipos, máximo de 2.60m
           if (valueInMeters > 2.60) {
@@ -384,11 +418,28 @@ export const insertLicenseRequestSchema = createInsertSchema(licenseRequests)
         const isInCentimeters = val > 100;
         const valueInMeters = isInCentimeters ? val / 100 : val;
         
-        // REMOVENDO TODAS AS VALIDAÇÕES PARA PRANCHAS (tipo "flatbed")
+        // VALIDAÇÕES ESPECÍFICAS PARA PRANCHAS (tipo "flatbed")
         if (ctx.data && (ctx.data as any).type === "flatbed") {
-          // Para todos os tipos de pranchas (incluindo carga normal ou superdimensionada)
-          // Não aplicar nenhuma validação de dimensão
-          return; // Válido sem restrições de altura
+          const cargoType = (ctx.data as any).cargoType;
+          
+          // Para "SUPERDIMENSIONADA" não há limites
+          if (cargoType === "oversized") {
+            return; // Válido sem restrições de altura
+          }
+          
+          // Para "Máquinas Agrícolas" e "Carga Indivisível", limite de 4,95m
+          if (cargoType === "agricultural_machinery" || cargoType === "indivisible_cargo") {
+            if (valueInMeters > 4.95) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "A altura máxima permitida para este tipo de prancha é 4,95 metros",
+              });
+            }
+            return;
+          }
+          
+          // Para outros tipos de prancha (caso existam no futuro)
+          return; // Sem restrições
         } else {
           // Para outros tipos, máximo de 4.40m
           if (valueInMeters > 4.40) {
