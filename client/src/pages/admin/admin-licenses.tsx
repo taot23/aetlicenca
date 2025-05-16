@@ -585,6 +585,25 @@ export default function AdminLicensesPage() {
           <Card>
             <CardContent className="pt-4 px-3 md:pt-6 md:px-6">
               {/* Novo layout de pesquisa conforme mockup, similar ao da página "Acompanhar Licença" */}
+              <div className="flex justify-between items-center mb-5">
+                <div className="text-lg font-semibold">Lista de Licenças</div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="flex items-center gap-1"
+                  onClick={() => {
+                    refetch();
+                    toast({
+                      title: "Atualizado",
+                      description: "Os dados foram atualizados com sucesso.",
+                    });
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Atualizar
+                </Button>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-5">
                 <div>
                   <div className="flex flex-col space-y-1">
