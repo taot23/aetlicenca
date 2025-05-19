@@ -218,12 +218,13 @@ export function Sidebar({ className }: SidebarProps) {
           </Avatar>
           <div className="ml-3">
             <p className="text-sm font-medium text-white">{user?.fullName}</p>
-            <p className="text-xs text-gray-300">
-              {user?.email}
-              {isAdmin && <span className="ml-1 bg-blue-600 text-white text-[10px] px-1 py-0.5 rounded">Admin</span>}
-              {user?.role === 'supervisor' && <span className="ml-1 bg-green-600 text-white text-[10px] px-1 py-0.5 rounded">Supervisor</span>}
-              {user?.role === 'operational' && <span className="ml-1 bg-orange-600 text-white text-[10px] px-1 py-0.5 rounded">Operacional</span>}
-            </p>
+            <p className="text-xs text-gray-300">{user?.email}</p>
+            <div className="mt-1">
+              {isAdmin && <span className="bg-blue-600 text-white text-[10px] px-1 py-0.5 rounded">Admin</span>}
+              {user?.role === 'supervisor' && <span className="bg-green-600 text-white text-[10px] px-1 py-0.5 rounded">Supervisor</span>}
+              {user?.role === 'operational' && <span className="bg-orange-600 text-white text-[10px] px-1 py-0.5 rounded">Operacional</span>}
+              {user?.role === 'user' && <span className="bg-gray-600 text-white text-[10px] px-1 py-0.5 rounded">Transportador</span>}
+            </div>
           </div>
           <Button 
             variant="ghost" 
